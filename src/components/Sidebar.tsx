@@ -288,7 +288,7 @@ function Sidebar() {
             </NavLink>
 
             <NavLink
-              to="/bdd/donateurs"
+              to="/bdd/Donateurs"
               className={subLinkClass}
             >
               <Users size={15} />
