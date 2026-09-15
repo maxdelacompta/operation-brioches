@@ -1,0 +1,679 @@
+/* =========================================================
+   DONATEURS
+========================================================= */
+
+.donateurs-page {
+  width: 100%;
+  min-height: 100vh;
+  padding: 30px;
+  color: #063b7c;
+}
+
+.donateurs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.donateurs-header h1 {
+  margin: 5px 0;
+  font-size: 32px;
+  color: #063b7c;
+}
+
+.donateurs-header p {
+  margin: 0;
+  color: #6682a5;
+}
+
+.donateurs-eyebrow {
+  color: #ff8614;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+
+/* =========================================================
+   BOUTONS
+========================================================= */
+
+.donateurs-primary-button,
+.donateurs-secondary-button,
+.donateurs-back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.donateurs-primary-button {
+  padding: 11px 16px;
+  border: none;
+  border-radius: 10px;
+  background: #ffa74f;
+  color: #1f344d;
+}
+
+.donateurs-primary-button:hover {
+  background: #ff8614;
+}
+
+.donateurs-secondary-button {
+  padding: 10px 14px;
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+  background: white;
+  color: #063b7c;
+}
+
+.donateurs-back-button {
+  margin-bottom: 18px;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: #063b7c;
+}
+
+
+/* =========================================================
+   CONTENEUR LISTE
+========================================================= */
+
+.donateurs-card {
+  overflow: hidden;
+  border: 1px solid #e1e9f2;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 5px 18px rgba(18, 59, 122, 0.07);
+}
+
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
+.donateurs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px;
+  border-bottom: 1px solid #e1e9f2;
+}
+
+.donateurs-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 0 12px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+
+  color: #6682a5;
+}
+
+.donateurs-search:focus-within {
+  border-color: #ffa74f;
+}
+
+.donateurs-search input {
+  width: 100%;
+  padding: 11px 0;
+
+  border: none;
+  outline: none;
+
+  background: transparent;
+  color: #063b7c;
+}
+
+.donateurs-select {
+  min-width: 160px;
+  height: 42px;
+
+  padding: 0 12px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+
+  background: white;
+  color: #063b7c;
+}
+
+
+/* =========================================================
+   RÉSULTATS
+========================================================= */
+
+.donateurs-results {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 12px 18px;
+
+  background: #f8fafc;
+
+  color: #6682a5;
+  font-size: 12px;
+}
+
+.donateurs-results strong {
+  color: #063b7c;
+}
+
+
+/* =========================================================
+   TABLEAU
+========================================================= */
+
+.donateurs-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.donateurs-table {
+  width: 100%;
+  min-width: 1180px;
+
+  border-collapse: collapse;
+}
+
+.donateurs-table th {
+  padding: 12px 13px;
+
+  background: #f4f7fb;
+
+  border-top: 1px solid #e1e9f2;
+  border-bottom: 1px solid #e1e9f2;
+
+  color: #6682a5;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.donateurs-table td {
+  padding: 12px 13px;
+
+  border-bottom: 1px solid #edf1f5;
+
+  color: #063b7c;
+
+  font-size: 12px;
+
+  white-space: nowrap;
+}
+
+.donateurs-table tbody tr {
+  cursor: pointer;
+}
+
+.donateurs-table tbody tr:hover {
+  background: rgba(255, 167, 79, 0.08);
+}
+
+.donateur-code {
+  font-weight: 800;
+  color: #6682a5 !important;
+}
+
+
+/* =========================================================
+   TYPE / BADGES
+========================================================= */
+
+.donateur-type {
+  display: inline-flex;
+
+  padding: 5px 8px;
+
+  border-radius: 999px;
+
+  background: rgba(6, 59, 124, 0.08);
+
+  color: #063b7c;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.donateur-empty {
+  color: #9aaabe;
+  font-style: italic;
+}
+
+.donateur-boolean {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 40px;
+
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.donateur-boolean.yes {
+  background: rgba(24, 185, 104, 0.12);
+  color: #11804a;
+}
+
+.donateur-boolean.no {
+  background: #edf1f5;
+  color: #788a9e;
+}
+
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.donateurs-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.donateurs-actions button {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border: none;
+  border-radius: 7px;
+
+  background: transparent;
+
+  color: #6682a5;
+
+  cursor: pointer;
+}
+
+.donateurs-actions button:hover {
+  background: rgba(6, 59, 124, 0.07);
+  color: #063b7c;
+}
+
+
+/* =========================================================
+   FICHE DONATEUR
+========================================================= */
+
+.donateur-profile {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+
+  padding: 22px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 16px;
+
+  background: white;
+
+  box-shadow: 0 5px 18px rgba(18, 59, 122, 0.07);
+}
+
+.donateur-avatar {
+  width: 70px;
+  height: 70px;
+
+  display: grid;
+  place-items: center;
+
+  flex-shrink: 0;
+
+  border-radius: 18px;
+
+  background: #1f344d;
+  color: white;
+
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.donateur-profile-info {
+  flex: 1;
+}
+
+.donateur-profile-info h1 {
+  margin: 5px 0 8px;
+
+  font-size: 26px;
+
+  color: #063b7c;
+}
+
+.donateur-profile-badges {
+  display: flex;
+  gap: 7px;
+}
+
+.donateur-profile-badges span {
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  background: rgba(6, 59, 124, 0.08);
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.donateur-profile-badges .active {
+  background: rgba(24, 185, 104, 0.12);
+  color: #11804a;
+}
+
+
+/* =========================================================
+   ONGLETS
+========================================================= */
+
+.donateur-tabs {
+  display: flex;
+  align-items: center;
+
+  margin: 18px 0;
+  padding: 0 8px;
+
+  overflow-x: auto;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+
+  background: white;
+}
+
+.donateur-tabs button {
+  flex-shrink: 0;
+
+  padding: 13px 12px;
+
+  border: none;
+  border-bottom: 3px solid transparent;
+
+  background: transparent;
+
+  color: #6682a5;
+
+  cursor: pointer;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.donateur-tabs button.active {
+  color: #063b7c;
+  border-bottom-color: #ffa74f;
+}
+
+
+/* =========================================================
+   KPI
+========================================================= */
+
+.donateur-kpi-grid {
+  display: grid;
+
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin-bottom: 18px;
+}
+
+.donateur-kpi {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  min-height: 95px;
+
+  padding: 17px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+
+  background: white;
+
+  box-shadow: 0 5px 18px rgba(18, 59, 122, 0.07);
+}
+
+.donateur-kpi svg {
+  color: #ff8614;
+}
+
+.donateur-kpi strong {
+  display: block;
+
+  color: #063b7c;
+
+  font-size: 20px;
+}
+
+.donateur-kpi span {
+  display: block;
+
+  margin-top: 3px;
+
+  color: #6682a5;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   CARTES INFORMATIONS
+========================================================= */
+
+.donateur-detail-grid {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 18px;
+}
+
+.donateur-detail-card {
+  padding: 20px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+
+  background: white;
+
+  box-shadow: 0 5px 18px rgba(18, 59, 122, 0.07);
+}
+
+.donateur-detail-card h2 {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  margin: 0 0 15px;
+
+  padding-bottom: 11px;
+
+  border-bottom: 1px solid #e1e9f2;
+
+  color: #063b7c;
+
+  font-size: 15px;
+}
+
+.donateur-detail-card h2 svg {
+  color: #ff8614;
+}
+
+
+/* =========================================================
+   LIGNES INFORMATIONS
+========================================================= */
+
+.donateur-info-row {
+  display: grid;
+
+  grid-template-columns: 155px 1fr;
+
+  gap: 14px;
+
+  padding: 9px 0;
+
+  border-bottom: 1px solid #edf1f5;
+}
+
+.donateur-info-row:last-child {
+  border-bottom: none;
+}
+
+.donateur-info-row > span {
+  color: #6682a5;
+  font-size: 11px;
+}
+
+.donateur-info-row > strong {
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  color: #063b7c;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   DOCUMENTS
+========================================================= */
+
+.donateur-documents-card {
+  margin-top: 18px;
+}
+
+.donateur-document-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 12px;
+}
+
+.donateur-document {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 14px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+
+  background: #f8fafc;
+}
+
+.donateur-document span {
+  font-weight: 800;
+  color: #063b7c;
+}
+
+.donateur-document strong {
+  padding: 4px 8px;
+  border-radius: 999px;
+
+  font-size: 9px;
+}
+
+.donateur-document strong.yes {
+  background: rgba(24, 185, 104, 0.12);
+  color: #11804a;
+}
+
+.donateur-document strong.no {
+  background: #edf1f5;
+  color: #788a9e;
+}
+
+
+/* =========================================================
+   ONGLET VIDE
+========================================================= */
+
+.donateur-empty-section {
+  padding: 50px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+
+  background: white;
+
+  text-align: center;
+
+  box-shadow: 0 5px 18px rgba(18, 59, 122, 0.07);
+}
+
+.donateur-empty-section h2 {
+  color: #063b7c;
+}
+
+.donateur-empty-section p {
+  color: #6682a5;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1100px) {
+  .donateur-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .donateur-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .donateurs-page {
+    padding: 16px;
+  }
+
+  .donateurs-header,
+  .donateurs-toolbar,
+  .donateur-profile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .donateur-kpi-grid,
+  .donateur-document-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .donateur-info-row {
+    grid-template-columns: 1fr;
+  }
+}

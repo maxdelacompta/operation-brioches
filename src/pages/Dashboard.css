@@ -1,0 +1,1110 @@
+/* =========================================================
+   DASHBOARD — OPÉRATION BRIOCHES
+   ========================================================= */
+
+
+/* =========================================================
+   1. PAGE
+   ========================================================= */
+
+.dashboard-page {
+  width: 100%;
+  min-height: 100vh;
+
+  padding: 32px 34px 60px;
+
+  color: #063b7c;
+}
+
+
+/* =========================================================
+   2. HEADER / TOPBAR
+   ========================================================= */
+
+.dashboard-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 28px;
+
+  margin-bottom: 24px;
+}
+
+.dashboard-eyebrow {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #ff8614;
+
+  font-size: 11px;
+  font-weight: 900;
+
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.dashboard-topbar h1 {
+  margin: 0;
+
+  color: #063b7c;
+
+  font-size: 34px;
+  font-weight: 850;
+
+  line-height: 1.1;
+}
+
+.dashboard-topbar p {
+  margin: 8px 0 0;
+
+  color: #6682a5;
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   3. UTILISATEUR
+   ========================================================= */
+
+.dashboard-user-actions {
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+}
+
+.dashboard-notification {
+  position: relative;
+
+  width: 42px;
+  height: 42px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 11px;
+
+  background: white;
+  color: #063b7c;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 4px 14px rgba(18, 59, 122, 0.07);
+
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.dashboard-notification:hover {
+  transform: translateY(-1px);
+
+  border-color: #ffa74f;
+
+  box-shadow:
+    0 7px 18px rgba(18, 59, 122, 0.1);
+}
+
+.dashboard-notification span {
+  position: absolute;
+
+  top: -6px;
+  right: -6px;
+
+  min-width: 19px;
+  height: 19px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0 5px;
+
+  border: 2px solid white;
+  border-radius: 999px;
+
+  background: #ef3340;
+  color: white;
+
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.dashboard-user {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 7px 10px 7px 7px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+
+  background: white;
+
+  box-shadow:
+    0 4px 14px rgba(18, 59, 122, 0.06);
+}
+
+.dashboard-avatar {
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
+  background: #063b7c;
+  color: white;
+
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.dashboard-user strong {
+  display: block;
+
+  color: #063b7c;
+
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.dashboard-user span {
+  display: block;
+
+  margin-top: 2px;
+
+  color: #6682a5;
+
+  font-size: 9px;
+}
+
+
+/* =========================================================
+   4. FILTRES
+   ========================================================= */
+
+.dashboard-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+
+  gap: 14px;
+
+  margin-bottom: 22px;
+
+  padding: 14px 16px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+
+  background: white;
+
+  box-shadow:
+    0 5px 18px rgba(18, 59, 122, 0.06);
+}
+
+.dashboard-filters label {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+
+  color: #063b7c;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.dashboard-filters select {
+  min-width: 120px;
+  min-height: 38px;
+
+  padding: 8px 30px 8px 10px;
+
+  border: 1px solid #dfe7f0;
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #f8fafc;
+  color: #063b7c;
+
+  cursor: pointer;
+
+  font-size: 10px;
+  font-weight: 650;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.dashboard-filters select:hover {
+  border-color: #ffa74f;
+}
+
+.dashboard-filters select:focus {
+  border-color: #ffa74f;
+
+  background: white;
+
+  box-shadow:
+    0 0 0 3px rgba(255, 167, 79, 0.12);
+}
+
+
+/* =========================================================
+   5. KPI PRINCIPAUX
+   ========================================================= */
+
+.dashboard-kpi-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 16px;
+
+  margin-bottom: 22px;
+}
+
+.dashboard-kpi {
+  min-width: 0;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap: 13px;
+
+  min-height: 115px;
+
+  padding: 17px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+
+  background: white;
+
+  box-shadow:
+    0 5px 18px rgba(18, 59, 122, 0.06);
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.dashboard-kpi:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 10px 24px rgba(18, 59, 122, 0.1);
+}
+
+.dashboard-kpi > div:last-child {
+  min-width: 0;
+}
+
+.dashboard-kpi-icon {
+  width: 40px;
+  height: 40px;
+
+  display: grid;
+  place-items: center;
+
+  flex-shrink: 0;
+
+  border-radius: 11px;
+}
+
+.dashboard-kpi-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+
+/* =========================================================
+   6. COULEURS KPI
+   ========================================================= */
+
+.dashboard-kpi-icon.orange {
+  background:
+    rgba(255, 134, 20, 0.11);
+
+  color: #ff8614;
+}
+
+.dashboard-kpi-icon.green {
+  background:
+    rgba(24, 185, 104, 0.11);
+
+  color: #18b968;
+}
+
+.dashboard-kpi-icon.blue {
+  background:
+    rgba(6, 59, 124, 0.1);
+
+  color: #063b7c;
+}
+
+.dashboard-kpi-icon.red {
+  background:
+    rgba(239, 51, 64, 0.1);
+
+  color: #ef3340;
+}
+
+.dashboard-kpi-title {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: #6682a5;
+
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.dashboard-kpi strong {
+  display: block;
+
+  color: #063b7c;
+
+  font-size: 19px;
+  font-weight: 900;
+
+  line-height: 1.15;
+}
+
+.dashboard-kpi-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 5px;
+
+  margin-top: 7px;
+
+  color: #6682a5;
+
+  font-size: 9px;
+}
+
+.dashboard-kpi-evolution {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 3px;
+
+  color: #18a25b;
+
+  font-weight: 800;
+}
+
+.dashboard-kpi-evolution svg {
+  width: 12px;
+  height: 12px;
+}
+
+
+/* =========================================================
+   7. BOÎTES GÉNÉRIQUES
+   ========================================================= */
+
+.dashboard-box {
+  min-width: 0;
+
+  padding: 20px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 16px;
+
+  background: white;
+
+  box-shadow:
+    0 5px 18px rgba(18, 59, 122, 0.06);
+}
+
+.dashboard-box-title {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  margin-bottom: 17px;
+}
+
+.dashboard-box-title svg {
+  flex-shrink: 0;
+
+  color: #ff8614;
+}
+
+.dashboard-box-title h2 {
+  margin: 0;
+
+  color: #063b7c;
+
+  font-size: 14px;
+  font-weight: 850;
+}
+
+
+/* =========================================================
+   8. GRILLE ANALYTIQUE
+   ========================================================= */
+
+.dashboard-analysis-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(12, minmax(0, 1fr));
+
+  gap: 18px;
+
+  margin-bottom: 18px;
+}
+
+.dashboard-map {
+  grid-column: span 4;
+}
+
+.dashboard-income {
+  grid-column: span 5;
+}
+
+.dashboard-analysis-grid > .dashboard-box:not(
+  .dashboard-map,
+  .dashboard-income
+) {
+  grid-column: span 3;
+}
+
+
+/* =========================================================
+   9. CARTE GÉOGRAPHIQUE
+   ========================================================= */
+
+.map-placeholder {
+  min-height: 220px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  padding: 20px;
+
+  border: 1px dashed #cfdbe8;
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #f8fbff,
+      #f5f8fb
+    );
+
+  color: #6682a5;
+
+  text-align: center;
+}
+
+.map-placeholder svg {
+  color: #a8bdd2;
+}
+
+.map-placeholder strong {
+  color: #063b7c;
+
+  font-size: 12px;
+}
+
+.map-placeholder span {
+  font-size: 9px;
+}
+
+.map-summary {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 8px;
+
+  margin-top: 12px;
+}
+
+.map-summary strong,
+.map-summary span {
+  padding: 9px 10px;
+
+  border-radius: 8px;
+
+  background: #f8fafc;
+}
+
+.map-summary strong {
+  grid-column: 1 / -1;
+
+  color: #063b7c;
+
+  font-size: 10px;
+}
+
+.map-summary span {
+  color: #6682a5;
+
+  font-size: 9px;
+}
+
+
+/* =========================================================
+   10. GRAPHIQUE ENCAISSEMENTS
+   ========================================================= */
+
+.dashboard-chart {
+  width: 100%;
+  height: 280px;
+}
+
+.dashboard-chart .recharts-wrapper {
+  font-family:
+    Inter,
+    system-ui,
+    sans-serif;
+}
+
+.dashboard-chart
+.recharts-cartesian-axis-tick-value {
+  fill: #6682a5;
+
+  font-size: 9px;
+}
+
+.dashboard-chart
+.recharts-default-tooltip {
+  border: 1px solid #e1e9f2 !important;
+  border-radius: 10px !important;
+
+  background: white !important;
+
+  box-shadow:
+    0 8px 22px rgba(18, 59, 122, 0.11) !important;
+}
+
+
+/* =========================================================
+   11. GRAPHIQUES CAMEMBERT
+   ========================================================= */
+
+.dashboard-pie-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 18px;
+
+  min-height: 210px;
+}
+
+.dashboard-pie-chart {
+  position: relative;
+
+  width: 180px;
+  height: 180px;
+
+  flex-shrink: 0;
+}
+
+.dashboard-pie-center {
+  position: absolute;
+
+  inset: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  pointer-events: none;
+}
+
+.dashboard-pie-center strong {
+  color: #063b7c;
+
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.dashboard-pie-center span {
+  margin-top: 2px;
+
+  color: #6682a5;
+
+  font-size: 9px;
+}
+
+
+/* =========================================================
+   12. LÉGENDES GRAPHIQUES
+   ========================================================= */
+
+.dashboard-legend {
+  flex: 1;
+
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+}
+
+.dashboard-legend > div {
+  display: grid;
+
+  grid-template-columns:
+    10px minmax(0, 1fr) auto;
+
+  align-items: center;
+
+  gap: 7px;
+
+  color: #6682a5;
+
+  font-size: 9px;
+}
+
+.dashboard-legend strong {
+  color: #063b7c;
+
+  font-size: 9px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+
+  display: block;
+
+  border-radius: 50%;
+}
+
+
+/* =========================================================
+   13. GRILLE SECONDAIRE
+   ========================================================= */
+
+.dashboard-secondary-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 18px;
+
+  margin-bottom: 18px;
+}
+
+
+/* =========================================================
+   14. PETITS INDICATEURS
+   ========================================================= */
+
+.dashboard-small-kpis {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 10px;
+}
+
+.dashboard-small-kpis > div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 13px;
+
+  border: 1px solid #e7edf4;
+  border-radius: 11px;
+
+  background: #f8fafc;
+}
+
+.dashboard-small-kpis svg {
+  margin-bottom: 10px;
+
+  color: #ff8614;
+}
+
+.dashboard-small-kpis span {
+  color: #6682a5;
+
+  font-size: 9px;
+}
+
+.dashboard-small-kpis strong {
+  margin-top: 4px;
+
+  color: #063b7c;
+
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.dashboard-small-kpis small {
+  margin-top: 3px;
+
+  color: #6682a5;
+
+  font-size: 8px;
+}
+
+
+/* =========================================================
+   15. BAS DE PAGE
+   ========================================================= */
+
+.dashboard-bottom-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 18px;
+}
+
+
+/* =========================================================
+   16. ACTIVITÉ RÉCENTE
+   ========================================================= */
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-list > div {
+  position: relative;
+
+  display: grid;
+
+  grid-template-columns:
+    10px minmax(0, 1fr);
+
+  column-gap: 9px;
+
+  padding: 10px 0;
+
+  border-bottom:
+    1px solid #edf1f5;
+}
+
+.activity-list > div:last-child {
+  border-bottom: none;
+}
+
+.activity-list strong,
+.activity-list > div > span:not(.status-dot),
+.activity-list small {
+  grid-column: 2;
+}
+
+.activity-list strong {
+  color: #063b7c;
+
+  font-size: 10px;
+}
+
+.activity-list > div > span:not(.status-dot) {
+  margin-top: 3px;
+
+  color: #6682a5;
+
+  font-size: 9px;
+}
+
+.activity-list small {
+  margin-top: 3px;
+
+  color: #9aabba;
+
+  font-size: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+
+  margin-top: 3px;
+
+  border-radius: 50%;
+}
+
+.status-dot.green {
+  background: #18b968;
+}
+
+.status-dot.orange {
+  background: #ffa74f;
+}
+
+.status-dot.blue {
+  background: #2e78c4;
+}
+
+
+/* =========================================================
+   17. ALERTES
+   ========================================================= */
+
+.alert-title svg {
+  color: #ef3340;
+}
+
+.alert-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+.alert-list > div {
+  padding: 11px 12px;
+
+  border-left:
+    3px solid #ef3340;
+
+  border-radius: 8px;
+
+  background:
+    rgba(239, 51, 64, 0.045);
+}
+
+.alert-list strong {
+  display: block;
+
+  color: #063b7c;
+
+  font-size: 10px;
+}
+
+.alert-list span {
+  display: block;
+
+  margin-top: 3px;
+
+  color: #6682a5;
+
+  font-size: 9px;
+}
+
+
+/* =========================================================
+   18. DOCUMENTS RAPIDES
+   ========================================================= */
+
+.documents-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+.documents-list button {
+  width: 100%;
+
+  padding: 10px 11px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 9px;
+
+  background: #f8fafc;
+  color: #063b7c;
+
+  cursor: pointer;
+
+  font-size: 9px;
+  font-weight: 750;
+
+  text-align: left;
+
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.documents-list button:hover {
+  transform: translateX(2px);
+
+  border-color: #ffa74f;
+
+  background:
+    rgba(255, 167, 79, 0.08);
+}
+
+
+/* =========================================================
+   19. RESPONSIVE — ÉCRAN MOYEN
+   ========================================================= */
+
+@media (max-width: 1350px) {
+  .dashboard-kpi-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-map {
+    grid-column: span 5;
+  }
+
+  .dashboard-income {
+    grid-column: span 7;
+  }
+
+  .dashboard-analysis-grid
+  > .dashboard-box:not(
+    .dashboard-map,
+    .dashboard-income
+  ) {
+    grid-column: span 12;
+  }
+
+  .dashboard-secondary-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-secondary-grid
+  > .dashboard-box:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+
+/* =========================================================
+   20. RESPONSIVE — TABLETTE
+   ========================================================= */
+
+@media (max-width: 1000px) {
+  .dashboard-page {
+    padding: 24px;
+  }
+
+  .dashboard-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-map,
+  .dashboard-income,
+  .dashboard-analysis-grid
+  > .dashboard-box:not(
+    .dashboard-map,
+    .dashboard-income
+  ) {
+    grid-column: auto;
+  }
+
+  .dashboard-secondary-grid,
+  .dashboard-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-secondary-grid
+  > .dashboard-box:last-child {
+    grid-column: auto;
+  }
+
+  .dashboard-pie-content {
+    justify-content: flex-start;
+  }
+}
+
+
+/* =========================================================
+   21. RESPONSIVE — MOBILE
+   ========================================================= */
+
+@media (max-width: 650px) {
+  .dashboard-page {
+    padding: 16px;
+  }
+
+  .dashboard-topbar {
+    flex-direction: column;
+  }
+
+  .dashboard-topbar h1 {
+    font-size: 28px;
+  }
+
+  .dashboard-user-actions {
+    width: 100%;
+
+    justify-content: space-between;
+  }
+
+  .dashboard-user {
+    flex: 1;
+  }
+
+  .dashboard-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-filters label,
+  .dashboard-filters select {
+    width: 100%;
+  }
+
+  .dashboard-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-box {
+    padding: 16px;
+  }
+
+  .dashboard-pie-content {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .dashboard-legend {
+    width: 100%;
+  }
+
+  .dashboard-small-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .map-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .map-summary strong {
+    grid-column: auto;
+  }
+}
