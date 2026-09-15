@@ -2239,3 +2239,311 @@
   background:
     rgba(24, 185, 104, 0.08);
 }
+
+/* =========================================================
+   COMMANDES DU DONATEUR
+   ========================================================= */
+
+.donateur-commandes {
+  padding: 24px;
+
+  border:
+    1px solid #e1e9f2;
+
+  border-radius: 14px;
+
+  background: white;
+
+  box-shadow:
+    0 5px 18px
+      rgba(
+        18,
+        59,
+        122,
+        0.05
+      );
+}
+
+.donateur-commandes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 20px;
+}
+
+.donateur-commandes-header h2 {
+  margin: 0;
+
+  color: #063b7c;
+
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.donateur-commandes-header p {
+  margin:
+    5px 0 0;
+
+  color: #6682a5;
+
+  font-size: 12px;
+}
+
+.donateur-commandes-kpis {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap: 12px;
+
+  margin-bottom: 20px;
+}
+
+.donateur-commandes-kpis > div {
+  padding: 15px;
+
+  border:
+    1px solid #e2eaf2;
+
+  border-radius: 11px;
+
+  background:
+    #fbfcfe;
+}
+
+.donateur-commandes-kpis span {
+  display: block;
+
+  color: #71859d;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.donateur-commandes-kpis strong {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #163653;
+
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.donateur-commandes-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+.donateur-commande-row {
+  display: grid;
+
+  grid-template-columns:
+    1.4fr
+    0.7fr
+    0.8fr
+    0.9fr
+    auto;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 13px 15px;
+
+  border:
+    1px solid #e1e9f2;
+
+  border-radius: 10px;
+
+  background: white;
+
+  color: inherit;
+
+  text-decoration: none;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.donateur-commande-row:hover {
+  border-color:
+    #bed2e8;
+
+  background:
+    #f8fbff;
+
+  transform:
+    translateY(-1px);
+}
+
+.donateur-commande-row > div span {
+  display: block;
+
+  color: #8092a6;
+
+  font-size: 9px;
+}
+
+.donateur-commande-row > div strong {
+  display: block;
+
+  margin-top: 2px;
+
+  color: #183853;
+
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.donateur-commande-status {
+  display: inline-flex;
+  align-items: center;
+
+  padding:
+    6px 9px;
+
+  border-radius: 999px;
+
+  font-size: 9px;
+  font-weight: 850;
+
+  white-space: nowrap;
+}
+
+.donateur-commande-status.confirmee {
+  background:
+    rgba(
+      24,
+      185,
+      104,
+      0.13
+    );
+
+  color: #149455;
+}
+
+.donateur-commande-status.a_livrer {
+  background:
+    rgba(
+      28,
+      118,
+      224,
+      0.11
+    );
+
+  color: #1975db;
+}
+
+.donateur-commande-status.brouillon {
+  background:
+    rgba(
+      255,
+      167,
+      79,
+      0.17
+    );
+
+  color: #d97510;
+}
+
+.donateur-commande-status.livree {
+  background:
+    rgba(
+      24,
+      185,
+      104,
+      0.18
+    );
+
+  color: #0d7f45;
+}
+
+.donateur-commande-status.annulee {
+  background:
+    rgba(
+      239,
+      51,
+      64,
+      0.11
+    );
+
+  color: #d82d39;
+}
+
+.donateur-commandes-empty {
+  min-height: 220px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  color: #8295aa;
+}
+
+.donateur-commandes-empty svg {
+  color: #ff8614;
+}
+
+.donateur-commandes-empty strong {
+  color: #063b7c;
+
+  font-size: 15px;
+}
+
+.donateur-commandes-empty span {
+  font-size: 11px;
+}
+
+@media (
+  max-width: 850px
+) {
+
+  .donateur-commandes-kpis {
+    grid-template-columns:
+      1fr;
+  }
+
+  .donateur-commande-row {
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+}
+
+@media (
+  max-width: 650px
+) {
+
+  .donateur-commandes-header {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+  .donateur-commande-row {
+    grid-template-columns:
+      1fr;
+  }
+
+}
