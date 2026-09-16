@@ -1,0 +1,406 @@
+/* =========================================================
+   TOPBAR — OPÉRATION BRIOCHES
+   ========================================================= */
+
+.ob-topbar {
+  position: relative;
+  z-index: 100;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+  min-height: 76px;
+
+  padding: 12px 30px;
+  gap: 24px;
+
+  background: #fff8f1;
+  border-bottom: 1px solid #e1e9f2;
+
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+/* =========================================================
+   TITRE : GESTION / OPÉRATION BRIOCHES
+   ========================================================= */
+
+.ob-topbar-brand {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
+  gap: 10px;
+  min-width: 0;
+
+  white-space: nowrap;
+}
+
+.ob-topbar-brand span {
+  color: #8092a6;
+
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ob-topbar-brand .ob-topbar-separator {
+  color: #cbd5e1;
+
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.ob-topbar-brand strong {
+  color: #063b7c;
+
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1.4;
+  letter-spacing: -0.3px;
+}
+
+/* =========================================================
+   ACTIONS À DROITE
+   ========================================================= */
+
+.ob-topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+
+.ob-notifications-wrapper {
+  position: relative;
+}
+
+.ob-notification-button {
+  position: relative;
+
+  display: grid;
+  place-items: center;
+
+  width: 46px;
+  height: 46px;
+
+  padding: 0;
+
+  border: 1px solid #dce5ef;
+  border-radius: 12px;
+
+  background: #ffffff;
+  color: #063b7c;
+
+  cursor: pointer;
+
+  box-shadow: 0 3px 10px rgba(18, 59, 122, 0.035);
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.ob-notification-button:hover {
+  background: #fffaf5;
+  border-color: #ffa74f;
+  color: #ff8614;
+
+  transform: translateY(-1px);
+}
+
+.ob-notification-button:focus-visible {
+  outline: 3px solid rgba(255, 167, 79, 0.35);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   PANNEAU DES NOTIFICATIONS
+   ========================================================= */
+
+.ob-notifications-panel {
+  position: absolute;
+
+  top: calc(100% + 12px);
+  right: 0;
+
+  z-index: 1000;
+
+  width: 350px;
+  max-width: calc(100vw - 32px);
+
+  padding: 18px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 15px 40px rgba(18, 59, 122, 0.16);
+}
+
+.ob-notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  padding-bottom: 14px;
+
+  border-bottom: 1px solid #edf1f5;
+}
+
+.ob-notifications-header strong {
+  color: #063b7c;
+
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.ob-notifications-header button {
+  display: grid;
+  place-items: center;
+
+  width: 30px;
+  height: 30px;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 7px;
+
+  background: transparent;
+  color: #6682a5;
+
+  cursor: pointer;
+}
+
+.ob-notifications-header button:hover {
+  background: #f4f7fb;
+  color: #063b7c;
+}
+
+.ob-notifications-panel p {
+  margin: 15px 0 0;
+
+  color: #6682a5;
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   PROFIL UTILISATEUR
+   ========================================================= */
+
+.ob-user-profile {
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
+  min-height: 54px;
+
+  padding: 6px 16px 6px 7px;
+
+  border: 1px solid #dce5ef;
+  border-radius: 13px;
+
+  background: #ffffff;
+
+  box-shadow: 0 3px 10px rgba(18, 59, 122, 0.035);
+}
+
+/* =========================================================
+   AVATAR
+   ========================================================= */
+
+.ob-user-avatar {
+  display: grid;
+  place-items: center;
+
+  width: 41px;
+  height: 41px;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
+  background: #063b7c;
+  color: #ffffff;
+
+  font-size: 17px;
+  font-weight: 900;
+}
+
+/* =========================================================
+   NOM ET POSTE
+   ========================================================= */
+
+.ob-user-info {
+  display: flex;
+  flex-direction: column;
+
+  justify-content: center;
+  gap: 3px;
+
+  min-width: 0;
+}
+
+.ob-user-info strong {
+  color: #063b7c;
+
+  font-size: 13px;
+  font-weight: 850;
+
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.ob-user-info span {
+  color: #6682a5;
+
+  font-size: 11px;
+  font-weight: 500;
+
+  line-height: 1.3;
+}
+
+/* =========================================================
+   RESPONSIVE — TABLETTE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .ob-topbar {
+    padding: 12px 20px;
+    gap: 15px;
+  }
+
+  .ob-topbar-brand {
+    gap: 7px;
+  }
+
+  .ob-topbar-brand strong {
+    font-size: 15px;
+  }
+
+  .ob-topbar-actions {
+    gap: 10px;
+  }
+
+  .ob-user-profile {
+    padding-right: 10px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — MOBILE
+   ========================================================= */
+
+@media (max-width: 650px) {
+  .ob-topbar {
+    min-height: 68px;
+
+    padding: 10px 15px;
+    gap: 10px;
+  }
+
+  .ob-topbar-brand {
+    gap: 6px;
+  }
+
+  .ob-topbar-brand span,
+  .ob-topbar-separator {
+    display: none;
+  }
+
+  .ob-topbar-brand strong {
+    font-size: 14px;
+    white-space: normal;
+  }
+
+  .ob-topbar-actions {
+    gap: 8px;
+  }
+
+  .ob-notification-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .ob-user-profile {
+    min-height: 44px;
+    padding: 5px;
+  }
+
+  .ob-user-avatar {
+    width: 34px;
+    height: 34px;
+
+    font-size: 14px;
+  }
+
+  .ob-user-info {
+    display: none;
+  }
+
+  .ob-notifications-panel {
+    right: -49px;
+  }
+}
+
+/* =========================================================
+   DISCUSSIONS DANS LA TOPBAR
+   ========================================================= */
+
+.ob-chat-button {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ob-chat-button.active {
+  border-color: #ff8614;
+  background: #fff4e8;
+  color: #ff8614;
+}
+
+.ob-chat-unread {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 21px;
+  height: 21px;
+
+  padding: 0 5px;
+
+  border: 2px solid #fff8f1;
+  border-radius: 999px;
+
+  background: #ff8614;
+  color: white;
+
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.ob-chat-button:focus-visible {
+  outline: 3px solid rgba(255, 134, 20, 0.3);
+  outline-offset: 3px;
+}

@@ -126,23 +126,9 @@ function Dashboard() {
 
           <h1>Opération Brioches 2026</h1>
 
-          <p>Suivi global de l'opération en temps réel</p>
-        </div>
-
-        <div className="dashboard-user-actions">
-          <button className="dashboard-notification">
-            <Bell size={20} />
-            <span>3</span>
-          </button>
-
-          <div className="dashboard-user">
-            <div className="dashboard-avatar">M</div>
-
-            <div>
-              <strong>Maxime Claudel</strong>
-              <span>Administrateur</span>
-            </div>
-          </div>
+          <p>
+            Suivi global de l'opération en temps réel
+          </p>
         </div>
       </header>
 

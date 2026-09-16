@@ -2,47 +2,62 @@
    CHAT — OPÉRATION BRIOCHES
    ========================================================= */
 
+/* =========================================================
+   BASE
+   ========================================================= */
+
+.chat-floating-button,
+.chat-panel,
+.chat-panel *,
+.chat-message-window,
+.chat-message-window * {
+  box-sizing: border-box;
+}
 
 /* =========================================================
-   BOUTON FLOTTANT
+   1. BOUTON FLOTTANT
    ========================================================= */
 
 .chat-floating-button {
   position: fixed;
   right: 22px;
   bottom: 22px;
-  z-index: 500;
+  z-index: 1200;
 
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 9px;
 
-  padding: 11px 15px;
+  min-width: 48px;
+  height: 48px;
+
+  padding: 0 13px;
 
   border: none;
-  border-radius: 12px 12px 4px 12px;
+  border-radius: 14px 14px 5px 14px;
 
   background: #1f344d;
-  color: white;
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
 
   cursor: pointer;
 
   box-shadow:
     0 8px 28px rgba(24, 43, 66, 0.25);
 
-  font-size: 13px;
-  font-weight: 700;
-
   transition:
-    transform 0.15s ease,
-    background 0.15s ease,
-    box-shadow 0.15s ease;
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .chat-floating-button:hover {
   background: #294662;
-
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 
   box-shadow:
     0 10px 32px rgba(24, 43, 66, 0.3);
@@ -52,199 +67,276 @@
   flex-shrink: 0;
 }
 
+.chat-floating-button.has-unread {
+  padding: 0 14px;
+}
+
+.chat-floating-label {
+  white-space: nowrap;
+}
 
 /* =========================================================
-   BADGE NON LU
+   BADGE DU BOUTON FLOTTANT
    ========================================================= */
 
 .chat-badge {
-  min-width: 20px;
-  height: 20px;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
+  min-width: 23px;
+  height: 23px;
 
   padding: 0 6px;
 
   border-radius: 999px;
 
-  background: #ffa74f;
-  color: #1f344d;
+  background: #ff8614;
+  color: #ffffff;
 
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 900;
+  line-height: 1;
 }
 
-
 /* =========================================================
-   PANNEAU CONVERSATIONS
+   2. PANNEAU DES DISCUSSIONS
    ========================================================= */
 
 .chat-panel {
   position: fixed;
-  right: 22px;
-  bottom: 76px;
-  z-index: 490;
 
-  width: 330px;
-  max-height: 520px;
+  right: 22px;
+  bottom: 84px;
+
+  z-index: 1201;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 360px;
+  max-width: calc(100vw - 44px);
+  max-height: min(560px, calc(100vh - 110px));
 
   overflow: hidden;
 
   border: 1px solid #e1e9f2;
-  border-radius: 14px;
+  border-radius: 16px;
 
-  background: white;
+  background: #ffffff;
 
   box-shadow:
     0 16px 50px rgba(24, 43, 66, 0.2);
 }
 
+/* Panneau ouvert lorsque la Topbar est visible */
+
+.chat-panel--topbar {
+  top: 85px;
+  bottom: auto;
+
+  max-height: calc(100vh - 105px);
+}
 
 /* =========================================================
-   HEADER DU CHAT
+   3. HEADER DES DISCUSSIONS — FIN
    ========================================================= */
 
 .chat-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 
-  gap: 10px;
+  height: 56px;
+  min-height: 56px;
 
-  min-height: 48px;
+  padding: 0 14px;
 
-  padding: 12px 14px;
+  flex-shrink: 0;
 
   background: #1f344d;
-  color: white;
+  color: #ffffff;
 }
 
-.chat-panel-header strong {
-  font-size: 13px;
-  font-weight: 800;
+/* Discussions + compteur sur une seule ligne */
+
+.chat-panel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  flex: 1;
+  min-width: 0;
 }
 
-.chat-panel-header button {
-  width: 28px;
-  height: 28px;
+/* Titre principal */
 
+.chat-panel-title-row strong {
+  flex-shrink: 0;
+
+  color: #ffffff;
+
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1.2;
+
+  white-space: nowrap;
+}
+
+/* Texte "Tous les messages sont lus" */
+
+.chat-panel-title-row .chat-panel-status {
+  display: block;
+
+  min-width: 0;
+  margin: 0;
+
+  overflow: hidden;
+
+  color: rgba(255, 255, 255, 0.75);
+
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bouton de fermeture */
+
+.chat-panel-header > button {
   display: grid;
   place-items: center;
 
+  width: 30px;
+  height: 30px;
+
+  flex-shrink: 0;
+
+  padding: 0;
+
   border: none;
-  border-radius: 7px;
+  border-radius: 8px;
 
   background: transparent;
-  color: rgba(255, 255, 255, 0.75);
+  color: #ffffff;
 
   cursor: pointer;
 }
 
-.chat-panel-header button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
+.chat-panel-header > button:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
-
 /* =========================================================
-   RECHERCHE CHAT
+   4. RECHERCHE
    ========================================================= */
 
 .chat-search {
   display: flex;
   align-items: center;
+  gap: 10px;
 
-  gap: 8px;
+  margin: 12px;
+  padding: 0 12px;
 
-  margin: 10px;
+  height: 44px;
 
-  padding: 8px 10px;
+  flex-shrink: 0;
 
   border: 1px solid #e1e9f2;
-  border-radius: 9px;
+  border-radius: 11px;
 
   background: #f8fafc;
-
   color: #6682a5;
 }
 
 .chat-search:focus-within {
   border-color: #ffa74f;
-
-  background: white;
+  background: #ffffff;
 
   box-shadow:
     0 0 0 3px rgba(255, 167, 79, 0.1);
 }
 
+.chat-search svg {
+  flex-shrink: 0;
+}
+
 .chat-search input {
   flex: 1;
-
   min-width: 0;
+
+  padding: 0;
 
   border: none;
   outline: none;
 
   background: transparent;
-
   color: #063b7c;
 
-  font-size: 12px;
+  font-family: inherit;
+  font-size: 14px;
 }
 
 .chat-search input::placeholder {
   color: #9aaabe;
 }
 
-
 /* =========================================================
-   LISTE DES CONVERSATIONS
+   5. LISTE DES CONVERSATIONS
    ========================================================= */
 
 .chat-conversations {
-  max-height: 390px;
-
+  min-height: 0;
   overflow-y: auto;
 }
 
-.chat-conversations::-webkit-scrollbar {
+/* Barre de défilement discrète */
+
+.chat-conversations::-webkit-scrollbar,
+.chat-message-content::-webkit-scrollbar {
   width: 5px;
 }
 
-.chat-conversations::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.chat-conversations::-webkit-scrollbar-thumb {
+.chat-conversations::-webkit-scrollbar-thumb,
+.chat-message-content::-webkit-scrollbar-thumb {
   background: #d9e1ea;
   border-radius: 10px;
 }
 
-
 /* =========================================================
-   UNE CONVERSATION
+   6. UNE CONVERSATION
    ========================================================= */
 
 .chat-conversation {
   display: flex;
   align-items: center;
+  gap: 12px;
 
-  gap: 10px;
+  width: 100%;
+  min-height: 78px;
 
-  min-height: 61px;
+  padding: 12px 14px;
 
-  padding: 10px 12px;
-
+  border: none;
   border-top: 1px solid #edf1f5;
+  border-radius: 0;
 
-  background: white;
+  background: #ffffff;
+
+  text-align: left;
+  font-family: inherit;
 
   cursor: pointer;
 
-  transition:
-    background 0.15s ease;
+  transition: background 0.15s ease;
+}
+
+.chat-conversation:first-child {
+  border-top: none;
 }
 
 .chat-conversation:hover {
@@ -252,38 +344,34 @@
 }
 
 .chat-conversation.active {
-  background: rgba(255, 167, 79, 0.08);
+  background: #fff4e8;
 }
 
-
 /* =========================================================
-   AVATAR
+   7. AVATAR
    ========================================================= */
 
 .chat-avatar {
   position: relative;
 
-  width: 39px;
-  height: 39px;
-
-  flex-shrink: 0;
-
   display: grid;
   place-items: center;
+
+  width: 43px;
+  height: 43px;
+
+  flex-shrink: 0;
 
   border-radius: 50%;
 
   background: #1f344d;
-  color: white;
+  color: #ffffff;
 
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 850;
 }
 
-
-/* =========================================================
-   STATUT EN LIGNE
-   ========================================================= */
+/* Point de présence sur l'avatar */
 
 .chat-status {
   position: absolute;
@@ -291,10 +379,10 @@
   right: -1px;
   bottom: -1px;
 
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
 
-  border: 2px solid white;
+  border: 2px solid #ffffff;
   border-radius: 50%;
 }
 
@@ -306,212 +394,347 @@
   background: #a4afba;
 }
 
-
 /* =========================================================
-   CONTENU D'UNE CONVERSATION
+   8. INFORMATIONS D'UNE CONVERSATION
    ========================================================= */
 
-.chat-conversation > div:not(.chat-avatar):not(.chat-unread) {
+.chat-conversation-info {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 5px;
 
   min-width: 0;
 }
 
-.chat-conversation strong {
+/* Nom et poste éventuel */
+
+.chat-conversation-identity {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+
+  min-width: 0;
+  width: 100%;
+}
+
+.chat-conversation-identity strong {
   display: block;
+
+  flex: 0 1 auto;
+  min-width: 0;
 
   overflow: hidden;
 
   color: #063b7c;
 
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.3;
 
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.chat-conversation span {
+.chat-conversation-poste {
   display: block;
 
-  margin-top: 3px;
+  flex: 0 1 auto;
+  min-width: 0;
+
+  margin: 0;
+
+  overflow: hidden;
+
+  color: #8b9aad;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Aperçu du dernier message */
+
+.chat-conversation-preview {
+  display: block;
 
   overflow: hidden;
 
   color: #6682a5;
 
-  font-size: 10px;
+  font-size: 13px;
+  line-height: 1.4;
 
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-
 /* =========================================================
-   BADGE NON LU DANS LA LISTE
+   9. BADGE NON LU
    ========================================================= */
 
 .chat-unread {
-  min-width: 20px;
-  height: 20px;
-
   display: grid;
   place-items: center;
 
-  padding: 0 5px;
+  min-width: 23px;
+  height: 23px;
+
+  padding: 0 6px;
+
+  flex-shrink: 0;
 
   border-radius: 999px;
 
-  background: #ffa74f;
-  color: #1f344d;
+  background: #ff8614;
+  color: #ffffff;
 
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 900;
+  line-height: 1;
 }
 
+/* =========================================================
+   10. RECHERCHE SANS RÉSULTAT
+   ========================================================= */
+
+.chat-empty {
+  padding: 35px 16px;
+
+  color: #6682a5;
+
+  text-align: center;
+  font-size: 13px;
+}
 
 /* =========================================================
-   FENÊTRE DE MESSAGES
+   11. FENÊTRE DE CONVERSATION
    ========================================================= */
 
 .chat-message-window {
   position: fixed;
 
-  right: 365px;
+  right: 398px;
   bottom: 22px;
 
-  z-index: 491;
-
-  width: 330px;
-  height: 420px;
+  z-index: 1202;
 
   display: flex;
   flex-direction: column;
 
+  width: 360px;
+  max-width: calc(100vw - 44px);
+  height: min(510px, calc(100vh - 110px));
+
   overflow: hidden;
 
   border: 1px solid #e1e9f2;
-  border-radius: 14px;
+  border-radius: 16px;
 
-  background: white;
+  background: #ffffff;
 
   box-shadow:
     0 16px 50px rgba(24, 43, 66, 0.22);
 }
 
+/* Fenêtre ouverte depuis la Topbar */
+
+.chat-message-window--topbar {
+  top: 85px;
+  bottom: auto;
+}
 
 /* =========================================================
-   HEADER CONVERSATION OUVERTE
+   12. HEADER DES MESSAGES — PLUS FIN
    ========================================================= */
 
 .chat-message-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   gap: 10px;
 
-  min-height: 50px;
+  height: 54px;
+  min-height: 54px;
 
-  padding: 11px 13px;
+  padding: 0 14px;
+
+  flex-shrink: 0;
 
   background: #1f344d;
-  color: white;
+  color: #ffffff;
 }
 
-.chat-message-header strong {
+.chat-message-person {
+  flex: 1;
+  min-width: 0;
+}
+
+/* =========================================================
+   13. NOM + STATUT SUR UNE SEULE LIGNE
+   ========================================================= */
+
+.chat-message-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-width: 0;
+  width: 100%;
+}
+
+/* Nom plus grand */
+
+.chat-message-identity strong {
   display: block;
+
+  flex: 0 1 auto;
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: #ffffff;
+
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1.2;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Statut à droite du nom */
+
+.chat-message-header .chat-message-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  flex-shrink: 0;
+
+  margin: 0;
 
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
+  line-height: 1.2;
+
+  white-space: nowrap;
 }
 
-.chat-message-header span {
-  display: block;
+/* En ligne : vert */
 
-  margin-top: 2px;
-
-  color: rgba(255, 255, 255, 0.55);
-
-  font-size: 9px;
+.chat-message-header .chat-message-presence.online {
+  color: #4ade80;
 }
 
-.chat-message-header button {
-  width: 28px;
-  height: 28px;
+/* Hors ligne : gris */
 
+.chat-message-header .chat-message-presence.offline {
+  color: #a4afba;
+}
+
+/* Point de présence */
+
+.chat-message-header .chat-presence-dot {
+  display: inline-block;
+
+  width: 8px;
+  height: 8px;
+
+  flex-shrink: 0;
+
+  margin: 0;
+
+  border-radius: 50%;
+
+  background: currentColor;
+}
+
+/* =========================================================
+   14. BOUTON FERMER LA CONVERSATION
+   ========================================================= */
+
+.chat-message-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  flex-shrink: 0;
+}
+
+.chat-message-actions button {
   display: grid;
   place-items: center;
 
+  width: 30px;
+  height: 30px;
+
+  padding: 0;
+
   border: none;
-  border-radius: 7px;
+  border-radius: 8px;
 
   background: transparent;
-  color: rgba(255, 255, 255, 0.8);
+  color: #ffffff;
 
   cursor: pointer;
 }
 
-.chat-message-header button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
+.chat-message-actions button:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
-
 /* =========================================================
-   ZONE DES MESSAGES
+   15. ZONE DES MESSAGES
    ========================================================= */
 
 .chat-message-content {
-  flex: 1;
-
   display: flex;
+  flex: 1;
   flex-direction: column;
+  gap: 10px;
 
-  gap: 8px;
+  min-height: 0;
 
-  padding: 14px;
+  padding: 16px;
 
   overflow-y: auto;
 
   background: #f8fafc;
 }
 
-.chat-message-content::-webkit-scrollbar {
-  width: 5px;
-}
-
-.chat-message-content::-webkit-scrollbar-thumb {
-  background: #d9e1ea;
-  border-radius: 10px;
-}
-
-
 /* =========================================================
-   BULLES
+   16. BULLES DES MESSAGES
    ========================================================= */
 
 .chat-message {
-  max-width: 78%;
+  max-width: 83%;
 
-  padding: 8px 10px;
+  padding: 10px 12px;
 
-  border-radius: 11px;
+  border-radius: 12px;
 
-  font-size: 11px;
-  line-height: 1.45;
+  overflow-wrap: anywhere;
+
+  font-size: 14px;
+  line-height: 1.5;
 }
+
+/* Message reçu */
 
 .chat-message.received {
   align-self: flex-start;
 
   border: 1px solid #e1e9f2;
-
   border-bottom-left-radius: 4px;
 
-  background: white;
+  background: #ffffff;
   color: #063b7c;
 }
+
+/* Message envoyé */
 
 .chat-message.sent {
   align-self: flex-end;
@@ -519,114 +742,79 @@
   border-bottom-right-radius: 4px;
 
   background: #1f344d;
-  color: white;
+  color: #ffffff;
 }
 
-
 /* =========================================================
-   DATE / HEURE MESSAGE
-   ========================================================= */
-
-.chat-message-time {
-  display: block;
-
-  margin-top: 4px;
-
-  font-size: 8px;
-
-  opacity: 0.55;
-}
-
-
-/* =========================================================
-   BARRE D'ENVOI
+   17. BARRE D'ENVOI
    ========================================================= */
 
 .chat-message-input {
   display: flex;
   align-items: center;
+  gap: 9px;
 
-  gap: 7px;
-
-  padding: 10px;
-
-  border-top: 1px solid #e1e9f2;
-
-  background: white;
-}
-
-.chat-message-input > button:not(.chat-send-button) {
-  width: 32px;
-  height: 32px;
-
-  display: grid;
-  place-items: center;
+  padding: 12px;
 
   flex-shrink: 0;
 
-  border: none;
-  border-radius: 8px;
+  border-top: 1px solid #e1e9f2;
 
-  background: transparent;
-
-  color: #6682a5;
-
-  cursor: pointer;
-}
-
-.chat-message-input > button:not(.chat-send-button):hover {
-  background: #f4f7fb;
-  color: #063b7c;
+  background: #ffffff;
 }
 
 .chat-message-input input {
   flex: 1;
-
   min-width: 0;
 
-  padding: 8px 10px;
+  min-height: 40px;
+
+  padding: 10px 12px;
 
   border: 1px solid #e1e9f2;
-  border-radius: 9px;
+  border-radius: 10px;
 
   outline: none;
 
   background: #f8fafc;
-
   color: #063b7c;
 
-  font-size: 11px;
+  font-family: inherit;
+  font-size: 14px;
 }
 
 .chat-message-input input:focus {
   border-color: #ffa74f;
+  background: #ffffff;
 
-  background: white;
+  box-shadow:
+    0 0 0 3px rgba(255, 167, 79, 0.1);
 }
 
 .chat-message-input input::placeholder {
   color: #9aaabe;
 }
 
-
 /* =========================================================
-   BOUTON ENVOYER
+   18. BOUTON ENVOYER
    ========================================================= */
 
 .chat-send-button {
-  width: 34px;
-  height: 34px;
-
-  flex-shrink: 0;
-
   display: grid;
   place-items: center;
 
-  border: none;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
 
-  background: #ffa74f;
-  color: #1f344d;
+  flex-shrink: 0;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #ff8614;
+  color: #ffffff;
 
   cursor: pointer;
 
@@ -635,28 +823,53 @@
     transform 0.15s ease;
 }
 
-.chat-send-button:hover {
-  background: #ff8614;
-
+.chat-send-button:hover:not(:disabled) {
+  background: #ef7610;
   transform: translateY(-1px);
 }
 
+.chat-send-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 /* =========================================================
-   RESPONSIVE
+   19. ACCESSIBILITÉ
    ========================================================= */
 
-@media (max-width: 900px) {
+.chat-floating-button:focus-visible,
+.chat-conversation:focus-visible,
+.chat-panel-header button:focus-visible,
+.chat-message-actions button:focus-visible,
+.chat-send-button:focus-visible {
+  outline: 3px solid rgba(255, 134, 20, 0.55);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   20. ÉCRANS INTERMÉDIAIRES
+   ========================================================= */
+
+@media (max-width: 1050px) {
+  /*
+   * La conversation passe devant la liste lorsque
+   * l'écran ne permet plus de les afficher côte à côte.
+   */
+
   .chat-message-window {
     right: 22px;
-    bottom: 76px;
+    bottom: 84px;
   }
 
-  .chat-panel {
-    bottom: 76px;
+  .chat-message-window--topbar {
+    top: 85px;
+    bottom: auto;
   }
 }
 
+/* =========================================================
+   21. MOBILE
+   ========================================================= */
 
 @media (max-width: 600px) {
   .chat-floating-button {
@@ -665,19 +878,64 @@
   }
 
   .chat-panel {
-    right: 10px;
-    left: 10px;
-    bottom: 67px;
+    right: 12px;
+    left: 12px;
+    bottom: 72px;
 
     width: auto;
+    max-width: none;
+
+    max-height: calc(100vh - 95px);
+  }
+
+  .chat-panel--topbar {
+    top: 76px;
+    bottom: auto;
+
+    max-height: calc(100vh - 90px);
+  }
+
+  .chat-panel-title-row {
+    gap: 7px;
+  }
+
+  .chat-panel-title-row strong {
+    font-size: 15px;
+  }
+
+  .chat-panel-title-row .chat-panel-status {
+    font-size: 11px;
   }
 
   .chat-message-window {
-    right: 10px;
-    left: 10px;
-    bottom: 67px;
+    right: 12px;
+    left: 12px;
+    bottom: 72px;
 
     width: auto;
-    height: 430px;
+    max-width: none;
+
+    height: min(510px, calc(100vh - 95px));
+  }
+
+  .chat-message-window--topbar {
+    top: 76px;
+    bottom: auto;
+  }
+
+  .chat-message-header {
+    padding: 0 12px;
+  }
+
+  .chat-message-identity {
+    gap: 7px;
+  }
+
+  .chat-message-identity strong {
+    font-size: 15px;
+  }
+
+  .chat-message-header .chat-message-presence {
+    font-size: 11px;
   }
 }
