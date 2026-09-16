@@ -16,11 +16,13 @@ import Etablissement from './pages/Etablissement'
 import Bdd from './pages/Bdd'
 import Donateurs from './pages/Donateurs'
 import Commandes from './pages/Commandes'
+import FichesCaisse from './pages/FichesCaisse'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+
         <Route element={<AppLayout />}>
 
           <Route
@@ -63,7 +65,13 @@ function App() {
             element={<Commandes />}
           />
 
+          <Route
+            path="/encaissements/fiches-caisse"
+            element={<FichesCaisse />}
+          />
+
         </Route>
+
       </Routes>
     </BrowserRouter>
   )

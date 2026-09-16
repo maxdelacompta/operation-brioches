@@ -4,12 +4,15 @@ import {
   useEffect,
   useMemo,
   useState,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from 'react'
 
 import type {
   Commande,
   Donateur,
+  FicheCaisse,
 } from '../types/ob'
 
 import {
@@ -20,44 +23,88 @@ import {
   initialCommandes,
 } from '../data/initialCommandes'
 
+import {
+  initialFichesCaisse,
+} from '../data/initialFichesCaisse'
+
+/* =========================================================
+   TYPE DU CONTEXTE
+   ========================================================= */
+
 type ObDataContextValue = {
-  donateurs: Donateur[]
-  commandes: Commande[]
+  donateurs:
+    Donateur[]
+
+  commandes:
+    Commande[]
+
+  fichesCaisse:
+    FicheCaisse[]
 
   setDonateurs:
-    React.Dispatch<
-      React.SetStateAction<
+    Dispatch<
+      SetStateAction<
         Donateur[]
       >
     >
 
   setCommandes:
-    React.Dispatch<
-      React.SetStateAction<
+    Dispatch<
+      SetStateAction<
         Commande[]
       >
     >
 
-  getDonateurById: (
-    id: number,
-  ) =>
-    Donateur | undefined
+  setFichesCaisse:
+    Dispatch<
+      SetStateAction<
+        FicheCaisse[]
+      >
+    >
 
-  getCommandesByDonateurId: (
-    donateurId: number,
-  ) => Commande[]
+  getDonateurById:
+    (
+      id: number,
+    ) =>
+      Donateur | undefined
+
+  getCommandesByDonateurId:
+    (
+      donateurId:
+        number,
+    ) =>
+      Commande[]
+
+  getFicheCaisseById:
+    (
+      id: number,
+    ) =>
+      FicheCaisse | undefined
 }
+
+/* =========================================================
+   CONTEXTE
+   ========================================================= */
 
 const ObDataContext =
   createContext<
     ObDataContextValue | undefined
   >(undefined)
 
+/* =========================================================
+   PROVIDER
+   ========================================================= */
+
 export function ObDataProvider({
   children,
 }: {
-  children: ReactNode
+  children:
+    ReactNode
 }) {
+  /* =======================================================
+     DONATEURS
+     ======================================================= */
+
   const [
     donateurs,
     setDonateurs,
@@ -82,6 +129,10 @@ export function ObDataProvider({
         }
       },
     )
+
+  /* =======================================================
+     COMMANDES
+     ======================================================= */
 
   const [
     commandes,
@@ -108,6 +159,39 @@ export function ObDataProvider({
       },
     )
 
+  /* =======================================================
+     FICHES DE CAISSE
+     ======================================================= */
+
+  const [
+    fichesCaisse,
+    setFichesCaisse,
+  ] =
+    useState<FicheCaisse[]>(
+      () => {
+        const saved =
+          localStorage.getItem(
+            'ob-fiches-caisse',
+          )
+
+        if (!saved) {
+          return initialFichesCaisse
+        }
+
+        try {
+          return JSON.parse(
+            saved,
+          ) as FicheCaisse[]
+        } catch {
+          return initialFichesCaisse
+        }
+      },
+    )
+
+  /* =======================================================
+     SAUVEGARDE DONATEURS
+     ======================================================= */
+
   useEffect(() => {
     localStorage.setItem(
       'ob-donateurs',
@@ -115,7 +199,13 @@ export function ObDataProvider({
         donateurs,
       ),
     )
-  }, [donateurs])
+  }, [
+    donateurs,
+  ])
+
+  /* =======================================================
+     SAUVEGARDE COMMANDES
+     ======================================================= */
 
   useEffect(() => {
     localStorage.setItem(
@@ -124,7 +214,28 @@ export function ObDataProvider({
         commandes,
       ),
     )
-  }, [commandes])
+  }, [
+    commandes,
+  ])
+
+  /* =======================================================
+     SAUVEGARDE FICHES DE CAISSE
+     ======================================================= */
+
+  useEffect(() => {
+    localStorage.setItem(
+      'ob-fiches-caisse',
+      JSON.stringify(
+        fichesCaisse,
+      ),
+    )
+  }, [
+    fichesCaisse,
+  ])
+
+  /* =======================================================
+     VALEUR
+     ======================================================= */
 
   const value =
     useMemo<
@@ -135,17 +246,23 @@ export function ObDataProvider({
 
         commandes,
 
+        fichesCaisse,
+
         setDonateurs,
 
         setCommandes,
 
-        getDonateurById: (
-          id,
-        ) =>
-          donateurs.find(
-            (donateur) =>
-              donateur.id === id,
-          ),
+        setFichesCaisse,
+
+        getDonateurById:
+          (
+            id,
+          ) =>
+            donateurs.find(
+              (donateur) =>
+                donateur.id ===
+                id,
+            ),
 
         getCommandesByDonateurId:
           (
@@ -156,21 +273,38 @@ export function ObDataProvider({
                 commande.donateurId ===
                 donateurId,
             ),
+
+        getFicheCaisseById:
+          (
+            id,
+          ) =>
+            fichesCaisse.find(
+              (fiche) =>
+                fiche.id ===
+                id,
+            ),
       }),
       [
         donateurs,
         commandes,
+        fichesCaisse,
       ],
     )
 
   return (
     <ObDataContext.Provider
-      value={value}
+      value={
+        value
+      }
     >
       {children}
     </ObDataContext.Provider>
   )
 }
+
+/* =========================================================
+   HOOK
+   ========================================================= */
 
 export function useObData() {
   const context =

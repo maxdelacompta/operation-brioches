@@ -2547,3 +2547,1003 @@
   }
 
 }
+
+/* =========================================================
+   DONATEURS — AGRANDISSEMENT GLOBAL
+   même logique visuelle que COMMANDES
+   ========================================================= */
+
+/* PAGE */
+
+.donateurs-page {
+  font-size: 15px;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.donateurs-header {
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.donateurs-eyebrow {
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.6px;
+}
+
+.donateurs-header h1 {
+  margin-top: 5px;
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.donateurs-header p {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   BOUTONS HEADER
+   ========================================================= */
+
+.donateurs-header-actions {
+  gap: 12px;
+}
+
+.donateurs-primary-button,
+.donateurs-secondary-button {
+  min-height: 44px;
+  padding: 0 17px;
+  gap: 9px;
+
+  border-radius: 10px;
+
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.donateurs-primary-button svg,
+.donateurs-secondary-button svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* =========================================================
+   FILTRES / BARRE DE RECHERCHE
+   ========================================================= */
+
+.donateurs-filter-card {
+  min-height: 72px;
+  padding: 15px 16px;
+  gap: 12px;
+
+  border-radius: 14px;
+}
+
+.donateurs-search {
+  min-height: 44px;
+}
+
+.donateurs-search svg {
+  width: 20px;
+  height: 20px;
+}
+
+.donateurs-search input {
+  min-height: 44px;
+
+  padding: 0 14px;
+
+  font-size: 13px;
+}
+
+.donateurs-filter-field {
+  min-width: 145px;
+}
+
+.donateurs-filter-field span {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.donateurs-filter-field select {
+  min-height: 44px;
+
+  padding: 0 13px;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   EXPORT
+   ========================================================= */
+
+.donateurs-export-button {
+  min-height: 44px;
+}
+
+.donateurs-export-menu {
+  width: 230px;
+
+  padding: 8px;
+
+  border-radius: 11px;
+}
+
+.donateurs-export-menu button {
+  min-height: 52px;
+
+  padding: 10px 12px;
+
+  gap: 10px;
+
+  border-radius: 8px;
+}
+
+.donateurs-export-menu button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.donateurs-export-menu strong {
+  font-size: 12px;
+}
+
+.donateurs-export-menu span {
+  margin-top: 2px;
+
+  font-size: 10px;
+}
+
+/* =========================================================
+   TABLEAU
+   ========================================================= */
+
+.donateurs-table-card {
+  border-radius: 14px;
+}
+
+.donateurs-table-header {
+  min-height: 48px;
+
+  padding: 0 16px;
+}
+
+.donateurs-table-header strong {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.donateurs-table-header span {
+  font-size: 12px;
+}
+
+.donateurs-table {
+  font-size: 13px;
+}
+
+.donateurs-table thead tr {
+  height: 48px;
+}
+
+.donateurs-table th {
+  padding: 12px 13px;
+
+  font-size: 10.5px;
+  font-weight: 850;
+
+  letter-spacing: 0.15px;
+}
+
+.donateurs-table tbody tr {
+  min-height: 58px;
+}
+
+.donateurs-table td {
+  height: 58px;
+
+  padding: 12px 13px;
+
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+/* =========================================================
+   CODE DONATEUR
+   ========================================================= */
+
+.donateur-code {
+  font-size: 11px !important;
+  font-weight: 850;
+}
+
+/* =========================================================
+   NOM / RAISON SOCIALE
+   ========================================================= */
+
+.donateur-name-cell {
+  gap: 10px;
+}
+
+.donateur-name-cell > svg {
+  width: 20px;
+  height: 20px;
+}
+
+.donateur-name-cell strong {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.donateur-name-cell span {
+  margin-top: 3px;
+
+  font-size: 10.5px;
+}
+
+/* =========================================================
+   TYPE
+   ========================================================= */
+
+.donateur-type-wrapper {
+  gap: 7px;
+}
+
+.donateur-type-badge {
+  min-height: 24px;
+
+  padding: 5px 10px;
+
+  font-size: 9.5px;
+  font-weight: 850;
+}
+
+/* =========================================================
+   ARCHIVE
+   ========================================================= */
+
+.donateur-archive-badge {
+  min-height: 24px;
+
+  padding: 5px 9px;
+
+  font-size: 9px;
+}
+
+/* =========================================================
+   JDI / JDP / RF
+   ========================================================= */
+
+.donateurs-table td span {
+  line-height: 1.3;
+}
+
+/* badges OUI / NON existants */
+
+.donateurs-table .yes,
+.donateurs-table .no,
+.donateurs-table .oui,
+.donateurs-table .non {
+  min-width: 42px;
+  min-height: 24px;
+
+  padding: 5px 9px;
+
+  font-size: 9.5px;
+  font-weight: 850;
+}
+
+/* =========================================================
+   ACTIONS TABLEAU
+   ========================================================= */
+
+.donateur-actions-button {
+  width: 38px;
+  height: 38px;
+
+  border-radius: 9px;
+}
+
+.donateur-actions-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.donateur-actions-menu {
+  width: 210px;
+
+  padding: 7px;
+
+  border-radius: 11px;
+}
+
+.donateur-actions-menu button {
+  min-height: 40px;
+
+  padding: 8px 10px;
+
+  gap: 9px;
+
+  border-radius: 7px;
+
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.donateur-actions-menu button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* =========================================================
+   FICHE DONATEUR
+   ========================================================= */
+
+.donateur-detail-header {
+  gap: 24px;
+
+  margin-bottom: 22px;
+}
+
+.donateur-back-button {
+  min-height: 40px;
+
+  padding: 0 13px;
+
+  gap: 8px;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.donateur-detail-icon {
+  width: 52px;
+  height: 52px;
+
+  border-radius: 12px;
+}
+
+.donateur-detail-icon svg {
+  width: 27px;
+  height: 27px;
+}
+
+.donateur-detail-title {
+  gap: 14px;
+}
+
+.donateur-detail-title h1 {
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.donateur-detail-title p {
+  margin-top: 5px;
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   ONGLETS
+   ========================================================= */
+
+.donateur-detail-tabs {
+  min-height: 52px;
+
+  gap: 4px;
+
+  margin-bottom: 20px;
+
+  padding: 5px;
+}
+
+.donateur-detail-tabs button {
+  min-height: 41px;
+
+  padding: 0 15px;
+
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+/* =========================================================
+   CARTES DETAIL
+   ========================================================= */
+
+.donateur-detail-grid {
+  gap: 16px;
+}
+
+.donateur-detail-card {
+  padding: 22px;
+
+  border-radius: 14px;
+}
+
+.donateur-detail-card h2 {
+  margin-bottom: 18px;
+
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.donateur-detail-row {
+  min-height: 42px;
+
+  padding: 9px 0;
+}
+
+.donateur-detail-row span {
+  font-size: 11px;
+}
+
+.donateur-detail-row strong {
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+/* =========================================================
+   CONTACT
+   ========================================================= */
+
+.donateur-contact-card {
+  gap: 15px;
+
+  padding: 18px;
+}
+
+.donateur-contact-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.donateur-contact-card strong {
+  font-size: 15px;
+}
+
+.donateur-contact-line {
+  gap: 9px;
+
+  margin-top: 8px;
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   COMMANDES DU DONATEUR
+   ========================================================= */
+
+.donateur-commandes {
+  padding: 24px;
+}
+
+.donateur-commandes-header h2 {
+  font-size: 21px;
+}
+
+.donateur-commandes-header p {
+  font-size: 12px;
+}
+
+.donateur-commandes-kpis {
+  gap: 14px;
+}
+
+.donateur-commandes-kpis > div {
+  padding: 17px;
+}
+
+.donateur-commandes-kpis span {
+  font-size: 10.5px;
+}
+
+.donateur-commandes-kpis strong {
+  margin-top: 5px;
+
+  font-size: 22px;
+}
+
+.donateur-commande-row {
+  min-height: 62px;
+
+  padding: 14px 16px;
+
+  gap: 14px;
+}
+
+.donateur-commande-row > div span {
+  font-size: 9.5px;
+}
+
+.donateur-commande-row > div strong {
+  margin-top: 3px;
+
+  font-size: 12.5px;
+}
+
+.donateur-commande-status {
+  padding: 7px 10px;
+
+  font-size: 9.5px;
+}
+
+/* =========================================================
+   MODALE DONATEUR
+   ========================================================= */
+
+.donateur-modal {
+  width: min(720px, calc(100vw - 40px));
+
+  border-radius: 16px;
+}
+
+.donateur-modal-header {
+  padding: 21px 24px;
+}
+
+.donateur-modal-header h2 {
+  margin-top: 4px;
+
+  font-size: 23px;
+}
+
+.donateur-modal-close {
+  width: 40px;
+  height: 40px;
+}
+
+.donateur-modal-content {
+  padding: 22px 24px;
+}
+
+.donateur-form-section {
+  margin-bottom: 25px;
+}
+
+.donateur-form-section h3 {
+  margin-bottom: 14px;
+
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.donateur-form-grid {
+  gap: 14px;
+}
+
+.donateur-form-field > span {
+  margin-bottom: 6px;
+
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.donateur-form-field input,
+.donateur-form-field select,
+.donateur-form-field textarea {
+  min-height: 42px;
+
+  padding: 10px 12px;
+
+  border-radius: 8px;
+
+  font-size: 12.5px;
+}
+
+.donateur-form-field textarea {
+  min-height: 90px;
+}
+
+.donateur-modal-footer {
+  padding: 16px 24px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .donateurs-table {
+    min-width: 1100px;
+  }
+}
+
+@media (max-width: 800px) {
+  .donateurs-header h1 {
+    font-size: 30px;
+  }
+
+  .donateurs-filter-card {
+    flex-wrap: wrap;
+  }
+
+  .donateurs-search {
+    width: 100%;
+  }
+}
+
+@media (max-width: 650px) {
+  .donateurs-header {
+    flex-direction: column;
+  }
+
+  .donateurs-header-actions {
+    width: 100%;
+  }
+
+  .donateurs-primary-button,
+  .donateurs-secondary-button {
+    min-height: 42px;
+  }
+
+  .donateur-detail-title h1 {
+    font-size: 25px;
+  }
+}
+
+/* =========================================================
+   ONGLET FICHE DONATEUR — AGRANDISSEMENT
+   ========================================================= */
+
+.donateur-tabs {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+}
+
+.donateur-tabs button {
+  min-height: 42px;
+
+  padding: 0 16px;
+
+  border: none;
+  border-radius: 9px;
+
+  background: transparent;
+
+  color: #6682a5;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.donateur-tabs button:hover {
+  background: rgba(6, 59, 124, 0.06);
+  color: #063b7c;
+}
+
+.donateur-tabs button.active {
+  background: white;
+  color: #063b7c;
+
+  border: 1px solid #063b7c;
+
+  box-shadow:
+    0 3px 10px rgba(6, 59, 124, 0.08);
+}
+
+/* encore un peu plus gros sur grand écran */
+
+@media (min-width: 1200px) {
+  .donateur-tabs button {
+    min-height: 44px;
+    padding: 0 18px;
+
+    font-size: 13.5px;
+  }
+}
+
+/* =========================================================
+   DONATEURS — TABLEAU SUR UNE SEULE LARGEUR D'ÉCRAN
+   ========================================================= */
+
+.donateurs-table-wrapper {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.donateurs-table {
+  width: 100%;
+  min-width: 0 !important;
+
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+/* =========================================================
+   LARGEUR DES COLONNES
+   ========================================================= */
+
+/* Code */
+.donateurs-table th:nth-child(1),
+.donateurs-table td:nth-child(1) {
+  width: 7%;
+}
+
+/* Nom / raison sociale */
+.donateurs-table th:nth-child(2),
+.donateurs-table td:nth-child(2) {
+  width: 21%;
+}
+
+/* Type */
+.donateurs-table th:nth-child(3),
+.donateurs-table td:nth-child(3) {
+  width: 7%;
+}
+
+/* Ville */
+.donateurs-table th:nth-child(4),
+.donateurs-table td:nth-child(4) {
+  width: 10%;
+}
+
+/* Contact */
+.donateurs-table th:nth-child(5),
+.donateurs-table td:nth-child(5) {
+  width: 12%;
+}
+
+/* Téléphone */
+.donateurs-table th:nth-child(6),
+.donateurs-table td:nth-child(6) {
+  width: 10%;
+}
+
+/* Email */
+.donateurs-table th:nth-child(7),
+.donateurs-table td:nth-child(7) {
+  width: 17%;
+}
+
+/* JDI */
+.donateurs-table th:nth-child(8),
+.donateurs-table td:nth-child(8) {
+  width: 4%;
+  text-align: center;
+}
+
+/* JDP */
+.donateurs-table th:nth-child(9),
+.donateurs-table td:nth-child(9) {
+  width: 4%;
+  text-align: center;
+}
+
+/* RF */
+.donateurs-table th:nth-child(10),
+.donateurs-table td:nth-child(10) {
+  width: 4%;
+  text-align: center;
+}
+
+/* Actions */
+.donateurs-table th:nth-child(11),
+.donateurs-table td:nth-child(11) {
+  width: 4%;
+  text-align: center;
+}
+
+/* =========================================================
+   TAILLE / ESPACEMENT
+   ========================================================= */
+
+.donateurs-table th {
+  padding: 11px 8px;
+
+  font-size: 10px;
+  line-height: 1.2;
+
+  white-space: nowrap;
+}
+
+.donateurs-table td {
+  padding: 12px 8px;
+
+  font-size: 11.5px;
+  line-height: 1.3;
+
+  overflow: hidden;
+}
+
+/* =========================================================
+   COLONNES TEXTE LONG
+   ========================================================= */
+
+.donateurs-table td:nth-child(2),
+.donateurs-table td:nth-child(5),
+.donateurs-table td:nth-child(7) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Nom un peu plus visible */
+
+.donateurs-table td:nth-child(2) strong {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+/* Les autres restent sur une ligne */
+
+.donateurs-table td:nth-child(1),
+.donateurs-table td:nth-child(3),
+.donateurs-table td:nth-child(4),
+.donateurs-table td:nth-child(6),
+.donateurs-table td:nth-child(8),
+.donateurs-table td:nth-child(9),
+.donateurs-table td:nth-child(10),
+.donateurs-table td:nth-child(11) {
+  white-space: nowrap;
+}
+
+/* =========================================================
+   BADGES PLUS COMPACTS
+   ========================================================= */
+
+.donateur-type {
+  padding: 4px 7px;
+  font-size: 9px;
+}
+
+.donateur-boolean {
+  min-width: 36px;
+  padding: 4px 6px;
+  font-size: 9px;
+}
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.donateurs-actions {
+  justify-content: center;
+  gap: 2px;
+}
+
+.donateurs-actions button {
+  width: 28px;
+  height: 28px;
+}
+
+.donateurs-actions button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* =========================================================
+   PERSONNALISATION DES COLONNES
+   ========================================================= */
+
+.donateurs-results-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.donateurs-columns-wrapper {
+  position: relative;
+}
+
+.donateurs-columns-button {
+  width: 34px;
+  height: 34px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+
+  border: 1px solid #dce5ef;
+  border-radius: 8px;
+
+  background: white;
+  color: #31597f;
+
+  cursor: pointer;
+}
+
+.donateurs-columns-button:hover {
+  border-color: #ffa74f;
+  color: #ff8614;
+  background: #fffaf5;
+}
+
+.donateurs-columns-menu {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+
+  z-index: 3000;
+
+  width: 220px;
+  padding: 10px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+
+  background: white;
+
+  box-shadow:
+    0 12px 32px
+    rgba(18, 59, 122, 0.16);
+}
+
+.donateurs-columns-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  padding: 4px 4px 9px;
+
+  margin-bottom: 5px;
+
+  border-bottom:
+    1px solid #edf1f5;
+}
+
+.donateurs-columns-menu-header strong {
+  font-size: 11px;
+  color: #063b7c;
+}
+
+.donateurs-columns-menu-header button {
+  border: none;
+  background: transparent;
+
+  color: #ff8614;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.donateurs-column-toggle {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  min-height: 35px;
+
+  padding: 6px 7px;
+
+  border-radius: 7px;
+
+  cursor: pointer;
+}
+
+.donateurs-column-toggle:hover {
+  background: #f7f9fc;
+}
+
+.donateurs-column-toggle input {
+  width: 15px;
+  height: 15px;
+
+  accent-color: #ff8614;
+}
+
+.donateurs-column-toggle span {
+  color: #31597f;
+
+  font-size: 11px;
+  font-weight: 700;
+}

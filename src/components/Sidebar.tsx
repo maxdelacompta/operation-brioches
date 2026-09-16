@@ -130,6 +130,12 @@ function Sidebar() {
 
             <ChevronDown size={15} />
           </div>
+          <NavLink
+              to="/encaissements/fiches-caisse"
+              className={subLinkClass}
+          >
+            Fiches de caisse
+          </NavLink>
 
           <div className="sidebar-submenu">
             <NavLink
@@ -288,7 +294,7 @@ function Sidebar() {
             </NavLink>
 
             <NavLink
-              to="/bdd/Donateurs"
+              to="/bdd/donateurs"
               className={subLinkClass}
             >
               <Users size={15} />

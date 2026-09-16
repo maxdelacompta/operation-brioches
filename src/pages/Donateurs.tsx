@@ -8,32 +8,29 @@ import {
 
 import {
   Archive,
+  ArrowLeft,
   Building2,
-  CalendarDays,
   Check,
-  CheckCircle2,
   ChevronDown,
-  ChevronUp,
   Download,
-  Edit3,
-  Euro,
+  Eye,
   FileDown,
   FileSpreadsheet,
   Mail,
   MapPin,
   MoreVertical,
+  Pencil,
   Phone,
   Plus,
-  RefreshCw,
   Search,
+  Settings2,
   ShoppingCart,
-  Truck,
   User,
   X,
 } from 'lucide-react'
 
 import {
-  useSearchParams,
+  useNavigate,
 } from 'react-router-dom'
 
 import ExcelJS from 'exceljs'
@@ -54,23 +51,113 @@ import type {
   StatutCommande,
 } from '../types/ob'
 
-import './Commandes.css'
+import './Donateurs.css'
 
-type CommandeFormMode =
+/* =========================================================
+   TYPES
+   ========================================================= */
+
+type SortKey =
+  | 'code'
+  | 'nom'
+  | 'type'
+  | 'ville'
+  | 'contact'
+  | 'telephone'
+  | 'email'
+  | 'jdi'
+  | 'jdp'
+  | 'rf'
+
+type SortDirection =
+  | 'asc'
+  | 'desc'
+
+type DonateurFormMode =
   | 'create'
   | 'edit'
 
-function Commandes() {
+type DetailTab =
+  | 'general'
+  | 'contacts'
+  | 'commandes'
+  | 'dons'
+  | 'encaissements'
+  | 'documents'
+  | 'historique'
+
+type ColumnKey =
+  | 'type'
+  | 'ville'
+  | 'contact'
+  | 'telephone'
+  | 'email'
+  | 'jdi'
+  | 'jdp'
+  | 'rf'
+
+/* =========================================================
+   COLONNES PAR DÉFAUT
+   ========================================================= */
+
+const DEFAULT_COLUMNS: Record<
+  ColumnKey,
+  boolean
+> = {
+  type: true,
+  ville: true,
+  contact: true,
+  telephone: true,
+  email: true,
+  jdi: true,
+  jdp: true,
+  rf: true,
+}
+
+/* =========================================================
+   DONATEUR VIDE
+   ========================================================= */
+
+const EMPTY_DONATEUR: Donateur = {
+  id: 0,
+  code: '',
+  type: 'ENTREPRISE',
+  nom: '',
+  numeroVoie: '',
+  adresse: '',
+  cp: '',
+  ville: '',
+  informations: '',
+  contactNom: '',
+  contactPrenom: '',
+  email: '',
+  telephone: '',
+  conditionReglement: '',
+  modeReglement: '',
+  jdi: 'NON',
+  jdp: 'NON',
+  rf: 'NON',
+  remarque: '',
+  archive: false,
+}
+
+/* =========================================================
+   PAGE DONATEURS
+   ========================================================= */
+
+function Donateurs() {
+  const navigate =
+    useNavigate()
+
   const {
     donateurs,
+    setDonateurs,
     commandes,
-    setCommandes,
   } = useObData()
 
-  const [
-    searchParams,
-    setSearchParams,
-  ] = useSearchParams()
+  /* =======================================================
+     ETATS
+     ======================================================= */
 
   const [
     search,
@@ -78,56 +165,57 @@ function Commandes() {
   ] = useState('')
 
   const [
-    campagneFilter,
-    setCampagneFilter,
-  ] = useState('Toutes')
-
-  const [
-    statutFilter,
-    setStatutFilter,
+    typeFilter,
+    setTypeFilter,
   ] = useState('Tous')
 
   const [
-    collapsedDays,
-    setCollapsedDays,
-  ] = useState<
-    Record<string, boolean>
-  >({})
-
-  const [
-    selectedCommande,
-    setSelectedCommande,
+    selectedDonateurId,
+    setSelectedDonateurId,
   ] =
-    useState<Commande | null>(
-      commandes[0] ?? null,
-    )
-
-  const [
-    modalMode,
-    setModalMode,
-  ] =
-    useState<CommandeFormMode>(
-      'create',
-    )
-
-  const [
-    modalOpen,
-    setModalOpen,
-  ] = useState(false)
-
-  const [
-    editingCommande,
-    setEditingCommande,
-  ] =
-    useState<Commande | null>(
+    useState<number | null>(
       null,
     )
 
   const [
-    preselectedDonateurId,
-    setPreselectedDonateurId,
+    sortKey,
+    setSortKey,
   ] =
-    useState<number | null>(
+    useState<SortKey>(
+      'code',
+    )
+
+  const [
+    sortDirection,
+    setSortDirection,
+  ] =
+    useState<SortDirection>(
+      'desc',
+    )
+
+  const [
+    exportMenuOpen,
+    setExportMenuOpen,
+  ] = useState(false)
+
+  const [
+    formOpen,
+    setFormOpen,
+  ] = useState(false)
+
+  const [
+    formMode,
+    setFormMode,
+  ] =
+    useState<DonateurFormMode>(
+      'create',
+    )
+
+  const [
+    editingDonateur,
+    setEditingDonateur,
+  ] =
+    useState<Donateur | null>(
       null,
     )
 
@@ -140,352 +228,290 @@ function Commandes() {
     )
 
   const [
-    exportMenuOpen,
-    setExportMenuOpen,
+    columnsMenuOpen,
+    setColumnsMenuOpen,
   ] = useState(false)
 
-  /* =========================================================
-     OUVERTURE DEPUIS DONATEURS
-     ========================================================= */
+  /* =======================================================
+     COLONNES PERSONNALISÉES
+     ======================================================= */
+
+  const [
+    visibleColumns,
+    setVisibleColumns,
+  ] = useState<
+    Record<
+      ColumnKey,
+      boolean
+    >
+  >(() => {
+    const saved =
+      localStorage.getItem(
+        'ob-donateurs-columns',
+      )
+
+    if (!saved) {
+      return {
+        ...DEFAULT_COLUMNS,
+      }
+    }
+
+    try {
+      return {
+        ...DEFAULT_COLUMNS,
+        ...JSON.parse(
+          saved,
+        ),
+      }
+    } catch {
+      return {
+        ...DEFAULT_COLUMNS,
+      }
+    }
+  })
 
   useEffect(() => {
-    const donateurParam =
-      searchParams.get(
-        'donateur',
-      )
-
-    const commandeParam =
-      searchParams.get(
-        'commande',
-      )
-
-    if (
-      commandeParam
-    ) {
-      const commandeId =
-        Number(
-          commandeParam,
-        )
-
-      const found =
-        commandes.find(
-          (commande) =>
-            commande.id ===
-            commandeId,
-        )
-
-      if (found) {
-        setSelectedCommande(
-          found,
-        )
-      }
-    }
-
-    if (
-      donateurParam
-    ) {
-      const donateurId =
-        Number(
-          donateurParam,
-        )
-
-      const exists =
-        donateurs.some(
-          (donateur) =>
-            donateur.id ===
-            donateurId,
-        )
-
-      if (exists) {
-        setPreselectedDonateurId(
-          donateurId,
-        )
-
-        setModalMode(
-          'create',
-        )
-
-        setEditingCommande(
-          null,
-        )
-
-        setModalOpen(true)
-      }
-    }
+    localStorage.setItem(
+      'ob-donateurs-columns',
+      JSON.stringify(
+        visibleColumns,
+      ),
+    )
   }, [
-    commandes,
-    donateurs,
-    searchParams,
+    visibleColumns,
   ])
 
-  /* =========================================================
-     HELPERS LOCAUX
-     ========================================================= */
-
-  function getDonateur(
-    id: number,
+  function toggleColumn(
+    column: ColumnKey,
   ) {
-    return donateurs.find(
-      (donateur) =>
-        donateur.id === id,
+    setVisibleColumns(
+      (current) => ({
+        ...current,
+
+        [column]:
+          !current[column],
+      }),
     )
   }
 
-  /* =========================================================
-     FILTRES
-     ========================================================= */
+  function showAllColumns() {
+    setVisibleColumns({
+      ...DEFAULT_COLUMNS,
+    })
+  }
 
-  const filteredCommandes =
+  /* =======================================================
+     DONATEUR SÉLECTIONNÉ
+     ======================================================= */
+
+  const selectedDonateur =
+    useMemo(() => {
+      if (
+        selectedDonateurId ===
+        null
+      ) {
+        return null
+      }
+
+      return (
+        donateurs.find(
+          (donateur) =>
+            donateur.id ===
+            selectedDonateurId,
+        ) ?? null
+      )
+    }, [
+      donateurs,
+      selectedDonateurId,
+    ])
+
+  /* =======================================================
+     TYPES
+     ======================================================= */
+
+  const types =
+    useMemo(() => {
+      const values =
+        donateurs
+          .map(
+            (donateur) =>
+              donateur.type,
+          )
+          .filter(Boolean)
+
+      return [
+        'Tous',
+
+        ...Array.from(
+          new Set(values),
+        ).sort(
+          (a, b) =>
+            a.localeCompare(
+              b,
+              'fr',
+            ),
+        ),
+      ]
+    }, [
+      donateurs,
+    ])
+
+  /* =======================================================
+     FILTRE + TRI
+     ======================================================= */
+
+  const filteredDonateurs =
     useMemo(() => {
       const normalizedSearch =
         search
           .trim()
           .toLowerCase()
 
-      return commandes.filter(
-        (commande) => {
-          const donateur =
-            donateurs.find(
-              (item) =>
-                item.id ===
-                commande.donateurId,
+      const filtered =
+        donateurs.filter(
+          (donateur) => {
+            if (
+              donateur.archive
+            ) {
+              return false
+            }
+
+            const searchableText =
+              [
+                donateur.code,
+                donateur.nom,
+                donateur.type,
+                donateur.ville,
+                donateur.contactNom,
+                donateur.contactPrenom,
+                donateur.telephone,
+                donateur.email,
+              ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase()
+
+            const matchesSearch =
+              !normalizedSearch ||
+              searchableText.includes(
+                normalizedSearch,
+              )
+
+            const matchesType =
+              typeFilter ===
+                'Tous' ||
+              donateur.type ===
+                typeFilter
+
+            return (
+              matchesSearch &&
+              matchesType
+            )
+          },
+        )
+
+      return [
+        ...filtered,
+      ].sort(
+        (a, b) => {
+          const valueA =
+            getSortValue(
+              a,
+              sortKey,
             )
 
-          const searchable = [
-            commande.numero,
-            commande.campagne,
-            donateur?.nom,
-            donateur?.ville,
-            donateur?.code,
-            donateur?.contactNom,
-            donateur?.contactPrenom,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
-
-          const matchesSearch =
-            !normalizedSearch ||
-            searchable.includes(
-              normalizedSearch,
+          const valueB =
+            getSortValue(
+              b,
+              sortKey,
             )
 
-          const matchesCampagne =
-            campagneFilter ===
-              'Toutes' ||
-            commande.campagne ===
-              campagneFilter
+          const comparison =
+            valueA.localeCompare(
+              valueB,
+              'fr',
+              {
+                numeric: true,
+                sensitivity:
+                  'base',
+              },
+            )
 
-          const matchesStatut =
-            statutFilter ===
-              'Tous' ||
-            commande.statut ===
-              statutFilter
-
-          return (
-            matchesSearch &&
-            matchesCampagne &&
-            matchesStatut
-          )
+          return sortDirection ===
+            'asc'
+            ? comparison
+            : -comparison
         },
       )
     }, [
-      commandes,
       donateurs,
       search,
-      campagneFilter,
-      statutFilter,
+      typeFilter,
+      sortKey,
+      sortDirection,
     ])
 
-  /* =========================================================
-     GROUPES PAR DATE
-     ========================================================= */
+  /* =======================================================
+     TRI
+     ======================================================= */
 
-  const groupes =
-    useMemo(() => {
-      const map =
-        new Map<
-          string,
-          Commande[]
-        >()
-
-      filteredCommandes.forEach(
-        (commande) => {
-          if (
-            !map.has(
-              commande.dateCommande,
-            )
-          ) {
-            map.set(
-              commande.dateCommande,
-              [],
-            )
-          }
-
-          map
-            .get(
-              commande.dateCommande,
-            )
-            ?.push(
-              commande,
-            )
-        },
-      )
-
-      return Array.from(
-        map.entries(),
-      )
-        .sort(
-          (
-            [dateA],
-            [dateB],
-          ) =>
-            dateA.localeCompare(
-              dateB,
-            ),
-        )
-        .map(
-          ([
-            date,
-            commandesJour,
-          ]) => ({
-            date,
-            commandes:
-              commandesJour,
-          }),
-        )
-    }, [
-      filteredCommandes,
-    ])
-
-  const campagnes =
-    useMemo(() => {
-      return [
-        'Toutes',
-
-        ...Array.from(
-          new Set(
-            commandes.map(
-              (commande) =>
-                commande.campagne,
-            ),
-          ),
-        ),
-      ]
-    }, [commandes])
-
-  /* =========================================================
-     KPI
-     ========================================================= */
-
-  const totalCommandes =
-    filteredCommandes.length
-
-  const totalQuantite =
-    filteredCommandes.reduce(
-      (
-        total,
-        commande,
-      ) =>
-        total +
-        commande.quantite,
-      0,
-    )
-
-  const totalMontant =
-    filteredCommandes.reduce(
-      (
-        total,
-        commande,
-      ) =>
-        total +
-        commande.quantite *
-          commande.prixUnitaire,
-      0,
-    )
-
-  const totalALivrer =
-    filteredCommandes.filter(
-      (commande) =>
-        commande.statut ===
-        'A_LIVRER',
-    ).length
-
-  const totalConfirmees =
-    filteredCommandes.filter(
-      (commande) =>
-        commande.statut ===
-        'CONFIRMEE',
-    ).length
-
-  /* =========================================================
-     JOURNÉES
-     ========================================================= */
-
-  function toggleDay(
-    date: string,
+  function changeSort(
+    key: SortKey,
   ) {
-    setCollapsedDays(
-      (current) => ({
-        ...current,
-
-        [date]:
-          !current[date],
-      }),
-    )
-  }
-
-  function expandAllDays() {
-    setCollapsedDays({})
-  }
-
-  function collapseAllDays() {
-    const next =
-      groupes.reduce<
-        Record<
-          string,
-          boolean
-        >
-      >(
-        (
-          result,
-          groupe,
-        ) => {
-          result[
-            groupe.date
-          ] = true
-
-          return result
-        },
-        {},
+    if (
+      sortKey === key
+    ) {
+      setSortDirection(
+        (current) =>
+          current ===
+          'asc'
+            ? 'desc'
+            : 'asc',
       )
 
-    setCollapsedDays(
-      next,
+      return
+    }
+
+    setSortKey(
+      key,
+    )
+
+    setSortDirection(
+      'asc',
     )
   }
 
-  /* =========================================================
-     MODALE
-     ========================================================= */
+  /* =======================================================
+     FICHE
+     ======================================================= */
 
-  function openCreateCommande() {
-    setModalMode(
-      'create',
+  function openDonateur(
+    donateur: Donateur,
+  ) {
+    setSelectedDonateurId(
+      donateur.id,
     )
-
-    setEditingCommande(
-      null,
-    )
-
-    setPreselectedDonateurId(
-      null,
-    )
-
-    setModalOpen(true)
 
     setActionMenuId(
       null,
+    )
+  }
+
+  /* =======================================================
+     CRÉATION DONATEUR
+     ======================================================= */
+
+  function openCreateDonateur() {
+    setFormMode(
+      'create',
+    )
+
+    setEditingDonateur(
+      null,
+    )
+
+    setFormOpen(
+      true,
     )
 
     setExportMenuOpen(
@@ -493,136 +519,128 @@ function Commandes() {
     )
   }
 
-  function openEditCommande(
-    commande: Commande,
+  /* =======================================================
+     MODIFICATION
+     ======================================================= */
+
+  function openEditDonateur(
+    donateur: Donateur,
   ) {
-    setModalMode(
+    setFormMode(
       'edit',
     )
 
-    setEditingCommande(
-      commande,
+    setEditingDonateur(
+      donateur,
     )
 
-    setPreselectedDonateurId(
-      commande.donateurId,
+    setFormOpen(
+      true,
     )
-
-    setModalOpen(true)
 
     setActionMenuId(
       null,
     )
   }
 
-  function closeModal() {
-    setModalOpen(false)
+  /* =======================================================
+     ENREGISTREMENT
+     ======================================================= */
 
-    setEditingCommande(
-      null,
-    )
-
-    setPreselectedDonateurId(
-      null,
-    )
-
-    if (
-      searchParams.has(
-        'donateur',
-      )
-    ) {
-      searchParams.delete(
-        'donateur',
-      )
-
-      setSearchParams(
-        searchParams,
-        {
-          replace: true,
-        },
-      )
-    }
-  }
-
-  function saveCommande(
-    commande: Commande,
+  function saveDonateur(
+    donateur: Donateur,
   ) {
     if (
-      modalMode ===
+      formMode ===
       'edit'
     ) {
-      setCommandes(
+      setDonateurs(
         (current) =>
           current.map(
             (item) =>
               item.id ===
-              commande.id
-                ? commande
+              donateur.id
+                ? donateur
                 : item,
           ),
       )
     } else {
-      setCommandes(
+      setDonateurs(
         (current) => [
           ...current,
-          commande,
+          donateur,
         ],
       )
     }
 
-    setSelectedCommande(
-      commande,
+    setFormOpen(
+      false,
     )
 
-    closeModal()
-  }
-
-  function cancelCommande(
-    commande: Commande,
-  ) {
-    const updated: Commande = {
-      ...commande,
-      statut: 'ANNULEE',
-    }
-
-    setCommandes(
-      (current) =>
-        current.map(
-          (item) =>
-            item.id ===
-            commande.id
-              ? updated
-              : item,
-        ),
-    )
-
-    if (
-      selectedCommande?.id ===
-      commande.id
-    ) {
-      setSelectedCommande(
-        updated,
-      )
-    }
-
-    setActionMenuId(
+    setEditingDonateur(
       null,
     )
   }
 
-  function resetFilters() {
-    setSearch('')
-    setCampagneFilter(
-      'Toutes',
+  /* =======================================================
+     ARCHIVAGE
+     ======================================================= */
+
+  function archiveDonateur(
+    donateur: Donateur,
+  ) {
+    setDonateurs(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id ===
+            donateur.id
+              ? {
+                  ...item,
+                  archive:
+                    true,
+                }
+              : item,
+        ),
     )
-    setStatutFilter(
-      'Tous',
+
+    setActionMenuId(
+      null,
+    )
+
+    if (
+      selectedDonateurId ===
+      donateur.id
+    ) {
+      setSelectedDonateurId(
+        null,
+      )
+    }
+  }
+
+  /* =======================================================
+     COMMANDES
+     ======================================================= */
+
+  function createCommande(
+    donateur: Donateur,
+  ) {
+    navigate(
+      `/commandes?donateur=${donateur.id}`,
     )
   }
 
-  /* =========================================================
+  function openCommande(
+    commandeId: number,
+  ) {
+    navigate(
+      `/commandes?commande=${commandeId}`,
+    )
+  }
+
+  /* =======================================================
      EXPORT EXCEL
-     ========================================================= */
+     ======================================================= */
 
   async function exportExcel() {
     const workbook =
@@ -630,157 +648,154 @@ function Commandes() {
 
     const worksheet =
       workbook.addWorksheet(
-        'Commandes',
+        'Donateurs',
       )
 
-    worksheet.columns = [
+    const columns: {
+      header: string
+      key: string
+      width: number
+    }[] = [
       {
-        header:
-          'N° commande',
-        key: 'numero',
-        width: 20,
-      },
-      {
-        header: 'Date',
-        key: 'date',
-        width: 14,
-      },
-      {
-        header:
-          'Campagne',
-        key: 'campagne',
-        width: 14,
-      },
-      {
-        header:
-          'Code donateur',
+        header: 'Code',
         key: 'code',
         width: 18,
       },
+
       {
         header:
-          'Donateur',
-        key: 'donateur',
-        width: 35,
-      },
-      {
-        header: 'Ville',
-        key: 'ville',
-        width: 22,
-      },
-      {
-        header:
-          'Quantité',
-        key: 'quantite',
-        width: 12,
-      },
-      {
-        header:
-          'Prix unitaire',
-        key: 'prix',
-        width: 15,
-      },
-      {
-        header:
-          'Montant',
-        key: 'montant',
-        width: 16,
-      },
-      {
-        header:
-          'Statut',
-        key: 'statut',
-        width: 16,
-      },
-      {
-        header:
-          'Règlement',
-        key: 'reglement',
-        width: 18,
-      },
-      {
-        header: 'JDI',
-        key: 'jdi',
-        width: 9,
-      },
-      {
-        header: 'JDP',
-        key: 'jdp',
-        width: 9,
-      },
-      {
-        header: 'RF',
-        key: 'rf',
-        width: 9,
+          'Nom / Raison sociale',
+        key: 'nom',
+        width: 38,
       },
     ]
 
-    filteredCommandes.forEach(
-      (commande) => {
-        const donateur =
-          getDonateur(
-            commande.donateurId,
-          )
+    if (
+      visibleColumns.type
+    ) {
+      columns.push({
+        header: 'Type',
+        key: 'type',
+        width: 18,
+      })
+    }
 
+    if (
+      visibleColumns.ville
+    ) {
+      columns.push({
+        header: 'Ville',
+        key: 'ville',
+        width: 24,
+      })
+    }
+
+    if (
+      visibleColumns.contact
+    ) {
+      columns.push({
+        header: 'Contact',
+        key: 'contact',
+        width: 28,
+      })
+    }
+
+    if (
+      visibleColumns.telephone
+    ) {
+      columns.push({
+        header:
+          'Téléphone',
+        key: 'telephone',
+        width: 20,
+      })
+    }
+
+    if (
+      visibleColumns.email
+    ) {
+      columns.push({
+        header: 'Email',
+        key: 'email',
+        width: 35,
+      })
+    }
+
+    if (
+      visibleColumns.jdi
+    ) {
+      columns.push({
+        header: 'JDI',
+        key: 'jdi',
+        width: 10,
+      })
+    }
+
+    if (
+      visibleColumns.jdp
+    ) {
+      columns.push({
+        header: 'JDP',
+        key: 'jdp',
+        width: 10,
+      })
+    }
+
+    if (
+      visibleColumns.rf
+    ) {
+      columns.push({
+        header: 'RF',
+        key: 'rf',
+        width: 10,
+      })
+    }
+
+    worksheet.columns =
+      columns
+
+    filteredDonateurs.forEach(
+      (donateur) => {
         worksheet.addRow({
-          numero:
-            commande.numero,
-
-          date:
-            formatDateShort(
-              commande.dateCommande,
+          code:
+            formatDonateurCode(
+              donateur,
             ),
 
-          campagne:
-            commande.campagne,
+          nom:
+            donateur.nom,
 
-          code:
-            donateur
-              ? `DON-${donateur.code.padStart(
-                  6,
-                  '0',
-                )}`
-              : '',
-
-          donateur:
-            donateur?.nom ||
-            '',
+          type:
+            donateur.type,
 
           ville:
-            donateur?.ville ||
+            donateur.ville ||
             '',
 
-          quantite:
-            commande.quantite,
-
-          prix:
-            commande.prixUnitaire,
-
-          montant:
-            commande.quantite *
-            commande.prixUnitaire,
-
-          statut:
-            getStatutLabel(
-              commande.statut,
+          contact:
+            formatContact(
+              donateur,
             ),
 
-          reglement:
-            formatPaymentMethod(
-              commande.modeReglement,
-            ),
+          telephone:
+            donateur.telephone ||
+            '',
+
+          email:
+            donateur.email ||
+            '',
 
           jdi:
-            commande.jdi ||
-            '',
+            donateur.jdi ||
+            'NON',
 
           jdp:
-            commande.jdp ||
-            '',
+            donateur.jdp ||
+            'NON',
 
           rf:
-            commande.rf ||
-            '',
+            donateur.rf ||
+            'NON',
         })
       },
     )
@@ -790,6 +805,7 @@ function Commandes() {
 
     header.font = {
       bold: true,
+
       color: {
         argb:
           'FFFFFFFF',
@@ -798,7 +814,9 @@ function Commandes() {
 
     header.fill = {
       type: 'pattern',
+
       pattern: 'solid',
+
       fgColor: {
         argb:
           'FF063B7C',
@@ -808,6 +826,7 @@ function Commandes() {
     header.alignment = {
       horizontal:
         'center',
+
       vertical:
         'middle',
     }
@@ -816,20 +835,10 @@ function Commandes() {
       {
         state:
           'frozen',
+
         ySplit: 1,
       },
     ]
-
-    worksheet.autoFilter = {
-      from: {
-        row: 1,
-        column: 1,
-      },
-      to: {
-        row: 1,
-        column: 14,
-      },
-    }
 
     const buffer =
       await workbook.xlsx.writeBuffer()
@@ -849,7 +858,7 @@ function Commandes() {
 
     downloadBlob(
       blob,
-      `Commandes_${getFileDate()}.xlsx`,
+      `Donateurs_${getFileDate()}.xlsx`,
     )
 
     setExportMenuOpen(
@@ -857,20 +866,24 @@ function Commandes() {
     )
   }
 
-  /* =========================================================
+  /* =======================================================
      EXPORT PDF
-     ========================================================= */
+     ======================================================= */
 
   function exportPdf() {
     const doc =
       new jsPDF({
         orientation:
           'landscape',
+
         unit: 'mm',
+
         format: 'a4',
       })
 
-    doc.setFontSize(15)
+    doc.setFontSize(
+      15,
+    )
 
     doc.setTextColor(
       6,
@@ -879,55 +892,166 @@ function Commandes() {
     )
 
     doc.text(
-      'Liste des commandes',
-      7,
+      'Liste des donateurs',
+      8,
       10,
     )
 
+    const headers =
+      [
+        'Code',
+        'Nom',
+      ]
+
+    if (
+      visibleColumns.type
+    ) {
+      headers.push(
+        'Type',
+      )
+    }
+
+    if (
+      visibleColumns.ville
+    ) {
+      headers.push(
+        'Ville',
+      )
+    }
+
+    if (
+      visibleColumns.contact
+    ) {
+      headers.push(
+        'Contact',
+      )
+    }
+
+    if (
+      visibleColumns.telephone
+    ) {
+      headers.push(
+        'Téléphone',
+      )
+    }
+
+    if (
+      visibleColumns.email
+    ) {
+      headers.push(
+        'Email',
+      )
+    }
+
+    if (
+      visibleColumns.jdi
+    ) {
+      headers.push(
+        'JDI',
+      )
+    }
+
+    if (
+      visibleColumns.jdp
+    ) {
+      headers.push(
+        'JDP',
+      )
+    }
+
+    if (
+      visibleColumns.rf
+    ) {
+      headers.push(
+        'RF',
+      )
+    }
+
     const rows =
-      filteredCommandes.map(
-        (commande) => {
-          const donateur =
-            getDonateur(
-              commande.donateurId,
-            )
-
-          return [
-            commande.numero,
-
-            formatDateShort(
-              commande.dateCommande,
+      filteredDonateurs.map(
+        (donateur) => {
+          const row = [
+            formatDonateurCode(
+              donateur,
             ),
 
-            donateur?.nom ||
-              '',
-
-            donateur?.ville ||
-              '',
-
-            commande.campagne,
-
-            String(
-              commande.quantite,
-            ),
-
-            formatMoney(
-              commande.prixUnitaire,
-            ),
-
-            formatMoney(
-              commande.quantite *
-                commande.prixUnitaire,
-            ),
-
-            getStatutLabel(
-              commande.statut,
-            ),
-
-            formatPaymentMethod(
-              commande.modeReglement,
-            ),
+            donateur.nom,
           ]
+
+          if (
+            visibleColumns.type
+          ) {
+            row.push(
+              donateur.type ||
+                '',
+            )
+          }
+
+          if (
+            visibleColumns.ville
+          ) {
+            row.push(
+              donateur.ville ||
+                '',
+            )
+          }
+
+          if (
+            visibleColumns.contact
+          ) {
+            row.push(
+              formatContact(
+                donateur,
+              ),
+            )
+          }
+
+          if (
+            visibleColumns.telephone
+          ) {
+            row.push(
+              donateur.telephone ||
+                '',
+            )
+          }
+
+          if (
+            visibleColumns.email
+          ) {
+            row.push(
+              donateur.email ||
+                '',
+            )
+          }
+
+          if (
+            visibleColumns.jdi
+          ) {
+            row.push(
+              donateur.jdi ||
+                'NON',
+            )
+          }
+
+          if (
+            visibleColumns.jdp
+          ) {
+            row.push(
+              donateur.jdp ||
+                'NON',
+            )
+          }
+
+          if (
+            visibleColumns.rf
+          ) {
+            row.push(
+              donateur.rf ||
+                'NON',
+            )
+          }
+
+          return row
         },
       )
 
@@ -936,20 +1060,12 @@ function Commandes() {
       {
         startY: 15,
 
-        head: [[
-          'N° commande',
-          'Date',
-          'Donateur',
-          'Ville',
-          'Campagne',
-          'Qté',
-          'Prix unit.',
-          'Montant',
-          'Statut',
-          'Règlement',
-        ]],
+        head: [
+          headers,
+        ],
 
-        body: rows,
+        body:
+          rows,
 
         styles: {
           fontSize: 7,
@@ -966,7 +1082,7 @@ function Commandes() {
     )
 
     doc.save(
-      `Commandes_${getFileDate()}.pdf`,
+      `Donateurs_${getFileDate()}.pdf`,
     )
 
     setExportMenuOpen(
@@ -974,34 +1090,189 @@ function Commandes() {
     )
   }
 
-  return (
-    <div className="commandes-page">
+  /* =======================================================
+     FICHE DONATEUR
+     ======================================================= */
 
-      <header className="commandes-header">
+  if (
+    selectedDonateur
+  ) {
+    return (
+      <>
+        <DonateurDetail
+          donateur={
+            selectedDonateur
+          }
+          commandes={
+            commandes.filter(
+              (commande) =>
+                commande.donateurId ===
+                selectedDonateur.id,
+            )
+          }
+          onBack={() =>
+            setSelectedDonateurId(
+              null,
+            )
+          }
+          onEdit={() =>
+            openEditDonateur(
+              selectedDonateur,
+            )
+          }
+          onCreateCommande={() =>
+            createCommande(
+              selectedDonateur,
+            )
+          }
+          onOpenCommande={
+            openCommande
+          }
+        />
+
+        {formOpen && (
+          <DonateurModal
+            mode={
+              formMode
+            }
+            donateur={
+              editingDonateur
+            }
+            donateurs={
+              donateurs
+            }
+            onClose={() => {
+              setFormOpen(
+                false,
+              )
+
+              setEditingDonateur(
+                null,
+              )
+            }}
+            onSave={
+              saveDonateur
+            }
+          />
+        )}
+      </>
+    )
+  }
+
+  /* =======================================================
+     LISTE PRINCIPALE
+     ======================================================= */
+
+  return (
+    <div className="donateurs-page">
+
+      {/* =================================================
+          HEADER
+      ================================================= */}
+
+      <header className="donateurs-header">
 
         <div>
 
-          <span className="commandes-eyebrow">
-            Opération Brioches
+          <span className="donateurs-eyebrow">
+            Base de données
           </span>
 
           <h1>
-            Commandes
+            Donateurs
           </h1>
 
           <p>
-            Suivez et organisez vos commandes jour par jour.
+            Entreprises, organismes, associations, collectivités et partenaires liés à l'Opération Brioches.
           </p>
 
         </div>
 
-        <div className="commandes-header-actions">
+        <button
+          type="button"
+          className="donateurs-primary-button"
+          onClick={
+            openCreateDonateur
+          }
+        >
+          <Plus
+            size={18}
+          />
 
-          <div className="commandes-export">
+          Nouveau donateur
+        </button>
+
+      </header>
+
+      {/* =================================================
+          LISTE
+      ================================================= */}
+
+      <section className="donateurs-card">
+
+        {/* ===============================================
+            TOOLBAR
+        =============================================== */}
+
+        <div className="donateurs-toolbar">
+
+          <div className="donateurs-search">
+
+            <Search
+              size={19}
+            />
+
+            <input
+              type="text"
+              placeholder="Rechercher un donateur, une ville, un contact..."
+              value={
+                search
+              }
+              onChange={(
+                event,
+              ) =>
+                setSearch(
+                  event.target.value,
+                )
+              }
+            />
+
+          </div>
+
+          <select
+            className="donateurs-select"
+            value={
+              typeFilter
+            }
+            onChange={(
+              event,
+            ) =>
+              setTypeFilter(
+                event.target.value,
+              )
+            }
+          >
+            {types.map(
+              (type) => (
+                <option
+                  key={
+                    type
+                  }
+                  value={
+                    type
+                  }
+                >
+                  {type}
+                </option>
+              ),
+            )}
+          </select>
+
+          <div className="donateurs-export">
 
             <button
               type="button"
-              className="commandes-secondary-button commandes-export-button"
+              className="donateurs-secondary-button donateurs-export-button"
               onClick={() =>
                 setExportMenuOpen(
                   (current) =>
@@ -1009,7 +1280,9 @@ function Commandes() {
                 )
               }
             >
-              <Download size={18} />
+              <Download
+                size={17}
+              />
 
               Exporter
 
@@ -1019,7 +1292,7 @@ function Commandes() {
             </button>
 
             {exportMenuOpen && (
-              <div className="commandes-export-menu">
+              <div className="donateurs-export-menu">
 
                 <button
                   type="button"
@@ -1028,18 +1301,21 @@ function Commandes() {
                   }
                 >
                   <FileSpreadsheet
-                    size={19}
+                    size={18}
                   />
 
                   <div>
+
                     <strong>
                       Excel
                     </strong>
 
                     <span>
-                      Exporter la vue actuelle
+                      Vue actuelle
                     </span>
+
                   </div>
+
                 </button>
 
                 <button
@@ -1049,18 +1325,21 @@ function Commandes() {
                   }
                 >
                   <FileDown
-                    size={19}
+                    size={18}
                   />
 
                   <div>
+
                     <strong>
                       PDF
                     </strong>
 
                     <span>
-                      Exporter la vue actuelle
+                      Vue actuelle
                     </span>
+
                   </div>
+
                 </button>
 
               </div>
@@ -1068,592 +1347,613 @@ function Commandes() {
 
           </div>
 
-          <button
-            type="button"
-            className="commandes-primary-button"
-            onClick={
-              openCreateCommande
-            }
-          >
-            <Plus size={20} />
-            Nouvelle commande
-          </button>
-
         </div>
 
-      </header>
+        {/* ===============================================
+            RESULTATS + PARAMÈTRES COLONNES
+        =============================================== */}
 
-      <section className="commandes-filter-card">
+        <div className="donateurs-results">
 
-        <div className="commandes-search">
+          <strong>
+            {
+              filteredDonateurs.length
+            } donateur
+            {filteredDonateurs.length >
+            1
+              ? 's'
+              : ''}
+          </strong>
 
-          <Search size={20} />
+          <div className="donateurs-results-right">
 
-          <input
-            value={search}
-            placeholder="Rechercher un donateur, une commune, une commande..."
-            onChange={(
-              event,
-            ) =>
-              setSearch(
-                event.target.value,
-              )
-            }
-          />
+            <span>
+              1 clic sur un libellé : trier • double-clic sur une ligne : ouvrir
+            </span>
 
-        </div>
+            <div className="donateurs-columns-wrapper">
 
-        <label className="commandes-filter-field">
+              <button
+                type="button"
+                className="donateurs-columns-button"
+                title="Personnaliser les colonnes"
+                onClick={() =>
+                  setColumnsMenuOpen(
+                    (current) =>
+                      !current,
+                  )
+                }
+              >
+                <Settings2
+                  size={17}
+                />
+              </button>
 
-          <span>
-            Campagne
-          </span>
+              {columnsMenuOpen && (
+                <div className="donateurs-columns-menu">
 
-          <select
-            value={
-              campagneFilter
-            }
-            onChange={(
-              event,
-            ) =>
-              setCampagneFilter(
-                event.target.value,
-              )
-            }
-          >
-            {campagnes.map(
-              (campagne) => (
-                <option
-                  key={
-                    campagne
-                  }
-                >
-                  {
-                    campagne
-                  }
-                </option>
-              ),
-            )}
-          </select>
+                  <div className="donateurs-columns-menu-header">
 
-        </label>
+                    <strong>
+                      Colonnes affichées
+                    </strong>
 
-        <label className="commandes-filter-field">
+                    <button
+                      type="button"
+                      onClick={
+                        showAllColumns
+                      }
+                    >
+                      Tout afficher
+                    </button>
 
-          <span>
-            Statut
-          </span>
+                  </div>
 
-          <select
-            value={
-              statutFilter
-            }
-            onChange={(
-              event,
-            ) =>
-              setStatutFilter(
-                event.target.value,
-              )
-            }
-          >
-            <option value="Tous">
-              Tous
-            </option>
+                  <ColumnToggle
+                    label="Type"
+                    checked={
+                      visibleColumns.type
+                    }
+                    onChange={() =>
+                      toggleColumn(
+                        'type',
+                      )
+                    }
+                  />
 
-            <option value="BROUILLON">
-              Brouillon
-            </option>
+                  <ColumnToggle
+                    label="Ville"
+                    checked={
+                      visibleColumns.ville
+                    }
+                    onChange={() =>
+                      toggleColumn(
+                        'ville',
+                      )
+                    }
+                  />
 
-            <option value="CONFIRMEE">
-              Confirmée
-            </option>
+                  <ColumnToggle
+                    label="Contact"
+                    checked={
+                      visibleColumns.contact
+                    }
+                    onChange={() =>
+                      toggleColumn(
+                        'contact',
+                      )
+                    }
+                  />
 
-            <option value="A_LIVRER">
-              À livrer
-            </option>
+                  <ColumnToggle
+                    label="Téléphone"
+                    checked={
+                      visibleColumns.telephone
+                    }
+                    onChange={() =>
+                      toggleColumn(
+                        'telephone',
+                      )
+                    }
+                  />
 
-            <option value="LIVREE">
-              Livrée
-            </option>
+                  <ColumnToggle
+                    label="Email"
+                    checked={
+                      visibleColumns.email
+                    }
+                    onChange={() =>
+                      toggleColumn(
+                        'email',
+                      )
+                    }
+                  />
 
-            <option value="ANNULEE">
-              Annulée
-            </option>
-          </select>
+                  <ColumnToggle
+                    label="JDI"
+                    checked={
+                      visibleColumns.jdi
+                    }
+                    onChange={() =>
+                      toggleColumn(
+                        'jdi',
+                      )
+                    }
+                  />
 
-        </label>
+                  <ColumnToggle
+                    label="JDP"
+                    checked={
+                      visibleColumns.jdp
+                    }
+                    onChange={() =>
+                      toggleColumn(
+                        'jdp',
+                      )
+                    }
+                  />
 
-        <button
-          type="button"
-          className="commandes-reset-button"
-          onClick={
-            resetFilters
-          }
-        >
-          <RefreshCw
-            size={18}
-          />
+                  <ColumnToggle
+                    label="RF"
+                    checked={
+                      visibleColumns.rf
+                    }
+                    onChange={() =>
+                      toggleColumn(
+                        'rf',
+                      )
+                    }
+                  />
 
-          Réinitialiser
-        </button>
+                </div>
+              )}
 
-      </section>
-
-      <section className="commandes-kpi-grid">
-
-        <CommandeKpi
-          icon={
-            <CalendarDays />
-          }
-          value={String(
-            totalCommandes,
-          )}
-          label="commandes"
-        />
-
-        <CommandeKpi
-          icon={
-            <ShoppingCart />
-          }
-          value={formatNumber(
-            totalQuantite,
-          )}
-          label="unités commandées"
-        />
-
-        <CommandeKpi
-          icon={<Euro />}
-          value={formatMoney(
-            totalMontant,
-          )}
-          label="montant total"
-        />
-
-        <CommandeKpi
-          icon={<Truck />}
-          value={String(
-            totalALivrer,
-          )}
-          label="commandes à livrer"
-        />
-
-        <CommandeKpi
-          icon={
-            <CheckCircle2 />
-          }
-          value={String(
-            totalConfirmees,
-          )}
-          label="commandes confirmées"
-        />
-
-      </section>
-
-      {groupes.length >
-        0 && (
-        <div className="commandes-days-toolbar">
-
-          <span>
-            Affichage des journées
-          </span>
-
-          <div>
-
-            <button
-              type="button"
-              onClick={
-                expandAllDays
-              }
-            >
-              <ChevronDown
-                size={17}
-              />
-              Tout déployer
-            </button>
-
-            <button
-              type="button"
-              onClick={
-                collapseAllDays
-              }
-            >
-              <ChevronUp
-                size={17}
-              />
-              Tout replier
-            </button>
+            </div>
 
           </div>
 
         </div>
-      )}
 
-      <section className="commandes-days">
+        {/* ===============================================
+            TABLEAU
+        =============================================== */}
 
-        {groupes.map(
-          ({
-            date,
-            commandes:
-              commandesJour,
-          }) => {
-            const collapsed =
-              collapsedDays[
-                date
-              ] ?? false
+        <div className="donateurs-table-wrapper">
 
-            const quantity =
-              commandesJour.reduce(
-                (
-                  total,
-                  commande,
-                ) =>
-                  total +
-                  commande.quantite,
-                0,
-              )
+          <table className="donateurs-table">
 
-            const amount =
-              commandesJour.reduce(
-                (
-                  total,
-                  commande,
-                ) =>
-                  total +
-                  commande.quantite *
-                    commande.prixUnitaire,
-                0,
-              )
+            <thead>
 
-            return (
-              <article
-                key={date}
-                className="commande-day"
-              >
+              <tr>
 
-                <button
-                  type="button"
-                  className="commande-day-header"
+                <SortableHeader
+                  label="Code"
+                  active={
+                    sortKey ===
+                    'code'
+                  }
+                  direction={
+                    sortDirection
+                  }
                   onClick={() =>
-                    toggleDay(
-                      date,
+                    changeSort(
+                      'code',
                     )
                   }
-                >
+                />
 
-                  <div className="commande-day-title">
+                <SortableHeader
+                  label="Nom / Raison sociale"
+                  active={
+                    sortKey ===
+                    'nom'
+                  }
+                  direction={
+                    sortDirection
+                  }
+                  onClick={() =>
+                    changeSort(
+                      'nom',
+                    )
+                  }
+                />
 
-                    <div className="commande-day-calendar">
-                      <CalendarDays
-                        size={20}
-                      />
-                    </div>
+                {visibleColumns.type && (
+                  <SortableHeader
+                    label="Type"
+                    active={
+                      sortKey ===
+                      'type'
+                    }
+                    direction={
+                      sortDirection
+                    }
+                    onClick={() =>
+                      changeSort(
+                        'type',
+                      )
+                    }
+                  />
+                )}
 
-                    <strong>
-                      {formatDateLong(
-                        date,
+                {visibleColumns.ville && (
+                  <SortableHeader
+                    label="Ville"
+                    active={
+                      sortKey ===
+                      'ville'
+                    }
+                    direction={
+                      sortDirection
+                    }
+                    onClick={() =>
+                      changeSort(
+                        'ville',
+                      )
+                    }
+                  />
+                )}
+
+                {visibleColumns.contact && (
+                  <SortableHeader
+                    label="Contact"
+                    active={
+                      sortKey ===
+                      'contact'
+                    }
+                    direction={
+                      sortDirection
+                    }
+                    onClick={() =>
+                      changeSort(
+                        'contact',
+                      )
+                    }
+                  />
+                )}
+
+                {visibleColumns.telephone && (
+                  <SortableHeader
+                    label="Téléphone"
+                    active={
+                      sortKey ===
+                      'telephone'
+                    }
+                    direction={
+                      sortDirection
+                    }
+                    onClick={() =>
+                      changeSort(
+                        'telephone',
+                      )
+                    }
+                  />
+                )}
+
+                {visibleColumns.email && (
+                  <SortableHeader
+                    label="Email"
+                    active={
+                      sortKey ===
+                      'email'
+                    }
+                    direction={
+                      sortDirection
+                    }
+                    onClick={() =>
+                      changeSort(
+                        'email',
+                      )
+                    }
+                  />
+                )}
+
+                {visibleColumns.jdi && (
+                  <SortableHeader
+                    label="JDI"
+                    active={
+                      sortKey ===
+                      'jdi'
+                    }
+                    direction={
+                      sortDirection
+                    }
+                    onClick={() =>
+                      changeSort(
+                        'jdi',
+                      )
+                    }
+                  />
+                )}
+
+                {visibleColumns.jdp && (
+                  <SortableHeader
+                    label="JDP"
+                    active={
+                      sortKey ===
+                      'jdp'
+                    }
+                    direction={
+                      sortDirection
+                    }
+                    onClick={() =>
+                      changeSort(
+                        'jdp',
+                      )
+                    }
+                  />
+                )}
+
+                {visibleColumns.rf && (
+                  <SortableHeader
+                    label="RF"
+                    active={
+                      sortKey ===
+                      'rf'
+                    }
+                    direction={
+                      sortDirection
+                    }
+                    onClick={() =>
+                      changeSort(
+                        'rf',
+                      )
+                    }
+                  />
+                )}
+
+                <th>
+                  Actions
+                </th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {filteredDonateurs.map(
+                (donateur) => (
+                  <tr
+                    key={
+                      donateur.id
+                    }
+                    onDoubleClick={() =>
+                      openDonateur(
+                        donateur,
+                      )
+                    }
+                  >
+
+                    <td className="donateur-code">
+                      {formatDonateurCode(
+                        donateur,
                       )}
-                    </strong>
+                    </td>
 
-                  </div>
+                    <td>
+                      <strong>
+                        {
+                          donateur.nom
+                        }
+                      </strong>
+                    </td>
 
-                  <div className="commande-day-summary">
+                    {visibleColumns.type && (
+                      <td>
 
-                    <span>
-                      {
-                        commandesJour.length
-                      } commande
-                      {commandesJour.length >
-                      1
-                        ? 's'
-                        : ''}
-                    </span>
+                        {donateur.type ? (
+                          <span className="donateur-type">
+                            {
+                              donateur.type
+                            }
+                          </span>
+                        ) : (
+                          <span className="donateur-empty">
+                            Non renseigné
+                          </span>
+                        )}
 
-                    <i />
-
-                    <span>
-                      {quantity} unités
-                    </span>
-
-                    <i />
-
-                    <span>
-                      {formatMoney(
-                        amount,
-                      )}
-                    </span>
-
-                    {collapsed ? (
-                      <ChevronDown
-                        size={20}
-                      />
-                    ) : (
-                      <ChevronUp
-                        size={20}
-                      />
+                      </td>
                     )}
 
-                  </div>
+                    {visibleColumns.ville && (
+                      <td>
+                        {
+                          donateur.ville ||
+                          '-'
+                        }
+                      </td>
+                    )}
 
-                </button>
+                    {visibleColumns.contact && (
+                      <td>
+                        {formatContact(
+                          donateur,
+                        ) || '-'}
+                      </td>
+                    )}
 
-                {!collapsed && (
-                  <div className="commande-day-table-wrapper">
+                    {visibleColumns.telephone && (
+                      <td>
+                        {
+                          donateur.telephone ||
+                          '-'
+                        }
+                      </td>
+                    )}
 
-                    <table className="commande-day-table">
+                    {visibleColumns.email && (
+                      <td>
+                        {
+                          donateur.email ||
+                          '-'
+                        }
+                      </td>
+                    )}
 
-                      <thead>
-                        <tr>
-                          <th>
-                            N° commande
-                          </th>
-                          <th>
-                            Donateur
-                          </th>
-                          <th>
-                            Commune
-                          </th>
-                          <th>
-                            Quantité
-                          </th>
-                          <th>
-                            Prix unitaire
-                          </th>
-                          <th>
-                            Montant
-                          </th>
-                          <th>
-                            Statut
-                          </th>
-                          <th>
-                            Règlement
-                          </th>
-                          <th>
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
+                    {visibleColumns.jdi && (
+                      <td>
+                        <BooleanBadge
+                          value={
+                            donateur.jdi
+                          }
+                        />
+                      </td>
+                    )}
 
-                      <tbody>
+                    {visibleColumns.jdp && (
+                      <td>
+                        <BooleanBadge
+                          value={
+                            donateur.jdp
+                          }
+                        />
+                      </td>
+                    )}
 
-                        {commandesJour.map(
-                          (
-                            commande,
-                          ) => {
-                            const donateur =
-                              getDonateur(
-                                commande.donateurId,
+                    {visibleColumns.rf && (
+                      <td>
+                        <BooleanBadge
+                          value={
+                            donateur.rf
+                          }
+                        />
+                      </td>
+                    )}
+
+                    <td>
+
+                      <div className="donateurs-actions">
+
+                        <button
+                          type="button"
+                          title="Voir la fiche"
+                          onClick={() =>
+                            openDonateur(
+                              donateur,
+                            )
+                          }
+                        >
+                          <Eye
+                            size={17}
+                          />
+                        </button>
+
+                        <button
+                          type="button"
+                          title="Modifier"
+                          onClick={() =>
+                            openEditDonateur(
+                              donateur,
+                            )
+                          }
+                        >
+                          <Pencil
+                            size={17}
+                          />
+                        </button>
+
+                        <div className="donateur-actions-menu-wrapper">
+
+                          <button
+                            type="button"
+                            title="Plus"
+                            onClick={() =>
+                              setActionMenuId(
+                                (
+                                  current,
+                                ) =>
+                                  current ===
+                                  donateur.id
+                                    ? null
+                                    : donateur.id,
                               )
+                            }
+                          >
+                            <MoreVertical
+                              size={17}
+                            />
+                          </button>
 
-                            return (
-                              <tr
-                                key={
-                                  commande.id
-                                }
-                                className={
-                                  selectedCommande?.id ===
-                                  commande.id
-                                    ? 'selected'
-                                    : ''
-                                }
+                          {actionMenuId ===
+                            donateur.id && (
+                            <div className="donateur-actions-menu">
+
+                              <button
+                                type="button"
                                 onClick={() =>
-                                  setSelectedCommande(
-                                    commande,
+                                  createCommande(
+                                    donateur,
                                   )
                                 }
                               >
+                                <ShoppingCart
+                                  size={17}
+                                />
 
-                                <td className="commande-number">
-                                  {
-                                    commande.numero
-                                  }
-                                </td>
+                                Faire une commande
+                              </button>
 
-                                <td className="commande-donor-table">
+                              <button
+                                type="button"
+                                className="danger"
+                                onClick={() =>
+                                  archiveDonateur(
+                                    donateur,
+                                  )
+                                }
+                              >
+                                <Archive
+                                  size={17}
+                                />
 
-                                  <strong>
-                                    {donateur?.nom ||
-                                      'Donateur inconnu'}
-                                  </strong>
+                                Archiver
+                              </button>
 
-                                  <span>
-                                    DON-
-                                    {donateur?.code.padStart(
-                                      6,
-                                      '0',
-                                    ) ||
-                                      '------'}
-                                  </span>
+                            </div>
+                          )}
 
-                                </td>
+                        </div>
 
-                                <td>
-                                  {donateur?.ville ||
-                                    '-'}
-                                </td>
+                      </div>
 
-                                <td className="commande-quantity">
-                                  {
-                                    commande.quantite
-                                  }
-                                </td>
+                    </td>
 
-                                <td>
-                                  {formatMoney(
-                                    commande.prixUnitaire,
-                                  )}
-                                </td>
+                  </tr>
+                ),
+              )}
 
-                                <td className="commande-amount">
-                                  {formatMoney(
-                                    commande.quantite *
-                                      commande.prixUnitaire,
-                                  )}
-                                </td>
+            </tbody>
 
-                                <td>
-                                  <StatutBadge
-                                    statut={
-                                      commande.statut
-                                    }
-                                  />
-                                </td>
+          </table>
 
-                                <td>
-                                  {formatPaymentMethod(
-                                    commande.modeReglement,
-                                  )}
-                                </td>
-
-                                <td>
-
-                                  <div
-                                    className="commande-actions-wrapper"
-                                    onClick={(
-                                      event,
-                                    ) =>
-                                      event.stopPropagation()
-                                    }
-                                  >
-
-                                    <button
-                                      type="button"
-                                      className="commande-actions-button"
-                                      onClick={() =>
-                                        setActionMenuId(
-                                          (
-                                            current,
-                                          ) =>
-                                            current ===
-                                            commande.id
-                                              ? null
-                                              : commande.id,
-                                        )
-                                      }
-                                    >
-                                      <MoreVertical
-                                        size={19}
-                                      />
-                                    </button>
-
-                                    {actionMenuId ===
-                                      commande.id && (
-                                      <div className="commande-actions-menu">
-
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            openEditCommande(
-                                              commande,
-                                            )
-                                          }
-                                        >
-                                          <Edit3
-                                            size={17}
-                                          />
-
-                                          Modifier
-                                        </button>
-
-                                        {commande.statut !==
-                                          'ANNULEE' && (
-                                          <button
-                                            type="button"
-                                            className="danger"
-                                            onClick={() =>
-                                              cancelCommande(
-                                                commande,
-                                              )
-                                            }
-                                          >
-                                            <Archive
-                                              size={17}
-                                            />
-
-                                            Annuler la commande
-                                          </button>
-                                        )}
-
-                                      </div>
-                                    )}
-
-                                  </div>
-
-                                </td>
-
-                              </tr>
-                            )
-                          },
-                        )}
-
-                      </tbody>
-
-                    </table>
-
-                  </div>
-                )}
-
-              </article>
-            )
-          },
-        )}
+        </div>
 
       </section>
 
-      {selectedCommande && (
-        <CommandeDetail
-          commande={
-            selectedCommande
-          }
-          onEdit={() =>
-            openEditCommande(
-              selectedCommande,
-            )
-          }
-        />
-      )}
-
-      {modalOpen && (
-        <CommandeModal
+      {formOpen && (
+        <DonateurModal
           mode={
-            modalMode
+            formMode
           }
-          commande={
-            editingCommande
-          }
-          commandes={
-            commandes
+          donateur={
+            editingDonateur
           }
           donateurs={
             donateurs
           }
-          initialDonateurId={
-            preselectedDonateurId
-          }
-          onClose={
-            closeModal
-          }
+          onClose={() => {
+            setFormOpen(
+              false,
+            )
+
+            setEditingDonateur(
+              null,
+            )
+          }}
           onSave={
-            saveCommande
+            saveDonateur
           }
         />
       )}
@@ -1663,378 +1963,951 @@ function Commandes() {
 }
 
 /* =========================================================
-   DÉTAIL
+   FICHE DONATEUR
    ========================================================= */
 
-function CommandeDetail({
-  commande,
-  onEdit,
-}: {
-  commande: Commande
-  onEdit: () => void
-}) {
-  const {
-    donateurs,
-  } = useObData()
-
-  const donateur =
-    donateurs.find(
-      (item) =>
-        item.id ===
-        commande.donateurId,
-    )
-
-  return (
-    <section className="commande-detail-card">
-
-      <div className="commande-detail-tabs">
-
-        <button
-          type="button"
-          className="active"
-        >
-          Détails
-        </button>
-
-        <button
-          type="button"
-        >
-          Suivi
-        </button>
-
-        <button
-          type="button"
-        >
-          Documents
-        </button>
-
-        <button
-          type="button"
-        >
-          Historique
-        </button>
-
-        <button
-          type="button"
-          className="commande-detail-edit"
-          onClick={
-            onEdit
-          }
-        >
-          <Edit3 size={17} />
-          Modifier
-        </button>
-
-      </div>
-
-      <div className="commande-detail-grid">
-
-        <div className="commande-detail-section">
-
-          <h3>
-            Informations générales
-          </h3>
-
-          <CommandeInfoRow
-            label="N° commande"
-            value={
-              commande.numero
-            }
-          />
-
-          <CommandeInfoRow
-            label="Date"
-            value={formatDateShort(
-              commande.dateCommande,
-            )}
-          />
-
-          <CommandeInfoRow
-            label="Campagne"
-            value={
-              commande.campagne
-            }
-          />
-
-          <div className="commande-info-row">
-            <span>
-              Statut
-            </span>
-
-            <strong>
-              <StatutBadge
-                statut={
-                  commande.statut
-                }
-              />
-            </strong>
-          </div>
-
-        </div>
-
-        <div className="commande-detail-section">
-
-          <h3>
-            Donateur
-          </h3>
-
-          {donateur && (
-            <div className="commande-donateur-card">
-
-              <div className="commande-donateur-header">
-
-                <div className="commande-donateur-icon">
-                  <Building2
-                    size={24}
-                  />
-                </div>
-
-                <div>
-                  <strong>
-                    {
-                      donateur.nom
-                    }
-                  </strong>
-
-                  <span>
-                    DON-
-                    {donateur.code.padStart(
-                      6,
-                      '0',
-                    )}
-                  </span>
-                </div>
-
-              </div>
-
-              <DonateurMiniLine
-                icon={
-                  <MapPin
-                    size={16}
-                  />
-                }
-              >
-                {formatDonateurAddress(
-                  donateur,
-                )}
-              </DonateurMiniLine>
-
-              <DonateurMiniLine
-                icon={
-                  <User
-                    size={16}
-                  />
-                }
-              >
-                {[
-                  donateur.contactPrenom,
-                  donateur.contactNom,
-                ]
-                  .filter(Boolean)
-                  .join(' ') ||
-                  'Aucun contact'}
-              </DonateurMiniLine>
-
-              <DonateurMiniLine
-                icon={
-                  <Phone
-                    size={16}
-                  />
-                }
-              >
-                {donateur.telephone ||
-                  'Non renseigné'}
-              </DonateurMiniLine>
-
-              <DonateurMiniLine
-                icon={
-                  <Mail
-                    size={16}
-                  />
-                }
-              >
-                {donateur.email ||
-                  'Non renseigné'}
-              </DonateurMiniLine>
-
-            </div>
-          )}
-
-        </div>
-
-        <div className="commande-detail-section">
-
-          <h3>
-            Détail de la commande
-          </h3>
-
-          <CommandeInfoRow
-            label="Quantité"
-            value={String(
-              commande.quantite,
-            )}
-          />
-
-          <CommandeInfoRow
-            label="Prix unitaire"
-            value={formatMoney(
-              commande.prixUnitaire,
-            )}
-          />
-
-          <CommandeInfoRow
-            label="Montant"
-            value={formatMoney(
-              commande.quantite *
-                commande.prixUnitaire,
-            )}
-            strong
-          />
-
-          <CommandeInfoRow
-            label="Règlement"
-            value={formatPaymentMethod(
-              commande.modeReglement,
-            )}
-          />
-
-        </div>
-
-      </div>
-
-    </section>
-  )
-}
-
-/* =========================================================
-   MODALE
-   ========================================================= */
-
-function CommandeModal({
-  mode,
-  commande,
+function DonateurDetail({
+  donateur,
   commandes,
-  donateurs,
-  initialDonateurId,
-  onClose,
-  onSave,
+  onBack,
+  onEdit,
+  onCreateCommande,
+  onOpenCommande,
 }: {
-  mode:
-    CommandeFormMode
-
-  commande:
-    Commande | null
+  donateur:
+    Donateur
 
   commandes:
     Commande[]
 
+  onBack:
+    () => void
+
+  onEdit:
+    () => void
+
+  onCreateCommande:
+    () => void
+
+  onOpenCommande:
+    (
+      commandeId:
+        number,
+    ) => void
+}) {
+  const [
+    tab,
+    setTab,
+  ] =
+    useState<DetailTab>(
+      'general',
+    )
+
+  const commandesTriees =
+    useMemo(() => {
+      return [
+        ...commandes,
+      ].sort(
+        (a, b) =>
+          b.dateCommande.localeCompare(
+            a.dateCommande,
+          ),
+      )
+    }, [
+      commandes,
+    ])
+
+  const totalQuantite =
+    commandes.reduce(
+      (
+        total,
+        commande,
+      ) =>
+        total +
+        commande.quantite,
+      0,
+    )
+
+  const totalMontant =
+    commandes.reduce(
+      (
+        total,
+        commande,
+      ) =>
+        total +
+        commande.quantite *
+          commande.prixUnitaire,
+      0,
+    )
+
+  return (
+    <div className="donateurs-page">
+
+      <button
+        type="button"
+        className="donateurs-back-button"
+        onClick={
+          onBack
+        }
+      >
+        <ArrowLeft
+          size={18}
+        />
+
+        Retour à la liste
+      </button>
+
+      <section className="donateur-profile">
+
+        <div className="donateur-avatar">
+          {getInitials(
+            donateur.nom,
+          )}
+        </div>
+
+        <div className="donateur-profile-info">
+
+          <span className="donateurs-eyebrow">
+            {formatDonateurCode(
+              donateur,
+            )}
+          </span>
+
+          <h1>
+            {
+              donateur.nom
+            }
+          </h1>
+
+          <div className="donateur-profile-badges">
+
+            {donateur.type && (
+              <span>
+                {
+                  donateur.type
+                }
+              </span>
+            )}
+
+            <span className="active">
+              Actif
+            </span>
+
+          </div>
+
+        </div>
+
+        <div
+          style={{
+            marginLeft:
+              'auto',
+
+            display:
+              'flex',
+
+            gap:
+              '10px',
+
+            flexWrap:
+              'wrap',
+          }}
+        >
+
+          <button
+            type="button"
+            className="donateurs-secondary-button"
+            onClick={
+              onEdit
+            }
+          >
+            <Pencil
+              size={17}
+            />
+
+            Modifier la fiche
+          </button>
+
+          <button
+            type="button"
+            className="donateurs-primary-button"
+            onClick={
+              onCreateCommande
+            }
+          >
+            <ShoppingCart
+              size={17}
+            />
+
+            Nouvelle commande
+          </button>
+
+        </div>
+
+      </section>
+
+      <nav className="donateur-tabs">
+
+        {[
+          [
+            'general',
+            'Vue générale',
+          ],
+
+          [
+            'contacts',
+            'Contacts',
+          ],
+
+          [
+            'commandes',
+            'Commandes',
+          ],
+
+          [
+            'dons',
+            'Dons',
+          ],
+
+          [
+            'encaissements',
+            'Encaissements',
+          ],
+
+          [
+            'documents',
+            'Documents',
+          ],
+
+          [
+            'historique',
+            'Historique',
+          ],
+        ].map(
+          ([
+            key,
+            label,
+          ]) => (
+            <button
+              type="button"
+              key={
+                key
+              }
+              className={
+                tab === key
+                  ? 'active'
+                  : ''
+              }
+              onClick={() =>
+                setTab(
+                  key as DetailTab,
+                )
+              }
+            >
+              {label}
+            </button>
+          ),
+        )}
+
+      </nav>
+
+      {/* =================================================
+          VUE GÉNÉRALE
+      ================================================= */}
+
+      {tab ===
+        'general' && (
+        <>
+
+          <div className="donateur-kpi-grid">
+
+            <div className="donateur-kpi">
+
+              <ShoppingCart
+                size={22}
+              />
+
+              <div>
+
+                <strong>
+                  {
+                    commandes.length
+                  }
+                </strong>
+
+                <span>
+                  Commandes
+                </span>
+
+              </div>
+
+            </div>
+
+            <div className="donateur-kpi">
+
+              <strong>
+                {
+                  totalQuantite
+                }
+              </strong>
+
+              <span>
+                Brioches commandées
+              </span>
+
+            </div>
+
+            <div className="donateur-kpi">
+
+              <strong>
+                {formatMoney(
+                  totalMontant,
+                )}
+              </strong>
+
+              <span>
+                Montant commandé
+              </span>
+
+            </div>
+
+            <div className="donateur-kpi">
+
+              <strong>
+                {formatPaymentMethod(
+                  donateur.modeReglement,
+                )}
+              </strong>
+
+              <span>
+                Mode de règlement
+              </span>
+
+            </div>
+
+          </div>
+
+          <div className="donateur-detail-grid">
+
+            <section className="donateur-detail-card">
+
+              <h2>
+                <Building2
+                  size={19}
+                />
+
+                Identité
+              </h2>
+
+              <InfoRow
+                label="Code donateur"
+                value={formatDonateurCode(
+                  donateur,
+                )}
+              />
+
+              <InfoRow
+                label="Type"
+                value={
+                  donateur.type ||
+                  'Non renseigné'
+                }
+              />
+
+              <InfoRow
+                label="Nom"
+                value={
+                  donateur.nom
+                }
+              />
+
+            </section>
+
+            <section className="donateur-detail-card">
+
+              <h2>
+                <MapPin
+                  size={19}
+                />
+
+                Adresse
+              </h2>
+
+              <InfoRow
+                label="N° de voie"
+                value={
+                  donateur.numeroVoie ||
+                  '-'
+                }
+              />
+
+              <InfoRow
+                label="Adresse"
+                value={
+                  donateur.adresse ||
+                  '-'
+                }
+              />
+
+              <InfoRow
+                label="Code postal"
+                value={
+                  donateur.cp ||
+                  '-'
+                }
+              />
+
+              <InfoRow
+                label="Ville"
+                value={
+                  donateur.ville ||
+                  '-'
+                }
+              />
+
+              <InfoRow
+                label="Informations"
+                value={
+                  donateur.informations ||
+                  '-'
+                }
+              />
+
+            </section>
+
+            <section className="donateur-detail-card">
+
+              <h2>
+                <User
+                  size={19}
+                />
+
+                Contact
+              </h2>
+
+              <InfoRow
+                label="Nom"
+                value={
+                  donateur.contactNom ||
+                  '-'
+                }
+              />
+
+              <InfoRow
+                label="Prénom"
+                value={
+                  donateur.contactPrenom ||
+                  '-'
+                }
+              />
+
+              <InfoRow
+                label="Email"
+                value={
+                  donateur.email ||
+                  '-'
+                }
+                icon={
+                  <Mail
+                    size={15}
+                  />
+                }
+              />
+
+              <InfoRow
+                label="Téléphone"
+                value={
+                  donateur.telephone ||
+                  '-'
+                }
+                icon={
+                  <Phone
+                    size={15}
+                  />
+                }
+              />
+
+            </section>
+
+            <section className="donateur-detail-card">
+
+              <h2>
+                <ShoppingCart
+                  size={19}
+                />
+
+                Opération Brioches
+              </h2>
+
+              <InfoRow
+                label="Condition de règlement"
+                value={
+                  donateur.conditionReglement ||
+                  '-'
+                }
+              />
+
+              <InfoRow
+                label="Mode de règlement"
+                value={formatPaymentMethod(
+                  donateur.modeReglement,
+                )}
+              />
+
+              <InfoRow
+                label="Nombre de commandes"
+                value={String(
+                  commandes.length,
+                )}
+              />
+
+              <InfoRow
+                label="Quantité totale"
+                value={String(
+                  totalQuantite,
+                )}
+              />
+
+            </section>
+
+          </div>
+
+          <section className="donateur-detail-card donateur-documents-card">
+
+            <h2>
+              Suivi documentaire
+            </h2>
+
+            <div className="donateur-document-grid">
+
+              <DocumentStatus
+                label="JDI"
+                value={
+                  donateur.jdi
+                }
+              />
+
+              <DocumentStatus
+                label="JDP"
+                value={
+                  donateur.jdp
+                }
+              />
+
+              <DocumentStatus
+                label="RF"
+                value={
+                  donateur.rf
+                }
+              />
+
+            </div>
+
+          </section>
+
+          {donateur.remarque && (
+            <section className="donateur-detail-card">
+
+              <h2>
+                Remarque
+              </h2>
+
+              <p>
+                {
+                  donateur.remarque
+                }
+              </p>
+
+            </section>
+          )}
+
+        </>
+      )}
+
+      {/* =================================================
+          CONTACT
+      ================================================= */}
+
+      {tab ===
+        'contacts' && (
+        <section className="donateur-detail-card">
+
+          <h2>
+            <User
+              size={19}
+            />
+
+            Contact principal
+          </h2>
+
+          <InfoRow
+            label="Prénom"
+            value={
+              donateur.contactPrenom ||
+              '-'
+            }
+          />
+
+          <InfoRow
+            label="Nom"
+            value={
+              donateur.contactNom ||
+              '-'
+            }
+          />
+
+          <InfoRow
+            label="Téléphone"
+            value={
+              donateur.telephone ||
+              '-'
+            }
+            icon={
+              <Phone
+                size={15}
+              />
+            }
+          />
+
+          <InfoRow
+            label="Email"
+            value={
+              donateur.email ||
+              '-'
+            }
+            icon={
+              <Mail
+                size={15}
+              />
+            }
+          />
+
+        </section>
+      )}
+
+      {/* =================================================
+          COMMANDES
+      ================================================= */}
+
+      {tab ===
+        'commandes' && (
+        <section className="donateur-commandes">
+
+          <div className="donateur-commandes-header">
+
+            <div>
+
+              <h2>
+                Commandes
+              </h2>
+
+              <p>
+                Commandes enregistrées pour {
+                  donateur.nom
+                }.
+              </p>
+
+            </div>
+
+            <button
+              type="button"
+              className="donateurs-primary-button"
+              onClick={
+                onCreateCommande
+              }
+            >
+              <Plus
+                size={17}
+              />
+
+              Nouvelle commande
+            </button>
+
+          </div>
+
+          <div className="donateur-commandes-kpis">
+
+            <div>
+
+              <span>
+                Commandes
+              </span>
+
+              <strong>
+                {
+                  commandes.length
+                }
+              </strong>
+
+            </div>
+
+            <div>
+
+              <span>
+                Quantité
+              </span>
+
+              <strong>
+                {
+                  totalQuantite
+                }
+              </strong>
+
+            </div>
+
+            <div>
+
+              <span>
+                Montant
+              </span>
+
+              <strong>
+                {formatMoney(
+                  totalMontant,
+                )}
+              </strong>
+
+            </div>
+
+          </div>
+
+          {commandesTriees.length ===
+          0 ? (
+            <div className="donateur-commandes-empty">
+
+              <ShoppingCart
+                size={36}
+              />
+
+              <strong>
+                Aucune commande
+              </strong>
+
+              <span>
+                Aucune commande n'est encore liée à ce donateur.
+              </span>
+
+              <button
+                type="button"
+                className="donateurs-primary-button"
+                onClick={
+                  onCreateCommande
+                }
+              >
+                <Plus
+                  size={17}
+                />
+
+                Créer une commande
+              </button>
+
+            </div>
+          ) : (
+            <div className="donateur-commandes-list">
+
+              {commandesTriees.map(
+                (commande) => (
+                  <button
+                    type="button"
+                    key={
+                      commande.id
+                    }
+                    className="donateur-commande-row"
+                    onClick={() =>
+                      onOpenCommande(
+                        commande.id,
+                      )
+                    }
+                  >
+
+                    <div>
+
+                      <span>
+                        N° commande
+                      </span>
+
+                      <strong>
+                        {
+                          commande.numero
+                        }
+                      </strong>
+
+                    </div>
+
+                    <div>
+
+                      <span>
+                        Date
+                      </span>
+
+                      <strong>
+                        {formatDate(
+                          commande.dateCommande,
+                        )}
+                      </strong>
+
+                    </div>
+
+                    <div>
+
+                      <span>
+                        Quantité
+                      </span>
+
+                      <strong>
+                        {
+                          commande.quantite
+                        }
+                      </strong>
+
+                    </div>
+
+                    <div>
+
+                      <span>
+                        Montant
+                      </span>
+
+                      <strong>
+                        {formatMoney(
+                          commande.quantite *
+                            commande.prixUnitaire,
+                        )}
+                      </strong>
+
+                    </div>
+
+                    <span
+                      className={`donateur-commande-status ${commande.statut.toLowerCase()}`}
+                    >
+                      {getStatutLabel(
+                        commande.statut,
+                      )}
+                    </span>
+
+                  </button>
+                ),
+              )}
+
+            </div>
+          )}
+
+        </section>
+      )}
+
+      {tab ===
+        'dons' && (
+        <EmptySection
+          title="Dons"
+          text="La gestion des dons sera reliée ici."
+        />
+      )}
+
+      {tab ===
+        'encaissements' && (
+        <EmptySection
+          title="Encaissements"
+          text="Les encaissements du donateur seront affichés ici."
+        />
+      )}
+
+      {tab ===
+        'documents' && (
+        <section className="donateur-detail-card donateur-documents-card">
+
+          <h2>
+            Documents
+          </h2>
+
+          <div className="donateur-document-grid">
+
+            <DocumentStatus
+              label="JDI"
+              value={
+                donateur.jdi
+              }
+            />
+
+            <DocumentStatus
+              label="JDP"
+              value={
+                donateur.jdp
+              }
+            />
+
+            <DocumentStatus
+              label="RF"
+              value={
+                donateur.rf
+              }
+            />
+
+          </div>
+
+        </section>
+      )}
+
+      {tab ===
+        'historique' && (
+        <EmptySection
+          title="Historique"
+          text="L'historique du donateur sera affiché ici."
+        />
+      )}
+
+    </div>
+  )
+}
+
+/* =========================================================
+   MODALE DONATEUR
+   ========================================================= */
+
+function DonateurModal({
+  mode,
+  donateur,
+  donateurs,
+  onClose,
+  onSave,
+}: {
+  mode:
+    DonateurFormMode
+
+  donateur:
+    Donateur | null
+
   donateurs:
     Donateur[]
 
-  initialDonateurId:
-    number | null
+  onClose:
+    () => void
 
-  onClose: () => void
-
-  onSave: (
-    commande: Commande,
-  ) => void
+  onSave:
+    (
+      donateur:
+        Donateur,
+    ) => void
 }) {
-  const initialId =
-    commande?.donateurId ??
-    initialDonateurId ??
-    null
-
-  const [
-    donorSearch,
-    setDonorSearch,
-  ] = useState('')
-
-  const [
-    selectedDonateurId,
-    setSelectedDonateurId,
-  ] =
-    useState<number | null>(
-      initialId,
-    )
-
-  const initialDonateur =
-    initialId
-      ? donateurs.find(
-          (donateur) =>
-            donateur.id ===
-            initialId,
-        )
-      : undefined
-
   const [
     form,
     setForm,
   ] =
-    useState<Commande>(
-      commande
+    useState<Donateur>(
+      donateur
         ? {
-            ...commande,
+            ...donateur,
           }
         : {
-            id:
-              Math.max(
-                0,
-                ...commandes.map(
-                  (item) =>
-                    item.id,
-                ),
-              ) + 1,
+            ...EMPTY_DONATEUR,
 
-            numero:
-              createCommandeNumber(
-                commandes,
+            id:
+              getNextDonateurId(
+                donateurs,
               ),
 
-            donateurId:
-              initialId ?? 0,
-
-            campagne:
-              'OB 2026',
-
-            dateCommande:
-              getTodayInput(),
-
-            quantite: 0,
-
-            prixUnitaire: 5,
-
-            statut:
-              'BROUILLON',
-
-            conditionReglement:
-              initialDonateur?.conditionReglement ||
-              '',
-
-            modeReglement:
-              initialDonateur?.modeReglement ||
-              '',
-
-            jdi:
-              initialDonateur?.jdi ||
-              'NON',
-
-            jdp:
-              initialDonateur?.jdp ||
-              'NON',
-
-            rf:
-              initialDonateur?.rf ||
-              'NON',
-
-            datePrevueLivraison:
-              '',
-
-            dateLivraison:
-              '',
-
-            remarque:
-              '',
+            code:
+              getNextDonateurCode(
+                donateurs,
+              ),
           },
     )
 
@@ -2043,97 +2916,19 @@ function CommandeModal({
     setError,
   ] = useState('')
 
-  const selectedDonateur =
-    selectedDonateurId
-      ? donateurs.find(
-          (donateur) =>
-            donateur.id ===
-            selectedDonateurId,
-        )
-      : undefined
-
-  const filteredDonateurs =
-    donateurs
-      .filter(
-        (donateur) =>
-          !donateur.archive,
-      )
-      .filter(
-        (donateur) => {
-          const query =
-            donorSearch
-              .trim()
-              .toLowerCase()
-
-          if (!query) {
-            return true
-          }
-
-          return [
-            donateur.nom,
-            donateur.code,
-            donateur.ville,
-            donateur.email,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
-            .includes(query)
-        },
-      )
-      .slice(
-        0,
-        8,
-      )
-
-  function selectDonateur(
-    donateur: Donateur,
-  ) {
-    setSelectedDonateurId(
-      donateur.id,
-    )
-
-    setForm(
-      (current) => ({
-        ...current,
-
-        donateurId:
-          donateur.id,
-
-        conditionReglement:
-          donateur.conditionReglement ||
-          '',
-
-        modeReglement:
-          donateur.modeReglement ||
-          '',
-
-        jdi:
-          donateur.jdi ||
-          'NON',
-
-        jdp:
-          donateur.jdp ||
-          'NON',
-
-        rf:
-          donateur.rf ||
-          'NON',
-      }),
-    )
-  }
-
   function updateField<
-    K extends keyof Commande,
+    K extends keyof Donateur,
   >(
     key: K,
     value:
-      Commande[K],
+      Donateur[K],
   ) {
     setForm(
       (current) => ({
         ...current,
-        [key]: value,
+
+        [key]:
+          value,
       }),
     )
   }
@@ -2144,59 +2939,99 @@ function CommandeModal({
   ) {
     event.preventDefault()
 
+    setError('')
+
+    const name =
+      form.nom.trim()
+
+    const code =
+      String(
+        form.code,
+      ).trim()
+
     if (
-      !selectedDonateurId
+      !name
     ) {
       setError(
-        'Sélectionne un donateur.',
+        'Le nom du donateur est obligatoire.',
       )
+
       return
     }
 
     if (
-      form.quantite <= 0
+      !code
     ) {
       setError(
-        'La quantité doit être supérieure à 0.',
+        'Le code donateur est obligatoire.',
       )
+
+      return
+    }
+
+    const duplicate =
+      donateurs.some(
+        (item) =>
+          String(
+            item.code,
+          ).trim() ===
+            code &&
+          item.id !==
+            form.id,
+      )
+
+    if (
+      duplicate
+    ) {
+      setError(
+        'Ce code donateur existe déjà.',
+      )
+
       return
     }
 
     onSave({
       ...form,
-      donateurId:
-        selectedDonateurId,
+
+      nom:
+        name,
+
+      code,
     })
   }
 
   return (
-    <div className="commande-modal-overlay">
+    <div className="donateur-modal-overlay">
 
-      <div className="commande-modal">
+      <div className="donateur-modal">
 
-        <header className="commande-modal-header">
+        <header className="donateur-modal-header">
 
           <div>
-            <span className="commandes-eyebrow">
-              Commandes
+
+            <span className="donateurs-eyebrow">
+              Base de données
             </span>
 
             <h2>
               {mode ===
               'create'
-                ? 'Nouvelle commande'
-                : 'Modifier la commande'}
+                ? 'Nouveau donateur'
+                : 'Modifier le donateur'}
             </h2>
+
           </div>
 
           <button
             type="button"
-            className="commande-modal-close"
+            className="donateur-modal-close"
             onClick={
               onClose
             }
           >
-            <X size={23} />
+            <X
+              size={22}
+            />
           </button>
 
         </header>
@@ -2207,308 +3042,284 @@ function CommandeModal({
           }
         >
 
-          <div className="commande-modal-content">
+          <div className="donateur-modal-content">
 
-            <CommandeFormSection
-              number="1"
-              title="Sélection du donateur"
+            <FormSection
+              title="Informations générales"
             >
 
-              {!selectedDonateur ? (
-                <>
+              <div className="donateur-form-grid">
 
-                  <div className="commande-donor-search">
-
-                    <Search
-                      size={20}
-                    />
-
-                    <input
-                      value={
-                        donorSearch
-                      }
-                      placeholder="Rechercher un donateur..."
-                      onChange={(
-                        event,
-                      ) =>
-                        setDonorSearch(
-                          event.target.value,
-                        )
-                      }
-                    />
-
-                  </div>
-
-                  <div className="commande-donor-results">
-
-                    {filteredDonateurs.map(
-                      (donateur) => (
-                        <button
-                          type="button"
-                          key={
-                            donateur.id
-                          }
-                          onClick={() =>
-                            selectDonateur(
-                              donateur,
-                            )
-                          }
-                        >
-                          <Building2
-                            size={22}
-                          />
-
-                          <div>
-                            <strong>
-                              {
-                                donateur.nom
-                              }
-                            </strong>
-
-                            <span>
-                              DON-
-                              {donateur.code.padStart(
-                                6,
-                                '0',
-                              )}
-                              {' • '}
-                              {
-                                donateur.ville
-                              }
-                            </span>
-                          </div>
-                        </button>
-                      ),
-                    )}
-
-                  </div>
-
-                </>
-              ) : (
-                <div className="commande-selected-donor">
-
-                  <div className="commande-selected-donor-header">
-
-                    <div className="commande-selected-donor-icon">
-                      <Building2
-                        size={27}
-                      />
-                    </div>
-
-                    <div>
-                      <strong>
-                        {
-                          selectedDonateur.nom
-                        }
-                      </strong>
-
-                      <span>
-                        DON-
-                        {selectedDonateur.code.padStart(
-                          6,
-                          '0',
-                        )}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedDonateurId(
-                          null,
-                        )
-                      }
-                    >
-                      Changer
-                    </button>
-
-                  </div>
-
-                  <div className="commande-selected-donor-info">
-
-                    <DonateurMiniLine
-                      icon={
-                        <MapPin
-                          size={17}
-                        />
-                      }
-                    >
-                      {formatDonateurAddress(
-                        selectedDonateur,
-                      )}
-                    </DonateurMiniLine>
-
-                    <DonateurMiniLine
-                      icon={
-                        <Phone
-                          size={17}
-                        />
-                      }
-                    >
-                      {selectedDonateur.telephone ||
-                        'Non renseigné'}
-                    </DonateurMiniLine>
-
-                    <DonateurMiniLine
-                      icon={
-                        <Mail
-                          size={17}
-                        />
-                      }
-                    >
-                      {selectedDonateur.email ||
-                        'Non renseigné'}
-                    </DonateurMiniLine>
-
-                  </div>
-
-                </div>
-              )}
-
-            </CommandeFormSection>
-
-            <CommandeFormSection
-              number="2"
-              title="Informations de la commande"
-            >
-
-              <div className="commande-form-grid">
-
-                <CommandeField
-                  label="N° commande"
+                <FormField
+                  label="Code"
                 >
                   <input
                     value={
-                      form.numero
-                    }
-                    disabled
-                  />
-                </CommandeField>
-
-                <CommandeField
-                  label="Campagne"
-                >
-                  <select
-                    value={
-                      form.campagne
+                      form.code
                     }
                     onChange={(
                       event,
                     ) =>
                       updateField(
-                        'campagne',
+                        'code',
+                        event.target.value,
+                      )
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  label="Type"
+                >
+                  <select
+                    value={
+                      form.type
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      updateField(
+                        'type',
                         event.target.value,
                       )
                     }
                   >
-                    <option>
-                      OB 2025
+                    <option value="ENTREPRISE">
+                      Entreprise
                     </option>
 
-                    <option>
-                      OB 2026
+                    <option value="MAIRIE">
+                      Mairie
                     </option>
 
-                    <option>
-                      OB 2027
+                    <option value="ETABLISSEMENT">
+                      Établissement
                     </option>
+
+                    <option value="ASSOCIATION">
+                      Association
+                    </option>
+
+                    <option value="PARTICULIER">
+                      Particulier
+                    </option>
+
+                    <option value="AUTRE">
+                      Autre
+                    </option>
+
                   </select>
-                </CommandeField>
+                </FormField>
 
-                <CommandeField
-                  label="Date"
+                <FormField
+                  label="Nom / Raison sociale"
                   wide
                 >
                   <input
-                    type="date"
                     value={
-                      form.dateCommande
+                      form.nom
                     }
                     onChange={(
                       event,
                     ) =>
                       updateField(
-                        'dateCommande',
+                        'nom',
                         event.target.value,
                       )
                     }
                   />
-                </CommandeField>
+                </FormField>
 
-                <CommandeField
-                  label="Quantité"
+              </div>
+
+            </FormSection>
+
+            <FormSection
+              title="Adresse"
+            >
+
+              <div className="donateur-form-grid">
+
+                <FormField
+                  label="N° voie"
                 >
                   <input
-                    type="number"
-                    min="1"
                     value={
-                      form.quantite
+                      form.numeroVoie ||
+                      ''
                     }
                     onChange={(
                       event,
                     ) =>
                       updateField(
-                        'quantite',
-                        Number(
-                          event.target.value,
-                        ),
+                        'numeroVoie',
+                        event.target.value,
                       )
                     }
                   />
-                </CommandeField>
+                </FormField>
 
-                <CommandeField
-                  label="Prix unitaire (€)"
+                <FormField
+                  label="Adresse"
                 >
                   <input
-                    type="number"
-                    step="0.01"
                     value={
-                      form.prixUnitaire
+                      form.adresse ||
+                      ''
                     }
                     onChange={(
                       event,
                     ) =>
                       updateField(
-                        'prixUnitaire',
-                        Number(
-                          event.target.value,
-                        ),
+                        'adresse',
+                        event.target.value,
                       )
                     }
                   />
-                </CommandeField>
+                </FormField>
+
+                <FormField
+                  label="Code postal"
+                >
+                  <input
+                    value={
+                      form.cp ||
+                      ''
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      updateField(
+                        'cp',
+                        event.target.value,
+                      )
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  label="Ville"
+                >
+                  <input
+                    value={
+                      form.ville ||
+                      ''
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      updateField(
+                        'ville',
+                        event.target.value,
+                      )
+                    }
+                  />
+                </FormField>
 
               </div>
 
-              <div className="commande-total-box">
-                <span>
-                  Montant total
-                </span>
+            </FormSection>
 
-                <strong>
-                  {formatMoney(
-                    form.quantite *
-                      form.prixUnitaire,
-                  )}
-                </strong>
+            <FormSection
+              title="Contact"
+            >
+
+              <div className="donateur-form-grid">
+
+                <FormField
+                  label="Prénom"
+                >
+                  <input
+                    value={
+                      form.contactPrenom ||
+                      ''
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      updateField(
+                        'contactPrenom',
+                        event.target.value,
+                      )
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  label="Nom"
+                >
+                  <input
+                    value={
+                      form.contactNom ||
+                      ''
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      updateField(
+                        'contactNom',
+                        event.target.value,
+                      )
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  label="Téléphone"
+                >
+                  <input
+                    value={
+                      form.telephone ||
+                      ''
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      updateField(
+                        'telephone',
+                        event.target.value,
+                      )
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  label="Email"
+                >
+                  <input
+                    type="email"
+                    value={
+                      form.email ||
+                      ''
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      updateField(
+                        'email',
+                        event.target.value,
+                      )
+                    }
+                  />
+                </FormField>
+
               </div>
 
-            </CommandeFormSection>
+            </FormSection>
 
-            <CommandeFormSection
-              number="3"
+            <FormSection
               title="Règlement & suivi"
             >
 
-              <div className="commande-form-grid">
+              <div className="donateur-form-grid">
 
-                <CommandeField
+                <FormField
                   label="Condition de règlement"
                 >
                   <input
                     value={
-                      form.conditionReglement
+                      form.conditionReglement ||
+                      ''
                     }
                     onChange={(
                       event,
@@ -2519,14 +3330,15 @@ function CommandeModal({
                       )
                     }
                   />
-                </CommandeField>
+                </FormField>
 
-                <CommandeField
+                <FormField
                   label="Mode de règlement"
                 >
                   <select
                     value={
-                      form.modeReglement
+                      form.modeReglement ||
+                      ''
                     }
                     onChange={(
                       event,
@@ -2537,6 +3349,7 @@ function CommandeModal({
                       )
                     }
                   >
+
                     <option value="">
                       Non renseigné
                     </option>
@@ -2556,10 +3369,11 @@ function CommandeModal({
                     <option value="MANDAT">
                       Mandat administratif
                     </option>
-                  </select>
-                </CommandeField>
 
-                <CommandeField
+                  </select>
+                </FormField>
+
+                <FormField
                   label="JDI"
                 >
                   <YesNoSelect
@@ -2575,9 +3389,9 @@ function CommandeModal({
                       )
                     }
                   />
-                </CommandeField>
+                </FormField>
 
-                <CommandeField
+                <FormField
                   label="JDP"
                 >
                   <YesNoSelect
@@ -2593,9 +3407,9 @@ function CommandeModal({
                       )
                     }
                   />
-                </CommandeField>
+                </FormField>
 
-                <CommandeField
+                <FormField
                   label="RF"
                 >
                   <YesNoSelect
@@ -2611,92 +3425,48 @@ function CommandeModal({
                       )
                     }
                   />
-                </CommandeField>
+                </FormField>
 
-                <CommandeField
-                  label="Statut"
+              </div>
+
+            </FormSection>
+
+            <FormSection
+              title="Informations complémentaires"
+            >
+
+              <div className="donateur-form-grid">
+
+                <FormField
+                  label="Informations"
+                  wide
                 >
-                  <select
+                  <textarea
+                    rows={3}
                     value={
-                      form.statut
+                      form.informations ||
+                      ''
                     }
                     onChange={(
                       event,
                     ) =>
                       updateField(
-                        'statut',
-                        event.target.value as StatutCommande,
-                      )
-                    }
-                  >
-                    <option value="BROUILLON">
-                      Brouillon
-                    </option>
-
-                    <option value="CONFIRMEE">
-                      Confirmée
-                    </option>
-
-                    <option value="A_LIVRER">
-                      À livrer
-                    </option>
-
-                    <option value="LIVREE">
-                      Livrée
-                    </option>
-
-                    <option value="ANNULEE">
-                      Annulée
-                    </option>
-                  </select>
-                </CommandeField>
-
-                <CommandeField
-                  label="Date prévue de livraison"
-                >
-                  <input
-                    type="date"
-                    value={
-                      form.datePrevueLivraison
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      updateField(
-                        'datePrevueLivraison',
+                        'informations',
                         event.target.value,
                       )
                     }
                   />
-                </CommandeField>
+                </FormField>
 
-                <CommandeField
-                  label="Date de livraison"
-                >
-                  <input
-                    type="date"
-                    value={
-                      form.dateLivraison
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      updateField(
-                        'dateLivraison',
-                        event.target.value,
-                      )
-                    }
-                  />
-                </CommandeField>
-
-                <CommandeField
+                <FormField
                   label="Remarque"
                   wide
                 >
                   <textarea
-                    rows={5}
+                    rows={4}
                     value={
-                      form.remarque
+                      form.remarque ||
+                      ''
                     }
                     onChange={(
                       event,
@@ -2707,25 +3477,25 @@ function CommandeModal({
                       )
                     }
                   />
-                </CommandeField>
+                </FormField>
 
               </div>
 
-            </CommandeFormSection>
+            </FormSection>
 
             {error && (
-              <div className="commande-form-error">
+              <div className="donateur-form-error">
                 {error}
               </div>
             )}
 
           </div>
 
-          <footer className="commande-modal-footer">
+          <footer className="donateur-modal-footer">
 
             <button
               type="button"
-              className="commandes-secondary-button"
+              className="donateurs-secondary-button"
               onClick={
                 onClose
               }
@@ -2735,13 +3505,15 @@ function CommandeModal({
 
             <button
               type="submit"
-              className="commandes-primary-button"
+              className="donateurs-primary-button"
             >
-              <Check size={19} />
+              <Check
+                size={18}
+              />
 
               {mode ===
               'create'
-                ? 'Créer la commande'
+                ? 'Créer le donateur'
                 : 'Enregistrer'}
             </button>
 
@@ -2756,74 +3528,233 @@ function CommandeModal({
 }
 
 /* =========================================================
-   MINI COMPOSANTS
+   COMPOSANTS
    ========================================================= */
 
-function CommandeKpi({
-  icon,
-  value,
+function ColumnToggle({
   label,
+  checked,
+  onChange,
 }: {
-  icon: ReactNode
-  value: string
-  label: string
+  label:
+    string
+
+  checked:
+    boolean
+
+  onChange:
+    () => void
 }) {
   return (
-    <div className="commande-kpi">
-      <div className="commande-kpi-icon">
-        {icon}
-      </div>
+    <label className="donateurs-column-toggle">
 
-      <div>
-        <strong>
-          {value}
-        </strong>
-        <span>
-          {label}
-        </span>
-      </div>
+      <input
+        type="checkbox"
+        checked={
+          checked
+        }
+        onChange={
+          onChange
+        }
+      />
+
+      <span>
+        {label}
+      </span>
+
+    </label>
+  )
+}
+
+function SortableHeader({
+  label,
+  active,
+  direction,
+  onClick,
+}: {
+  label:
+    string
+
+  active:
+    boolean
+
+  direction:
+    SortDirection
+
+  onClick:
+    () => void
+}) {
+  return (
+    <th
+      onClick={
+        onClick
+      }
+      style={{
+        cursor:
+          'pointer',
+
+        userSelect:
+          'none',
+      }}
+    >
+      {label}
+
+      {' '}
+
+      <span
+        style={{
+          opacity:
+            active
+              ? 1
+              : 0.35,
+        }}
+      >
+        {active
+          ? direction ===
+            'asc'
+            ? '↑'
+            : '↓'
+          : '↕'}
+      </span>
+
+    </th>
+  )
+}
+
+function InfoRow({
+  label,
+  value,
+  icon,
+}: {
+  label:
+    string
+
+  value:
+    string
+
+  icon?:
+    ReactNode
+}) {
+  return (
+    <div className="donateur-info-row">
+
+      <span>
+        {label}
+      </span>
+
+      <strong>
+        {icon}
+
+        {value}
+      </strong>
+
     </div>
   )
 }
 
-function StatutBadge({
-  statut,
+function BooleanBadge({
+  value,
 }: {
-  statut:
-    StatutCommande
+  value?:
+    string
 }) {
+  const yes =
+    value
+      ?.toUpperCase() ===
+    'OUI'
+
   return (
     <span
-      className={`commande-status commande-status-${statut.toLowerCase()}`}
+      className={`donateur-boolean ${
+        yes
+          ? 'yes'
+          : 'no'
+      }`}
     >
-      {getStatutLabel(
-        statut,
-      )}
+      {value ||
+        'NON'}
     </span>
   )
 }
 
-function CommandeFormSection({
-  number,
+function DocumentStatus({
+  label,
+  value,
+}: {
+  label:
+    string
+
+  value?:
+    string
+}) {
+  const yes =
+    value
+      ?.toUpperCase() ===
+    'OUI'
+
+  return (
+    <div className="donateur-document">
+
+      <span>
+        {label}
+      </span>
+
+      <strong
+        className={
+          yes
+            ? 'yes'
+            : 'no'
+        }
+      >
+        {value ||
+          'NON'}
+      </strong>
+
+    </div>
+  )
+}
+
+function EmptySection({
+  title,
+  text,
+}: {
+  title:
+    string
+
+  text:
+    string
+}) {
+  return (
+    <section className="donateur-empty-section">
+
+      <h2>
+        {title}
+      </h2>
+
+      <p>
+        {text}
+      </p>
+
+    </section>
+  )
+}
+
+function FormSection({
   title,
   children,
 }: {
-  number: string
-  title: string
-  children: ReactNode
+  title:
+    string
+
+  children:
+    ReactNode
 }) {
   return (
-    <section className="commande-form-section">
+    <section className="donateur-form-section">
 
-      <div className="commande-form-section-title">
-        <span>
-          {number}
-        </span>
-
-        <h3>
-          {title}
-        </h3>
-      </div>
+      <h3>
+        {title}
+      </h3>
 
       {children}
 
@@ -2831,74 +3762,36 @@ function CommandeFormSection({
   )
 }
 
-function CommandeField({
+function FormField({
   label,
   wide = false,
   children,
 }: {
-  label: string
-  wide?: boolean
-  children: ReactNode
+  label:
+    string
+
+  wide?:
+    boolean
+
+  children:
+    ReactNode
 }) {
   return (
     <label
-      className={`commande-field ${
+      className={`donateur-form-field ${
         wide
           ? 'wide'
           : ''
       }`}
     >
+
       <span>
         {label}
       </span>
 
       {children}
+
     </label>
-  )
-}
-
-function CommandeInfoRow({
-  label,
-  value,
-  strong = false,
-}: {
-  label: string
-  value: string
-  strong?: boolean
-}) {
-  return (
-    <div
-      className={`commande-info-row ${
-        strong
-          ? 'strong'
-          : ''
-      }`}
-    >
-      <span>
-        {label}
-      </span>
-
-      <strong>
-        {value}
-      </strong>
-    </div>
-  )
-}
-
-function DonateurMiniLine({
-  icon,
-  children,
-}: {
-  icon: ReactNode
-  children: ReactNode
-}) {
-  return (
-    <div className="commande-donateur-line">
-      {icon}
-      <span>
-        {children}
-      </span>
-    </div>
   )
 }
 
@@ -2906,15 +3799,20 @@ function YesNoSelect({
   value,
   onChange,
 }: {
-  value?: string
-  onChange: (
-    value: string,
-  ) => void
+  value?:
+    string
+
+  onChange:
+    (
+      value:
+        string,
+    ) => void
 }) {
   return (
     <select
       value={
-        value || 'NON'
+        value ||
+        'NON'
       }
       onChange={(
         event,
@@ -2924,6 +3822,7 @@ function YesNoSelect({
         )
       }
     >
+
       <option value="NON">
         Non
       </option>
@@ -2931,6 +3830,7 @@ function YesNoSelect({
       <option value="OUI">
         Oui
       </option>
+
     </select>
   )
 }
@@ -2939,200 +3839,316 @@ function YesNoSelect({
    HELPERS
    ========================================================= */
 
-function formatDonateurAddress(
-  donateur: Donateur,
+function getSortValue(
+  donateur:
+    Donateur,
+
+  key:
+    SortKey,
+) {
+  switch (
+    key
+  ) {
+    case 'code':
+      return String(
+        donateur.code,
+      )
+
+    case 'nom':
+      return (
+        donateur.nom ||
+        ''
+      )
+
+    case 'type':
+      return (
+        donateur.type ||
+        ''
+      )
+
+    case 'ville':
+      return (
+        donateur.ville ||
+        ''
+      )
+
+    case 'contact':
+      return formatContact(
+        donateur,
+      )
+
+    case 'telephone':
+      return (
+        donateur.telephone ||
+        ''
+      )
+
+    case 'email':
+      return (
+        donateur.email ||
+        ''
+      )
+
+    case 'jdi':
+      return (
+        donateur.jdi ||
+        ''
+      )
+
+    case 'jdp':
+      return (
+        donateur.jdp ||
+        ''
+      )
+
+    case 'rf':
+      return (
+        donateur.rf ||
+        ''
+      )
+
+    default:
+      return ''
+  }
+}
+
+function formatContact(
+  donateur:
+    Donateur,
 ) {
   return [
-    [
-      donateur.numeroVoie,
-      donateur.adresse,
-    ]
-      .filter(Boolean)
-      .join(' '),
-
-    [
-      donateur.cp,
-      donateur.ville,
-    ]
-      .filter(Boolean)
-      .join(' '),
+    donateur.contactPrenom,
+    donateur.contactNom,
   ]
     .filter(Boolean)
-    .join(' — ')
+    .join(' ')
+}
+
+function formatDonateurCode(
+  donateur:
+    Donateur,
+) {
+  const code =
+    String(
+      donateur.code,
+    )
+      .replace(
+        /^DON-/i,
+        '',
+      )
+      .trim()
+
+  return `DON-${code.padStart(
+    6,
+    '0',
+  )}`
+}
+
+function formatPaymentMethod(
+  value?:
+    string,
+) {
+  switch (
+    value
+  ) {
+    case 'VIREMENT':
+      return 'Virement'
+
+    case 'CHEQUE':
+      return 'Chèque'
+
+    case 'ESPECES':
+      return 'Espèces'
+
+    case 'MANDAT':
+      return 'Mandat administratif'
+
+    default:
+      return (
+        value ||
+        '-'
+      )
+  }
 }
 
 function getStatutLabel(
   statut:
     StatutCommande,
 ) {
-  const labels:
-    Record<
-      StatutCommande,
-      string
-    > = {
-    BROUILLON:
-      'Brouillon',
-    CONFIRMEE:
-      'Confirmée',
-    A_LIVRER:
-      'À livrer',
-    LIVREE:
-      'Livrée',
-    ANNULEE:
-      'Annulée',
-  }
-
-  return labels[
+  switch (
     statut
-  ]
+  ) {
+    case 'BROUILLON':
+      return 'Brouillon'
+
+    case 'CONFIRMEE':
+      return 'Confirmée'
+
+    case 'A_LIVRER':
+      return 'À livrer'
+
+    case 'LIVREE':
+      return 'Livrée'
+
+    case 'ANNULEE':
+      return 'Annulée'
+
+    default:
+      return statut
+  }
 }
 
 function formatMoney(
-  value: number,
+  value:
+    number,
 ) {
   return new Intl.NumberFormat(
     'fr-FR',
     {
-      style: 'currency',
-      currency: 'EUR',
-    },
-  ).format(value)
-}
+      style:
+        'currency',
 
-function formatNumber(
-  value: number,
-) {
-  return new Intl.NumberFormat(
-    'fr-FR',
-  ).format(value)
-}
-
-function formatDateLong(
-  value: string,
-) {
-  return new Intl.DateTimeFormat(
-    'fr-FR',
-    {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
+      currency:
+        'EUR',
     },
   ).format(
-    new Date(
-      `${value}T12:00:00`,
-    ),
+    value,
   )
 }
 
-function formatDateShort(
-  value: string,
+function formatDate(
+  value:
+    string,
 ) {
-  return new Intl.DateTimeFormat(
-    'fr-FR',
-  ).format(
-    new Date(
-      `${value}T12:00:00`,
-    ),
-  )
-}
-
-function formatPaymentMethod(
-  value?: string,
-) {
-  switch (value) {
-    case 'CHEQUE':
-      return 'Chèque'
-    case 'ESPECES':
-      return 'Espèces'
-    case 'MANDAT':
-      return 'Mandat administratif'
-    case 'VIREMENT':
-      return 'Virement'
-    default:
-      return value || '-'
+  if (
+    !value
+  ) {
+    return '-'
   }
+
+  const [
+    year,
+    month,
+    day,
+  ] =
+    value.split(
+      '-',
+    )
+
+  if (
+    !year ||
+    !month ||
+    !day
+  ) {
+    return value
+  }
+
+  return `${day}/${month}/${year}`
 }
 
-function getTodayInput() {
-  const now =
+function getInitials(
+  name:
+    string,
+) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(
+      0,
+      2,
+    )
+    .map(
+      (word) =>
+        word.charAt(
+          0,
+        ),
+    )
+    .join('')
+}
+
+function getNextDonateurId(
+  donateurs:
+    Donateur[],
+) {
+  return (
+    Math.max(
+      0,
+
+      ...donateurs.map(
+        (donateur) =>
+          donateur.id,
+      ),
+    ) + 1
+  )
+}
+
+function getNextDonateurCode(
+  donateurs:
+    Donateur[],
+) {
+  const codes =
+    donateurs
+      .map(
+        (donateur) =>
+          Number(
+            String(
+              donateur.code,
+            ).replace(
+              /^DON-/i,
+              '',
+            ),
+          ),
+      )
+      .filter(
+        (
+          value,
+        ) =>
+          Number.isFinite(
+            value,
+          ),
+      )
+
+  return String(
+    Math.max(
+      0,
+      ...codes,
+    ) + 1,
+  )
+}
+
+function getFileDate() {
+  const date =
     new Date()
 
-  return [
-    now.getFullYear(),
+  const year =
+    date.getFullYear()
+
+  const month =
     String(
-      now.getMonth() +
+      date.getMonth() +
         1,
     ).padStart(
       2,
       '0',
-    ),
+    )
+
+  const day =
     String(
-      now.getDate(),
+      date.getDate(),
     ).padStart(
       2,
       '0',
-    ),
-  ].join('-')
-}
-
-function createCommandeNumber(
-  commandes:
-    Commande[],
-) {
-  const year =
-    new Date().getFullYear()
-
-  const max =
-    commandes
-      .filter(
-        (commande) =>
-          commande.numero.startsWith(
-            `CMD-${year}-`,
-          ),
-      )
-      .reduce(
-        (
-          current,
-          commande,
-        ) => {
-          const match =
-            commande.numero.match(
-              /(\d+)$/,
-            )
-
-          return Math.max(
-            current,
-            match
-              ? Number(
-                  match[1],
-                )
-              : 0,
-          )
-        },
-        0,
-      )
-
-  return `CMD-${year}-${String(
-    max + 1,
-  ).padStart(
-    4,
-    '0',
-  )}`
-}
-
-function getFileDate() {
-  return new Date()
-    .toISOString()
-    .slice(
-      0,
-      10,
     )
+
+  return `${year}-${month}-${day}`
 }
 
 function downloadBlob(
-  blob: Blob,
-  filename: string,
+  blob:
+    Blob,
+
+  filename:
+    string,
 ) {
   const url =
     URL.createObjectURL(
@@ -3144,7 +4160,9 @@ function downloadBlob(
       'a',
     )
 
-  link.href = url
+  link.href =
+    url
+
   link.download =
     filename
 
@@ -3161,4 +4179,4 @@ function downloadBlob(
   )
 }
 
-export default Commandes
+export default Donateurs
