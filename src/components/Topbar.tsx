@@ -1,7 +1,35 @@
-import { useEffect, useRef, useState } from 'react'
-import { Bell, MessageCircle, X } from 'lucide-react'
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+
+import {
+  Bell,
+  MessageCircle,
+  X,
+} from 'lucide-react'
+
+import {
+  Link,
+} from 'react-router-dom'
+
+import {
+  ROLE_LABELS,
+  useUsers,
+} from '../contexts/UsersContext'
+
+import {
+  useGeneralSettings,
+} from '../contexts/GeneralSettingsContext'
 
 import './Topbar.css'
+
+/* =========================================================
+   PROPRIÉTÉS
+
+   On conserve la signature utilisée par AppLayout.
+   ========================================================= */
 
 type TopbarProps = {
   unreadCount: number
@@ -10,31 +38,132 @@ type TopbarProps = {
   onVisibilityChange: (visible: boolean) => void
 }
 
+/* =========================================================
+   INITIALES
+   ========================================================= */
+
+function getInitials(name: string): string {
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (words.length === 0) {
+    return '?'
+  }
+
+  return words
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join('')
+}
+
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+
 function Topbar({
   unreadCount,
   chatOpen,
   onChatClick,
   onVisibilityChange,
 }: TopbarProps) {
-  const [notificationsOpen, setNotificationsOpen] =
-    useState(false)
+  /* =======================================================
+     CONTEXTES
+     ======================================================= */
 
-  const topbarRef = useRef<HTMLElement | null>(null)
+  const {
+    currentUser,
+  } = useUsers()
 
-  // Détecte si la Topbar est visible à l'écran.
-  // Cela fonctionne aussi lorsque le défilement
-  // se fait dans un conteneur interne.
+  const {
+    settings,
+  } = useGeneralSettings()
+
+  /* =======================================================
+     RÉFÉRENCES
+     ======================================================= */
+
+  const topbarRef =
+    useRef<HTMLElement | null>(null)
+
+  const notificationsRef =
+    useRef<HTMLDivElement | null>(null)
+
+  /* =======================================================
+     ÉTATS
+     ======================================================= */
+
+  const [
+    notificationsOpen,
+    setNotificationsOpen,
+  ] = useState(false)
+
+  /* =======================================================
+     INFORMATIONS UTILISATEUR
+     ======================================================= */
+
+  const userName =
+    currentUser?.name || 'Utilisateur'
+
+  const userRole = currentUser
+    ? ROLE_LABELS[currentUser.role]
+    : 'Profil non disponible'
+
+  const userInitials =
+    getInitials(userName)
+
+  /* =======================================================
+     NOM DE L'APPLICATION
+
+     Relié aux Paramètres généraux.
+     ======================================================= */
+
+  const applicationName =
+    settings.applicationName.trim() ||
+    'Opération Brioches'
+
+  /* =======================================================
+     NOMBRE DE MESSAGES NON LUS
+     ======================================================= */
+
+  const unreadMessages =
+    Math.max(0, unreadCount)
+
+  const unreadLabel =
+    unreadMessages > 99
+      ? '99+'
+      : String(unreadMessages)
+
+  /* =======================================================
+     DÉTECTION DE VISIBILITÉ
+
+     Permet à AppLayout / Chat de savoir si la
+     Topbar est encore visible à l'écran.
+     ======================================================= */
+
   useEffect(() => {
     const element = topbarRef.current
 
-    if (!element) return
+    if (!element) {
+      return
+    }
+
+    if (
+      typeof IntersectionObserver === 'undefined'
+    ) {
+      onVisibilityChange(true)
+      return
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        onVisibilityChange(entry.isIntersecting)
+        onVisibilityChange(
+          entry.isIntersecting,
+        )
       },
       {
-        threshold: 0,
+        threshold: 0.01,
       },
     )
 
@@ -45,94 +174,277 @@ function Topbar({
     }
   }, [onVisibilityChange])
 
-  return (
-    <header ref={topbarRef} className="ob-topbar">
+  /* =======================================================
+     FERMETURE DES NOTIFICATIONS
 
-      <div className="ob-topbar-brand">
-        <span>Campagne</span>
-        <span className="ob-topbar-separator">/</span>
-        <strong>Opération Brioches</strong>
-      </div>
+     Clic à l'extérieur ou touche Échap.
+     ======================================================= */
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return
+    }
+
+    function handleOutsideClick(
+      event: MouseEvent,
+    ) {
+      const target = event.target
+
+      if (!(target instanceof Node)) {
+        return
+      }
+
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(target)
+      ) {
+        setNotificationsOpen(false)
+      }
+    }
+
+    function handleEscape(
+      event: KeyboardEvent,
+    ) {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false)
+      }
+    }
+
+    document.addEventListener(
+      'mousedown',
+      handleOutsideClick,
+    )
+
+    document.addEventListener(
+      'keydown',
+      handleEscape,
+    )
+
+    return () => {
+      document.removeEventListener(
+        'mousedown',
+        handleOutsideClick,
+      )
+
+      document.removeEventListener(
+        'keydown',
+        handleEscape,
+      )
+    }
+  }, [notificationsOpen])
+
+  /* =======================================================
+     OUVERTURE DU CHAT
+     ======================================================= */
+
+  function handleChatClick() {
+    setNotificationsOpen(false)
+    onChatClick()
+  }
+
+  /* =======================================================
+     AFFICHAGE
+     ======================================================= */
+
+  return (
+    <header
+      ref={topbarRef}
+      className="ob-topbar"
+    >
+
+      {/* ===================================================
+          IDENTITÉ DE L'APPLICATION
+      =================================================== */}
+
+      <Link
+        to="/"
+        className="ob-topbar-brand"
+        aria-label={`Accueil - ${applicationName}`}
+      >
+
+        <div className="ob-topbar-logo">
+          OB
+        </div>
+
+        <div className="ob-topbar-brand-text">
+
+          <span className="ob-topbar-eyebrow">
+            CAMPAGNE
+          </span>
+
+          <strong>
+            {applicationName}
+          </strong>
+
+        </div>
+
+      </Link>
+
+      {/* ===================================================
+          PARTIE DROITE
+      =================================================== */}
 
       <div className="ob-topbar-actions">
 
-        {/* DISCUSSIONS */}
+        {/* ================================================
+            NOTIFICATIONS
+        ================================================ */}
 
-        <button
-          type="button"
-          className={`ob-notification-button ob-chat-button ${
-            chatOpen ? 'active' : ''
-          }`}
-          aria-label={
-            unreadCount > 0
-              ? `Discussions, ${unreadCount} messages non lus`
-              : 'Discussions'
-          }
-          aria-expanded={chatOpen}
-          title="Discussions"
-          onClick={onChatClick}
+        <div
+          ref={notificationsRef}
+          className="ob-topbar-notifications"
         >
-          <MessageCircle size={21} />
-
-          {unreadCount > 0 && (
-            <span className="ob-chat-unread">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </button>
-
-        {/* NOTIFICATIONS */}
-
-        <div className="ob-notifications-wrapper">
 
           <button
             type="button"
-            className="ob-notification-button"
+            className={`ob-topbar-icon-button ${
+              notificationsOpen ? 'active' : ''
+            }`}
+            onClick={() =>
+              setNotificationsOpen(
+                (current) => !current,
+              )
+            }
             aria-label="Notifications"
             aria-expanded={notificationsOpen}
-            onClick={() =>
-              setNotificationsOpen((current) => !current)
-            }
+            aria-controls="ob-notifications-panel"
+            title="Notifications"
           >
-            <Bell size={21} />
+
+            <Bell size={20} />
+
           </button>
 
           {notificationsOpen && (
-            <div className="ob-notifications-panel">
 
-              <div className="ob-notifications-header">
-                <strong>Notifications</strong>
+            <div
+              id="ob-notifications-panel"
+              className="ob-topbar-notification-panel"
+            >
+
+              <div className="ob-topbar-panel-header">
+
+                <div>
+
+                  <strong>
+                    Notifications
+                  </strong>
+
+                  <span>
+                    Centre de notifications
+                  </span>
+
+                </div>
 
                 <button
                   type="button"
+                  className="ob-topbar-panel-close"
+                  onClick={() =>
+                    setNotificationsOpen(false)
+                  }
                   aria-label="Fermer les notifications"
-                  onClick={() => setNotificationsOpen(false)}
                 >
-                  <X size={18} />
+
+                  <X size={17} />
+
                 </button>
+
               </div>
 
-              <p>
-                Les notifications seront reliées aux
-                données utilisateurs.
-              </p>
+              <div className="ob-topbar-notification-empty">
+
+                <div className="ob-topbar-empty-icon">
+
+                  <Bell size={23} />
+
+                </div>
+
+                <strong>
+                  Aucune notification
+                </strong>
+
+                <p>
+                  Les alertes des différents
+                  modules apparaîtront ici
+                  lorsqu'elles seront connectées.
+                </p>
+
+              </div>
 
             </div>
+
           )}
 
         </div>
 
-        {/* PROFIL */}
+        {/* ================================================
+            CHAT
 
-        <div className="ob-user-profile">
+            Relié au Chat existant.
+        ================================================ */}
 
-          <div className="ob-user-avatar">
-            M
+        <button
+          type="button"
+          className={`ob-topbar-icon-button ob-topbar-chat-button ${
+            chatOpen ? 'active' : ''
+          }`}
+          onClick={handleChatClick}
+          aria-label={
+            unreadMessages > 0
+              ? `Discussions : ${unreadMessages} message(s) non lu(s)`
+              : 'Ouvrir les discussions'
+          }
+          aria-pressed={chatOpen}
+          title="Discussions"
+        >
+
+          <MessageCircle size={21} />
+
+          {unreadMessages > 0 && (
+
+            <span className="ob-topbar-chat-badge">
+
+              {unreadLabel}
+
+            </span>
+
+          )}
+
+        </button>
+
+        {/* ================================================
+            SÉPARATEUR
+        ================================================ */}
+
+        <div
+          className="ob-topbar-divider"
+          aria-hidden="true"
+        />
+
+        {/* ================================================
+            UTILISATEUR CONNECTÉ
+
+            Relié à UsersContext.
+        ================================================ */}
+
+        <div className="ob-topbar-user">
+
+          <div className="ob-topbar-avatar">
+
+            {userInitials}
+
           </div>
 
-          <div className="ob-user-info">
-            <strong>Maxime Claudel</strong>
-            <span>Administrateur</span>
+          <div className="ob-topbar-user-info">
+
+            <strong>
+              {userName}
+            </strong>
+
+            <span>
+              {userRole}
+            </span>
+
           </div>
 
         </div>

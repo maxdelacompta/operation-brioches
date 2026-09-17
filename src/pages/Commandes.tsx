@@ -46,7 +46,7 @@ import autoTable from 'jspdf-autotable'
 
 import {
   useObData,
-} from '../context/ObDataContext'
+} from '../contexts/ObDataContext'
 
 import type {
   Commande,

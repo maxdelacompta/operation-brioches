@@ -1,0 +1,824 @@
+/* =========================================================
+   PARAMÈTRES GÉNÉRAUX
+   CHARTE OPÉRATION BRIOCHES / AEIM
+   ========================================================= */
+
+.gs-page,
+.gs-page * {
+  box-sizing: border-box;
+}
+
+.gs-page {
+  width: 100%;
+  min-width: 0;
+
+  padding: 28px 34px 45px;
+
+  color: #1f344d;
+}
+
+/* =========================================================
+   RETOUR
+   ========================================================= */
+
+.gs-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-bottom: 24px;
+
+  color: #6682a5;
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.gs-back:hover {
+  color: #ff8614;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.gs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+
+  margin-bottom: 22px;
+}
+
+.gs-header-left {
+  display: flex;
+  align-items: center;
+  gap: 19px;
+
+  min-width: 0;
+}
+
+.gs-header-icon {
+  display: grid;
+  place-items: center;
+
+  width: 64px;
+  height: 64px;
+
+  flex-shrink: 0;
+
+  border-radius: 16px;
+
+  background: #063b7c;
+  color: #ffffff;
+}
+
+.gs-eyebrow {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #ff8614;
+
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 1px;
+}
+
+.gs-header h1 {
+  margin: 0;
+
+  color: #063b7c;
+
+  font-size: 30px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.gs-header p {
+  margin: 7px 0 0;
+
+  color: #6682a5;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.gs-header-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+/* =========================================================
+   BOUTONS
+   ========================================================= */
+
+.gs-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 40px;
+
+  padding: 10px 14px;
+
+  border-radius: 9px;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 750;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.gs-button-primary {
+  border: 1px solid #ff8614;
+
+  background: #ff8614;
+  color: #ffffff;
+}
+
+.gs-button-primary:hover:not(:disabled) {
+  background: #e9740b;
+}
+
+.gs-button-outline {
+  border: 1px solid #dce5ef;
+
+  background: #ffffff;
+  color: #063b7c;
+}
+
+.gs-button-reset {
+  border: 1px solid #e1e9f2;
+
+  background: #ffffff;
+  color: #b64a4a;
+}
+
+.gs-button-reset:hover {
+  border-color: #b64a4a;
+}
+
+.gs-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   BANDEAU D'INFORMATION
+   ========================================================= */
+
+.gs-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  margin-bottom: 18px;
+  padding: 12px 15px;
+
+  border: 1px solid #ffe0be;
+  border-radius: 10px;
+
+  background: #fff5ea;
+  color: #805024;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.gs-info-banner svg {
+  flex-shrink: 0;
+  color: #ff8614;
+}
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
+
+.gs-message {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  margin-bottom: 17px;
+  padding: 12px 14px;
+
+  border-radius: 9px;
+
+  font-size: 12px;
+}
+
+.gs-message-success {
+  background: #e8f9f1;
+  color: #147b49;
+}
+
+.gs-message-error {
+  background: #fff0f0;
+  color: #b23d3d;
+}
+
+/* =========================================================
+   STATISTIQUES
+   ========================================================= */
+
+.gs-stats {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 13px;
+
+  margin-bottom: 19px;
+}
+
+.gs-stat {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  min-width: 0;
+  min-height: 85px;
+
+  padding: 15px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 13px;
+
+  background: #ffffff;
+}
+
+.gs-stat-icon {
+  display: grid;
+  place-items: center;
+
+  width: 44px;
+  height: 44px;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+}
+
+.gs-stat-icon.orange {
+  background: #fff0de;
+  color: #ff8614;
+}
+
+.gs-stat-icon.blue {
+  background: #eef4fc;
+  color: #063b7c;
+}
+
+.gs-stat-icon.green {
+  background: #e6f8ef;
+  color: #16975a;
+}
+
+.gs-stat-icon.purple {
+  background: #f2ecff;
+  color: #8150c7;
+}
+
+.gs-stat > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  min-width: 0;
+}
+
+.gs-stat span {
+  color: #6682a5;
+
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.gs-stat strong {
+  color: #063b7c;
+
+  font-size: 20px;
+  font-weight: 850;
+
+  overflow-wrap: anywhere;
+}
+
+.gs-stat strong.gs-stat-text {
+  font-size: 16px;
+}
+
+/* =========================================================
+   DISPOSITION PRINCIPALE
+   ========================================================= */
+
+.gs-layout {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.65fr)
+    minmax(265px, 1fr);
+
+  align-items: start;
+  gap: 17px;
+
+  min-width: 0;
+}
+
+.gs-main,
+.gs-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  min-width: 0;
+}
+
+/* =========================================================
+   CARTES
+   ========================================================= */
+
+.gs-card {
+  min-width: 0;
+
+  padding: 19px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 5px 20px rgba(18, 59, 122, 0.04);
+}
+
+.gs-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-bottom: 19px;
+}
+
+.gs-card-icon {
+  display: grid;
+  place-items: center;
+
+  width: 42px;
+  height: 42px;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
+  background: #fff0de;
+  color: #ff8614;
+}
+
+.gs-card h2 {
+  margin: 0;
+
+  color: #063b7c;
+
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.gs-card-header p {
+  margin: 5px 0 0;
+
+  color: #6682a5;
+
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* =========================================================
+   FORMULAIRES
+   ========================================================= */
+
+.gs-fields {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+.gs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  min-width: 0;
+
+  color: #063b7c;
+
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.gs-field.wide {
+  grid-column: 1 / -1;
+}
+
+.gs-field b {
+  color: #ff8614;
+}
+
+.gs-field input,
+.gs-field textarea {
+  width: 100%;
+  min-width: 0;
+
+  padding: 10px 12px;
+
+  border: 1px solid #dce5ef;
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #ffffff;
+  color: #1f344d;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.gs-field input {
+  min-height: 41px;
+}
+
+.gs-field textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.gs-field input:focus,
+.gs-field textarea:focus {
+  border-color: #ff8614;
+
+  box-shadow:
+    0 0 0 3px rgba(255, 134, 20, 0.1);
+}
+
+.gs-field small {
+  align-self: flex-end;
+
+  color: #6682a5;
+  font-size: 10px;
+}
+
+/* =========================================================
+   NOTES
+   ========================================================= */
+
+.gs-card-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+
+  margin-top: 14px;
+  padding: 10px 12px;
+
+  border-radius: 8px;
+
+  background: #eef6ff;
+  color: #526f91;
+
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.gs-card-note svg {
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   ACTIONS DU FORMULAIRE
+   ========================================================= */
+
+.gs-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gs-unsaved {
+  margin: -7px 0 0;
+
+  color: #c36a0a;
+  font-size: 11px;
+
+  text-align: right;
+}
+
+/* =========================================================
+   APERÇU
+   ========================================================= */
+
+.gs-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+
+  min-width: 0;
+
+  padding: 23px 16px;
+
+  border: 1px solid #f1e7dc;
+  border-radius: 11px;
+
+  background: #fff8f1;
+
+  text-align: center;
+}
+
+.gs-preview-logo {
+  display: grid;
+  place-items: center;
+
+  width: 55px;
+  height: 55px;
+
+  margin-bottom: 5px;
+
+  border-radius: 13px;
+
+  background: #ff8614;
+  color: #ffffff;
+
+  font-size: 19px;
+  font-weight: 850;
+}
+
+.gs-preview h3 {
+  margin: 0;
+
+  color: #063b7c;
+
+  font-size: 19px;
+  font-weight: 850;
+
+  overflow-wrap: anywhere;
+}
+
+.gs-preview > strong {
+  color: #526f91;
+  font-size: 12px;
+}
+
+.gs-preview-divider {
+  width: 100%;
+  height: 1px;
+
+  margin: 7px 0;
+
+  background: #e1e9f2;
+}
+
+.gs-preview-line {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+
+  width: 100%;
+
+  color: #526f91;
+
+  font-size: 11px;
+  line-height: 1.5;
+
+  overflow-wrap: anywhere;
+}
+
+.gs-preview-line svg {
+  flex-shrink: 0;
+  color: #063b7c;
+}
+
+.gs-preview-footer {
+  width: 100%;
+
+  margin-top: 10px;
+  padding-top: 13px;
+
+  border-top: 1px solid #e1e9f2;
+
+  color: #063b7c;
+
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.6;
+
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.gs-preview-empty {
+  margin: 8px 0 0;
+
+  color: #6682a5;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.gs-preview-hint {
+  margin: 12px 0 0;
+
+  color: #6682a5;
+
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   SÉCURITÉ
+   ========================================================= */
+
+.gs-local-badge {
+  display: inline-block;
+
+  padding: 6px 9px;
+
+  border-radius: 7px;
+
+  background: #fff0de;
+  color: #b96711;
+
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.gs-security-content {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+
+  margin-top: 15px;
+}
+
+.gs-security-content p {
+  margin: 0;
+
+  color: #6682a5;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   CAMPAGNES
+   ========================================================= */
+
+.gs-campaign-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  padding: 12px;
+
+  border-radius: 9px;
+
+  background: #f3f7fb;
+}
+
+.gs-campaign-info span {
+  color: #6682a5;
+  font-size: 11px;
+}
+
+.gs-campaign-info strong {
+  color: #063b7c;
+  font-size: 17px;
+}
+
+.gs-card-description {
+  margin: 14px 0;
+
+  color: #6682a5;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.gs-campaign-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  min-height: 40px;
+
+  padding: 10px 12px;
+
+  border-radius: 9px;
+
+  background: #eef6ff;
+  color: #063b7c;
+
+  text-decoration: none;
+
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.gs-campaign-link:hover {
+  color: #ff8614;
+}
+
+.gs-campaign-link svg {
+  transform: rotate(180deg);
+}
+
+/* =========================================================
+   ACCESSIBILITÉ
+   ========================================================= */
+
+.gs-page button:focus-visible,
+.gs-page a:focus-visible {
+  outline: 3px solid rgba(255, 134, 20, 0.4);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1250px) {
+  .gs-stats {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .gs-layout {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(245px, 0.8fr);
+  }
+}
+
+@media (max-width: 1050px) {
+  .gs-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .gs-page {
+    padding: 20px 15px 35px;
+  }
+
+  .gs-header-left {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .gs-header-icon {
+    width: 49px;
+    height: 49px;
+  }
+
+  .gs-header h1 {
+    font-size: 24px;
+  }
+
+  .gs-stats,
+  .gs-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .gs-field.wide {
+    grid-column: auto;
+  }
+
+  .gs-card {
+    padding: 15px;
+  }
+
+  .gs-header-actions {
+    width: 100%;
+  }
+
+  .gs-header-actions .gs-button {
+    flex: 1;
+  }
+}

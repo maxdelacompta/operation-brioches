@@ -1,15 +1,25 @@
-import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+
+import {
+  NavLink,
+  useLocation,
+} from 'react-router-dom'
 
 import {
   BarChart3,
   Building2,
+  CalendarDays,
   ChevronDown,
   Database,
   Euro,
+  History,
   Home,
+  KeyRound,
+  LayoutDashboard,
   Map,
   Megaphone,
   Settings,
+  ShieldCheck,
   ShoppingCart,
   Truck,
   Users,
@@ -17,7 +27,38 @@ import {
 
 import './Sidebar.css'
 
+/* =========================================================
+   SIDEBAR — OPÉRATION BRIOCHES
+   ========================================================= */
+
 function Sidebar() {
+  const location = useLocation()
+
+  /* =======================================================
+     ÉTAT DU MENU ADMINISTRATION
+     ======================================================= */
+
+  const isAdminRoute =
+    location.pathname === '/administration' ||
+    location.pathname.startsWith('/administration/')
+
+  const [adminOpen, setAdminOpen] = useState(isAdminRoute)
+
+  // Ouvrir automatiquement le menu quand on arrive
+  // sur une page Administration.
+  useEffect(() => {
+    if (
+      location.pathname === '/administration' ||
+      location.pathname.startsWith('/administration/')
+    ) {
+      setAdminOpen(true)
+    }
+  }, [location.pathname])
+
+  /* =======================================================
+     CLASSES DES LIENS
+     ======================================================= */
+
   const mainLinkClass = ({
     isActive,
   }: {
@@ -32,13 +73,19 @@ function Sidebar() {
   }) =>
     `sidebar-submenu-link ${isActive ? 'active' : ''}`
 
+  /* =======================================================
+     AFFICHAGE
+     ======================================================= */
+
   return (
     <aside className="sidebar">
+
       {/* =====================================================
           LOGO
       ===================================================== */}
 
       <div className="sidebar-logo">
+
         <div className="sidebar-logo-mark">
           OB
         </div>
@@ -47,14 +94,21 @@ function Sidebar() {
           <strong>Opération Brioches</strong>
           <span>AEIM</span>
         </div>
+
       </div>
 
       {/* =====================================================
           NAVIGATION PRINCIPALE
       ===================================================== */}
 
-      <nav className="sidebar-nav">
-        {/* ACCUEIL */}
+      <nav
+        className="sidebar-nav"
+        aria-label="Navigation principale"
+      >
+
+        {/* ===================================================
+            ACCUEIL
+        =================================================== */}
 
         <NavLink
           to="/"
@@ -66,7 +120,9 @@ function Sidebar() {
           <span>Accueil</span>
         </NavLink>
 
-        {/* DASHBOARD */}
+        {/* ===================================================
+            TABLEAU DE BORD
+        =================================================== */}
 
         <NavLink
           to="/dashboard"
@@ -77,12 +133,14 @@ function Sidebar() {
           <span>Tableau de bord</span>
         </NavLink>
 
-        {/* =====================================================
+        {/* ===================================================
             OPÉRATION BRIOCHES
-        ===================================================== */}
+        =================================================== */}
 
         <div className="sidebar-menu-group">
+
           <div className="sidebar-section-title">
+
             <div className="sidebar-section-title-left">
               <ShoppingCart size={18} />
 
@@ -90,9 +148,11 @@ function Sidebar() {
             </div>
 
             <ChevronDown size={15} />
+
           </div>
 
           <div className="sidebar-submenu">
+
             <NavLink
               to="/commandes"
               className={subLinkClass}
@@ -113,15 +173,19 @@ function Sidebar() {
             >
               Suivi global
             </NavLink>
+
           </div>
+
         </div>
 
-        {/* =====================================================
+        {/* ===================================================
             ENCAISSEMENTS
-        ===================================================== */}
+        =================================================== */}
 
         <div className="sidebar-menu-group">
+
           <div className="sidebar-section-title">
+
             <div className="sidebar-section-title-left">
               <Euro size={18} />
 
@@ -129,15 +193,18 @@ function Sidebar() {
             </div>
 
             <ChevronDown size={15} />
+
           </div>
-          <NavLink
-              to="/encaissements/fiches-caisse"
-              className={subLinkClass}
-          >
-            Fiches de caisse
-          </NavLink>
 
           <div className="sidebar-submenu">
+
+            <NavLink
+              to="/encaissements/fiches-caisse"
+              className={subLinkClass}
+            >
+              Fiches de caisse
+            </NavLink>
+
             <NavLink
               to="/encaissements/etablissements"
               className={subLinkClass}
@@ -172,15 +239,19 @@ function Sidebar() {
             >
               Récap général
             </NavLink>
+
           </div>
+
         </div>
 
-        {/* =====================================================
+        {/* ===================================================
             FINANCE
-        ===================================================== */}
+        =================================================== */}
 
         <div className="sidebar-menu-group">
+
           <div className="sidebar-section-title">
+
             <div className="sidebar-section-title-left">
               <Euro size={18} />
 
@@ -188,9 +259,11 @@ function Sidebar() {
             </div>
 
             <ChevronDown size={15} />
+
           </div>
 
           <div className="sidebar-submenu">
+
             <NavLink
               to="/finance/recettes"
               className={subLinkClass}
@@ -225,12 +298,14 @@ function Sidebar() {
             >
               Pertes / Écarts
             </NavLink>
+
           </div>
+
         </div>
 
-        {/* =====================================================
+        {/* ===================================================
             STRUCTURES
-        ===================================================== */}
+        =================================================== */}
 
         <NavLink
           to="/structures"
@@ -241,9 +316,9 @@ function Sidebar() {
           <span>Structures</span>
         </NavLink>
 
-        {/* =====================================================
+        {/* ===================================================
             GÉOGRAPHIE
-        ===================================================== */}
+        =================================================== */}
 
         <NavLink
           to="/geographie"
@@ -254,9 +329,9 @@ function Sidebar() {
           <span>Géographie</span>
         </NavLink>
 
-        {/* =====================================================
+        {/* ===================================================
             COMMUNICATION
-        ===================================================== */}
+        =================================================== */}
 
         <NavLink
           to="/communication"
@@ -267,12 +342,14 @@ function Sidebar() {
           <span>Communication</span>
         </NavLink>
 
-        {/* =====================================================
+        {/* ===================================================
             BASE DE DONNÉES
-        ===================================================== */}
+        =================================================== */}
 
         <div className="sidebar-menu-group">
+
           <div className="sidebar-section-title">
+
             <div className="sidebar-section-title-left">
               <Database size={18} />
 
@@ -280,9 +357,11 @@ function Sidebar() {
             </div>
 
             <ChevronDown size={15} />
+
           </div>
 
           <div className="sidebar-submenu">
+
             <NavLink
               to="/bdd"
               end
@@ -301,21 +380,128 @@ function Sidebar() {
 
               Donateurs
             </NavLink>
+
           </div>
+
         </div>
 
-        {/* =====================================================
+        {/* ===================================================
             ADMINISTRATION
-        ===================================================== */}
+        =================================================== */}
 
-        <NavLink
-          to="/administration"
-          className={mainLinkClass}
-        >
-          <Settings size={19} />
+        <div className="sidebar-menu-group">
 
-          <span>Administration</span>
-        </NavLink>
+          {/* BOUTON OUVRIR / FERMER */}
+
+          <button
+            type="button"
+            className={`sidebar-section-title sidebar-section-button ${
+              isAdminRoute ? 'is-current' : ''
+            }`}
+            aria-expanded={adminOpen}
+            aria-controls="sidebar-admin-submenu"
+            onClick={() =>
+              setAdminOpen((current) => !current)
+            }
+          >
+
+            <div className="sidebar-section-title-left">
+
+              <ShieldCheck size={19} />
+
+              <span>Administration</span>
+
+            </div>
+
+            <ChevronDown
+              size={16}
+              className={`sidebar-chevron ${
+                adminOpen ? 'is-open' : ''
+              }`}
+            />
+
+          </button>
+
+          {/* SOUS-MENU ADMINISTRATION */}
+
+          {adminOpen && (
+            <div
+              id="sidebar-admin-submenu"
+              className="sidebar-submenu sidebar-admin-submenu"
+            >
+
+              {/* VUE D'ENSEMBLE */}
+
+              <NavLink
+                to="/administration"
+                end
+                className={subLinkClass}
+              >
+                <LayoutDashboard size={16} />
+
+                <span>Vue d'ensemble</span>
+              </NavLink>
+
+              {/* UTILISATEURS */}
+
+              <NavLink
+                to="/administration/utilisateurs"
+                className={subLinkClass}
+              >
+                <Users size={16} />
+
+                <span>Utilisateurs</span>
+              </NavLink>
+
+              {/* RÔLES ET PERMISSIONS */}
+
+              <NavLink
+                to="/administration/roles"
+                className={subLinkClass}
+              >
+                <KeyRound size={16} />
+
+                <span>Rôles et permissions</span>
+              </NavLink>
+
+              {/* CAMPAGNES */}
+
+              <NavLink
+                to="/administration/campagnes"
+                className={subLinkClass}
+              >
+                <CalendarDays size={16} />
+
+                <span>Campagnes</span>
+              </NavLink>
+
+              {/* PARAMÈTRES */}
+
+              <NavLink
+                to="/administration/parametres"
+                className={subLinkClass}
+              >
+                <Settings size={16} />
+
+                <span>Paramètres généraux</span>
+              </NavLink>
+
+              {/* JOURNAL D'ACTIVITÉ */}
+
+              <NavLink
+                to="/administration/journal"
+                className={subLinkClass}
+              >
+                <History size={16} />
+
+                <span>Journal d'activité</span>
+              </NavLink>
+
+            </div>
+          )}
+
+        </div>
+
       </nav>
 
       {/* =====================================================
@@ -323,6 +509,7 @@ function Sidebar() {
       ===================================================== */}
 
       <div className="sidebar-footer">
+
         <div className="sidebar-footer-icon">
           <Truck size={18} />
         </div>
@@ -330,9 +517,13 @@ function Sidebar() {
         <div>
           <strong>Opération Brioches</strong>
 
-          <span>Ensemble, faisons la différence.</span>
+          <span>
+            Ensemble, faisons la différence.
+          </span>
         </div>
+
       </div>
+
     </aside>
   )
 }

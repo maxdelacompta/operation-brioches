@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+
 import {
   MessageCircle,
   Search,
@@ -6,25 +12,24 @@ import {
   X,
 } from 'lucide-react'
 
+import { Link } from 'react-router-dom'
+
+import {
+  ROLE_LABELS,
+  useUsers,
+} from '../contexts/UsersContext'
+
 import './Chat.css'
 
 /* =========================================================
    TYPES
    ========================================================= */
 
-type Conversation = {
-  id: number
-  name: string
-  poste?: string
-  online: boolean
-  unread: number
-  lastMessage: string
-}
-
 type ChatMessage = {
   id: number
-  author: 'me' | 'them'
+  senderId: string
   text: string
+  read: boolean
 }
 
 type ChatProps = {
@@ -36,59 +41,7 @@ type ChatProps = {
 }
 
 /* =========================================================
-   DONNÉES DE DÉMONSTRATION
-   ========================================================= */
-
-const initialConversations: Conversation[] = [
-  {
-    id: 1,
-    name: 'Chloé Martin',
-    online: true,
-    unread: 2,
-    lastMessage: 'Tu peux regarder ça ?',
-  },
-  {
-    id: 2,
-    name: 'Service Comptabilité',
-    online: true,
-    unread: 1,
-    lastMessage: 'Facture reçue ✓',
-  },
-  {
-    id: 3,
-    name: 'Rémi Dupont',
-    online: false,
-    unread: 0,
-    lastMessage: "D'accord merci",
-  },
-]
-
-const initialMessages: Record<number, ChatMessage[]> = {
-  1: [
-    {
-      id: 1,
-      author: 'them',
-      text: 'Tu peux regarder ça ?',
-    },
-  ],
-  2: [
-    {
-      id: 2,
-      author: 'them',
-      text: 'Facture reçue ✓',
-    },
-  ],
-  3: [
-    {
-      id: 3,
-      author: 'them',
-      text: "D'accord merci",
-    },
-  ],
-}
-
-/* =========================================================
-   COMPOSANT PRINCIPAL
+   COMPOSANT CHAT
    ========================================================= */
 
 function Chat({
@@ -98,47 +51,98 @@ function Chat({
   onClose,
   onUnreadChange,
 }: ChatProps) {
-  const [conversations, setConversations] =
-    useState<Conversation[]>(initialConversations)
+  /* =======================================================
+     UTILISATEURS PARTAGÉS
+     ======================================================= */
 
-  const [messages, setMessages] =
-    useState<Record<number, ChatMessage[]>>(initialMessages)
+  const {
+    users,
+    currentUserId,
+  } = useUsers()
+
+  /* =======================================================
+     ÉTATS LOCAUX
+     ======================================================= */
 
   const [activeConversationId, setActiveConversationId] =
-    useState<number | null>(null)
+    useState<string | null>(null)
 
   const [search, setSearch] = useState('')
   const [message, setMessage] = useState('')
 
-  const nextMessageId = useRef(4)
+  // Messages locaux classés par identifiant utilisateur.
+  // Les identifiants ne dépendent plus des noms.
+  const [messages, setMessages] = useState<
+    Record<string, ChatMessage[]>
+  >({})
+
+  const nextMessageId = useRef(1)
+
+  /* =======================================================
+     LISTE DES PERSONNES DISPONIBLES
+     ======================================================= */
+
+  const chatUsers = useMemo(() => {
+    return users.filter(
+      (user) =>
+        user.id !== currentUserId &&
+        user.status === 'actif',
+    )
+  }, [users, currentUserId])
 
   /* =======================================================
      CONVERSATION ACTIVE
      ======================================================= */
 
-  const activeConversation = conversations.find(
-    (conversation) =>
-      conversation.id === activeConversationId,
-  )
+  const activeConversation =
+    chatUsers.find(
+      (user) => user.id === activeConversationId,
+    ) ?? null
 
-  const activeMessages =
-    activeConversationId === null
-      ? []
-      : messages[activeConversationId] || []
+  const activeMessages = activeConversation
+    ? messages[activeConversation.id] ?? []
+    : []
 
   /* =======================================================
-     COMPTEUR DE MESSAGES NON LUS
+     DERNIER MESSAGE
+     ======================================================= */
+
+  function getLastMessage(userId: string) {
+    const conversationMessages = messages[userId] ?? []
+
+    if (conversationMessages.length === 0) {
+      return 'Aucun message pour le moment'
+    }
+
+    return conversationMessages[
+      conversationMessages.length - 1
+    ].text
+  }
+
+  /* =======================================================
+     MESSAGES NON LUS
      ======================================================= */
 
   const totalUnread = useMemo(() => {
-    return conversations.reduce(
-      (total, conversation) =>
-        total + conversation.unread,
-      0,
-    )
-  }, [conversations])
+    return chatUsers.reduce((total, user) => {
+      const conversationMessages =
+        messages[user.id] ?? []
 
-  // Synchronisation du compteur avec la Topbar.
+      const unread = conversationMessages.filter(
+        (item) =>
+          item.senderId !== currentUserId &&
+          !item.read,
+      ).length
+
+      return total + unread
+    }, 0)
+  }, [
+    chatUsers,
+    messages,
+    currentUserId,
+  ])
+
+  // Synchronisation du compteur avec AppLayout et Topbar.
   useEffect(() => {
     onUnreadChange(totalUnread)
   }, [totalUnread, onUnreadChange])
@@ -147,50 +151,81 @@ function Chat({
      RECHERCHE
      ======================================================= */
 
-  const filteredConversations = useMemo(() => {
+  const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase()
 
     if (!query) {
-      return conversations
+      return chatUsers
     }
 
-    return conversations.filter((conversation) => {
+    return chatUsers.filter((user) => {
       const searchableText = [
-        conversation.name,
-        conversation.poste,
-        conversation.lastMessage,
+        user.name,
+        user.email,
+        user.poste,
+        ROLE_LABELS[user.role],
+        user.perimetre,
+        getLastMessage(user.id),
       ]
-        .filter(Boolean)
         .join(' ')
         .toLowerCase()
 
       return searchableText.includes(query)
     })
-  }, [conversations, search])
+  }, [
+    chatUsers,
+    search,
+    messages,
+  ])
 
   /* =======================================================
-     OUVERTURE D'UNE CONVERSATION
+     COMPTEUR POUR UNE PERSONNE
      ======================================================= */
 
-  function openConversation(conversationId: number) {
-    setActiveConversationId(conversationId)
-    setMessage('')
-
-    // Les messages de cette conversation passent à "lus".
-    setConversations((current) =>
-      current.map((conversation) =>
-        conversation.id === conversationId
-          ? {
-              ...conversation,
-              unread: 0,
-            }
-          : conversation,
-      ),
-    )
+  function getUnreadCount(userId: string) {
+    return (messages[userId] ?? []).filter(
+      (item) =>
+        item.senderId !== currentUserId &&
+        !item.read,
+    ).length
   }
 
   /* =======================================================
-     FERMETURE DU CHAT
+     OUVRIR UNE CONVERSATION
+     ======================================================= */
+
+  function openConversation(userId: string) {
+    setActiveConversationId(userId)
+    setMessage('')
+
+    // Marquer les éventuels messages reçus comme lus.
+    setMessages((current) => {
+      const conversationMessages =
+        current[userId] ?? []
+
+      const hasUnread = conversationMessages.some(
+        (item) =>
+          item.senderId !== currentUserId &&
+          !item.read,
+      )
+
+      if (!hasUnread) {
+        return current
+      }
+
+      return {
+        ...current,
+
+        [userId]: conversationMessages.map((item) => ({
+          ...item,
+          read: true,
+        })),
+      }
+    })
+  }
+
+  /* =======================================================
+     FERMER LES DISCUSSIONS
      ======================================================= */
 
   function closeChat() {
@@ -199,50 +234,43 @@ function Chat({
     onClose()
   }
 
+  /* =======================================================
+     FERMER UNE CONVERSATION
+     ======================================================= */
+
   function closeConversation() {
     setActiveConversationId(null)
     setMessage('')
   }
 
   /* =======================================================
-     ENVOI D'UN MESSAGE
+     ENVOYER UN MESSAGE LOCAL
      ======================================================= */
 
   function sendMessage() {
     const text = message.trim()
 
-    if (!text || activeConversationId === null) {
+    if (!text || !activeConversation) {
       return
     }
 
-    const conversationId = activeConversationId
+    const userId = activeConversation.id
 
     const newMessage: ChatMessage = {
       id: nextMessageId.current++,
-      author: 'me',
+      senderId: currentUserId,
       text,
+      read: true,
     }
 
-    // Ajout du message dans l'historique local.
     setMessages((current) => ({
       ...current,
-      [conversationId]: [
-        ...(current[conversationId] || []),
+
+      [userId]: [
+        ...(current[userId] ?? []),
         newMessage,
       ],
     }))
-
-    // Actualisation du dernier message dans la liste.
-    setConversations((current) =>
-      current.map((conversation) =>
-        conversation.id === conversationId
-          ? {
-              ...conversation,
-              lastMessage: text,
-            }
-          : conversation,
-      ),
-    )
 
     setMessage('')
   }
@@ -253,11 +281,11 @@ function Chat({
 
   return (
     <>
+
       {/* =================================================
           BOUTON FLOTTANT
 
-          Visible uniquement lorsque la Topbar
-          n'est plus visible à l'écran.
+          Affiché lorsque la Topbar n'est plus visible.
       ================================================= */}
 
       {showFloating && (
@@ -275,6 +303,7 @@ function Chat({
           aria-expanded={isOpen}
           title="Discussions"
         >
+
           <MessageCircle size={22} />
 
           {totalUnread > 0 && (
@@ -284,28 +313,38 @@ function Chat({
               </span>
 
               <span className="chat-badge">
-                {totalUnread > 99 ? '99+' : totalUnread}
+                {totalUnread > 99
+                  ? '99+'
+                  : totalUnread}
               </span>
             </>
           )}
+
         </button>
       )}
 
       {/* =================================================
-          PANNEAU : LISTE DES DISCUSSIONS
+          PANNEAU DES DISCUSSIONS
       ================================================= */}
 
       {isOpen && (
         <div
           className={`chat-panel ${
-            showFloating ? '' : 'chat-panel--topbar'
+            showFloating
+              ? ''
+              : 'chat-panel--topbar'
           }`}
         >
-          {/* EN-TÊTE COMPACT */}
+
+          {/* EN-TÊTE */}
 
           <div className="chat-panel-header">
+
             <div className="chat-panel-title-row">
-              <strong>Discussions</strong>
+
+              <strong>
+                Discussions
+              </strong>
 
               <span className="chat-panel-status">
                 {totalUnread > 0
@@ -314,6 +353,7 @@ function Chat({
                     } non lu${totalUnread > 1 ? 's' : ''}`
                   : 'Tous les messages sont lus'}
               </span>
+
             </div>
 
             <button
@@ -324,11 +364,15 @@ function Chat({
             >
               <X size={19} />
             </button>
+
           </div>
 
-          {/* RECHERCHE */}
+          {/* =================================================
+              RECHERCHE
+          ================================================= */}
 
           <div className="chat-search">
+
             <Search size={19} />
 
             <input
@@ -340,75 +384,112 @@ function Chat({
                 setSearch(event.target.value)
               }
             />
+
           </div>
 
-          {/* LISTE DES CONVERSATIONS */}
+          {/* =================================================
+              LISTE DES UTILISATEURS
+          ================================================= */}
 
           <div className="chat-conversations">
-            {filteredConversations.length === 0 ? (
+
+            {/* AUCUN AUTRE UTILISATEUR ACTIF */}
+
+            {chatUsers.length === 0 && (
               <div className="chat-empty">
-                Aucune conversation trouvée.
+
+                <p>
+                  Aucun autre utilisateur actif.
+                </p>
+
+                <Link
+                  to="/administration/utilisateurs"
+                  onClick={closeChat}
+                >
+                  Gérer les utilisateurs
+                </Link>
+
               </div>
-            ) : (
-              filteredConversations.map((conversation) => (
+            )}
+
+            {/* RECHERCHE SANS RÉSULTAT */}
+
+            {chatUsers.length > 0 &&
+              filteredUsers.length === 0 && (
+                <div className="chat-empty">
+                  Aucune conversation trouvée.
+                </div>
+              )}
+
+            {/* CONVERSATIONS */}
+
+            {filteredUsers.map((user) => {
+              const unread = getUnreadCount(user.id)
+
+              const posteOuRole =
+                user.poste.trim() ||
+                ROLE_LABELS[user.role]
+
+              return (
                 <button
-                  key={conversation.id}
+                  key={user.id}
                   type="button"
                   className={`chat-conversation ${
-                    activeConversationId === conversation.id
+                    activeConversationId === user.id
                       ? 'active'
                       : ''
                   }`}
                   onClick={() =>
-                    openConversation(conversation.id)
+                    openConversation(user.id)
                   }
                 >
+
                   {/* AVATAR */}
 
                   <div className="chat-avatar">
-                    {conversation.name.charAt(0).toUpperCase()}
-
-                    <span
-                      className={`chat-status ${
-                        conversation.online
-                          ? 'online'
-                          : 'offline'
-                      }`}
-                      aria-hidden="true"
-                    />
+                    {user.name
+                      .charAt(0)
+                      .toUpperCase()}
                   </div>
 
-                  {/* NOM + POSTE ÉVENTUEL + DERNIER MESSAGE */}
+                  {/* IDENTITÉ ET DERNIER MESSAGE */}
 
                   <div className="chat-conversation-info">
+
                     <div className="chat-conversation-identity">
+
                       <strong>
-                        {conversation.name}
+                        {user.name}
                       </strong>
 
-                      {conversation.poste?.trim() && (
+                      {posteOuRole && (
                         <span className="chat-conversation-poste">
-                          · {conversation.poste}
+                          · {posteOuRole}
                         </span>
                       )}
+
                     </div>
 
                     <span className="chat-conversation-preview">
-                      {conversation.lastMessage}
+                      {getLastMessage(user.id)}
                     </span>
+
                   </div>
 
-                  {/* COMPTEUR NON LU */}
+                  {/* COMPTEUR */}
 
-                  {conversation.unread > 0 && (
+                  {unread > 0 && (
                     <span className="chat-unread">
-                      {conversation.unread}
+                      {unread}
                     </span>
                   )}
+
                 </button>
-              ))
-            )}
+              )
+            })}
+
           </div>
+
         </div>
       )}
 
@@ -424,41 +505,51 @@ function Chat({
               : 'chat-message-window--topbar'
           }`}
         >
-          {/* EN-TÊTE COMPACT */}
+
+          {/* =================================================
+              EN-TÊTE
+          ================================================= */}
 
           <div className="chat-message-header">
+
             <div className="chat-message-person">
+
               <div className="chat-message-identity">
-                {/* NOM PLUS GRAND */}
+
+                {/* NOM DEPUIS LE RÉFÉRENTIEL */}
 
                 <strong>
                   {activeConversation.name}
                 </strong>
 
-                {/* STATUT À CÔTÉ DU NOM */}
+                {/*
+                  À ce stade, nous connaissons le statut
+                  du compte, mais pas la présence réelle
+                  en ligne.
 
-                <span
-                  className={`chat-message-presence ${
-                    activeConversation.online
-                      ? 'online'
-                      : 'offline'
-                  }`}
-                >
+                  On affiche donc "Compte actif" au lieu
+                  d'inventer un statut de connexion.
+                */}
+
+                <span className="chat-message-presence online">
+
                   <span
                     className="chat-presence-dot"
                     aria-hidden="true"
                   />
 
-                  {activeConversation.online
-                    ? 'En ligne'
-                    : 'Hors ligne'}
+                  Compte actif
+
                 </span>
+
               </div>
+
             </div>
 
-            {/* UNIQUEMENT LE BOUTON FERMER */}
+            {/* UN SEUL BOUTON : FERMER */}
 
             <div className="chat-message-actions">
+
               <button
                 type="button"
                 aria-label="Fermer la conversation"
@@ -467,27 +558,49 @@ function Chat({
               >
                 <X size={19} />
               </button>
+
             </div>
+
           </div>
 
-          {/* HISTORIQUE DES MESSAGES */}
+          {/* =================================================
+              HISTORIQUE DES MESSAGES
+          ================================================= */}
 
           <div className="chat-message-content">
-            {activeMessages.map((item) => (
-              <div
-                key={item.id}
-                className={`chat-message ${
-                  item.author === 'me'
-                    ? 'sent'
-                    : 'received'
-                }`}
-              >
-                {item.text}
+
+            {activeMessages.length === 0 ? (
+
+              <div className="chat-empty">
+                Aucun message pour le moment.
+                <br />
+                Commencez la conversation.
               </div>
-            ))}
+
+            ) : (
+
+              activeMessages.map((item) => (
+
+                <div
+                  key={item.id}
+                  className={`chat-message ${
+                    item.senderId === currentUserId
+                      ? 'sent'
+                      : 'received'
+                  }`}
+                >
+                  {item.text}
+                </div>
+
+              ))
+
+            )}
+
           </div>
 
-          {/* BARRE D'ENVOI */}
+          {/* =================================================
+              BARRE D'ENVOI
+          ================================================= */}
 
           <form
             className="chat-message-input"
@@ -496,6 +609,7 @@ function Chat({
               sendMessage()
             }}
           >
+
             <input
               value={message}
               onChange={(event) =>
@@ -514,9 +628,12 @@ function Chat({
             >
               <Send size={19} />
             </button>
+
           </form>
+
         </div>
       )}
+
     </>
   )
 }

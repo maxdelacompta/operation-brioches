@@ -7,7 +7,7 @@ import './index.css'
 
 import {
   ObDataProvider,
-} from './context/ObDataContext'
+} from './contexts/ObDataContext'
 
 ReactDOM.createRoot(
   document.getElementById('root')!,

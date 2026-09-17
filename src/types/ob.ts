@@ -156,3 +156,50 @@ export type FicheCaisse = {
 
   remarque?: string
 }
+
+/* =========================================================
+   CAMPAGNES
+   ========================================================= */
+
+export type StatutCampagne =
+  | 'A_CONFIGURER'
+  | 'PREPARATION'
+  | 'ACTIVE'
+  | 'TERMINEE'
+
+export type Campagne = {
+  // Identifiant stable utilisé par les commandes
+  // et les fiches de caisse : "OB 2026", etc.
+  id: string
+
+  annee: number | null
+  nom: string
+  description: string
+
+  statut: StatutCampagne
+
+  dateDebut: string
+  dateFin: string
+
+  prixUnitaire: number | null
+
+  objectifBrioches: number | null
+  objectifDonateurs: number | null
+  budgetPrevisionnel: number | null
+}
+
+export type CampagneDetails = Pick<
+  Campagne,
+  | 'nom'
+  | 'description'
+  | 'dateDebut'
+  | 'dateFin'
+  | 'prixUnitaire'
+  | 'objectifBrioches'
+  | 'objectifDonateurs'
+  | 'budgetPrevisionnel'
+>
+
+export type NouvelleCampagne = CampagneDetails & {
+  annee: number
+}

@@ -1,0 +1,1068 @@
+/* =========================================================
+   RÔLES ET PERMISSIONS — VERSION 2
+   OPÉRATION BRIOCHES
+   ========================================================= */
+
+.rp-page,
+.rp-page * {
+  box-sizing: border-box;
+}
+
+.rp-page {
+  width: 100%;
+  min-width: 0;
+  padding: 28px 34px 50px;
+  color: #1f344d;
+}
+
+/* =========================================================
+   EN-TÊTE
+   ========================================================= */
+
+.rp-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+
+  margin-bottom: 20px;
+}
+
+.rp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-bottom: 15px;
+
+  color: #6682a5;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.rp-back:hover {
+  color: #ff8614;
+}
+
+.rp-eyebrow {
+  display: block;
+
+  color: #ff8614;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 1px;
+}
+
+.rp-header h1 {
+  margin: 5px 0;
+
+  color: #063b7c;
+  font-size: 30px;
+  font-weight: 850;
+}
+
+.rp-header p {
+  margin: 0;
+
+  color: #6682a5;
+  font-size: 14px;
+}
+
+/* =========================================================
+   BOUTONS
+   ========================================================= */
+
+.rp-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 42px;
+  padding: 10px 16px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #ff8614;
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 750;
+
+  cursor: pointer;
+}
+
+.rp-primary-button:hover:not(:disabled) {
+  background: #e9740b;
+}
+
+.rp-primary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rp-outline-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-height: 36px;
+  padding: 8px 12px;
+
+  border: 1px solid #dce5ef;
+  border-radius: 9px;
+
+  background: #ffffff;
+  color: #063b7c;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.rp-outline-button:hover {
+  border-color: #ff8614;
+  color: #e9740b;
+}
+
+/* =========================================================
+   BANDEAU DÉMONSTRATION
+   ========================================================= */
+
+.rp-demo-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-bottom: 20px;
+  padding: 12px 15px;
+
+  border: 1px solid #ffe0be;
+  border-radius: 11px;
+
+  background: #fff5ea;
+  color: #805024;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.rp-demo-notice svg {
+  flex-shrink: 0;
+  color: #ff8614;
+}
+
+/* =========================================================
+   STATISTIQUES
+   ========================================================= */
+
+.rp-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+
+  margin-bottom: 18px;
+}
+
+.rp-stat {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  min-width: 0;
+  min-height: 88px;
+  padding: 17px 19px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+
+  background: #ffffff;
+  color: #063b7c;
+}
+
+.rp-stat.green {
+  color: #16975a;
+}
+
+.rp-stat.purple {
+  color: #8150c7;
+}
+
+.rp-stat > svg {
+  flex-shrink: 0;
+}
+
+.rp-stat div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rp-stat strong {
+  font-size: 25px;
+  line-height: 1.1;
+}
+
+.rp-stat span {
+  color: #6682a5;
+  font-size: 12px;
+}
+
+/* =========================================================
+   CONFIRMATION
+   ========================================================= */
+
+.rp-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 16px;
+  padding: 11px 14px;
+
+  border-radius: 9px;
+
+  background: #e8f9f1;
+  color: #147b49;
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   DISPOSITION EN COLONNES
+   ========================================================= */
+
+.rp-layout {
+  display: grid;
+  grid-template-columns:
+    minmax(280px, 350px)
+    minmax(0, 1fr);
+
+  align-items: start;
+  gap: 16px;
+
+  width: 100%;
+  min-width: 0;
+}
+
+.rp-left-column,
+.rp-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  min-width: 0;
+}
+
+/* =========================================================
+   CARTES
+   ========================================================= */
+
+.rp-card {
+  min-width: 0;
+
+  overflow: hidden;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 15px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 5px 20px rgba(18, 59, 122, 0.04);
+}
+
+.rp-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+
+  padding: 16px 17px 10px;
+}
+
+.rp-card-heading h2 {
+  margin: 0;
+
+  color: #063b7c;
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.rp-card-heading p {
+  margin: 5px 0 0;
+
+  color: #6682a5;
+  font-size: 12px;
+}
+
+/* =========================================================
+   RECHERCHE DES RÔLES
+   ========================================================= */
+
+.rp-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  margin: 0 14px 12px;
+  padding: 0 12px;
+
+  border: 1px solid #dce5ef;
+  border-radius: 10px;
+
+  background: #f8fafc;
+  color: #6682a5;
+}
+
+.rp-search svg {
+  flex-shrink: 0;
+}
+
+.rp-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 39px;
+
+  border: none;
+  outline: none;
+
+  background: transparent;
+  color: #063b7c;
+
+  font-family: inherit;
+  font-size: 12px;
+}
+
+/* =========================================================
+   LISTE DES RÔLES
+   ========================================================= */
+
+.rp-role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  padding: 0 13px 15px;
+}
+
+.rp-role-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+
+  padding: 9px 10px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  font-family: inherit;
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.rp-role-item:hover {
+  background: #f8fafc;
+}
+
+.rp-role-item.active {
+  border-color: #ff8614;
+  background: #fff6ed;
+}
+
+.rp-role-icon {
+  display: grid;
+  place-items: center;
+
+  width: 35px;
+  height: 35px;
+
+  flex-shrink: 0;
+
+  border-radius: 9px;
+
+  background: #eef4fc;
+  color: #063b7c;
+}
+
+.rp-role-item.active .rp-role-icon {
+  background: #fff0de;
+  color: #ff8614;
+}
+
+.rp-role-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.rp-role-text strong {
+  overflow: hidden;
+
+  color: #063b7c;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-role-text span {
+  overflow: hidden;
+
+  color: #6682a5;
+
+  font-size: 10px;
+  line-height: 1.3;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-role-count {
+  display: grid;
+  place-items: center;
+
+  min-width: 24px;
+  height: 24px;
+
+  padding: 0 6px;
+
+  flex-shrink: 0;
+
+  border-radius: 8px;
+
+  background: #eef3f9;
+  color: #6682a5;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.rp-role-item.active .rp-role-count {
+  background: #ff8614;
+  color: #ffffff;
+}
+
+/* =========================================================
+   UTILISATEURS ASSOCIÉS
+   ========================================================= */
+
+.rp-users-heading a {
+  color: #6682a5;
+}
+
+.rp-users-heading a:hover {
+  color: #ff8614;
+}
+
+.rp-users-list {
+  padding: 0 13px 13px;
+}
+
+.rp-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 10px 4px;
+
+  border-top: 1px solid #edf1f5;
+}
+
+.rp-user-avatar {
+  display: grid;
+  place-items: center;
+
+  width: 35px;
+  height: 35px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #1f344d;
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.rp-user-details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+
+  min-width: 0;
+}
+
+.rp-user-details strong {
+  overflow: hidden;
+
+  color: #063b7c;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-user-details span,
+.rp-user-details small {
+  overflow: hidden;
+
+  color: #6682a5;
+
+  font-size: 10px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-user-status {
+  flex-shrink: 0;
+
+  padding: 5px 7px;
+
+  border-radius: 7px;
+
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.rp-user-status.actif {
+  background: #e6f8ef;
+  color: #16834e;
+}
+
+.rp-user-status.inactif {
+  background: #fff0f1;
+  color: #ba4658;
+}
+
+.rp-empty {
+  margin: 0;
+  padding: 22px 15px;
+
+  color: #6682a5;
+
+  font-size: 12px;
+  text-align: center;
+}
+
+/* =========================================================
+   FICHE DU RÔLE
+   ========================================================= */
+
+.rp-detail-heading {
+  padding-bottom: 5px;
+}
+
+.rp-role-detail {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 9px 17px 17px;
+}
+
+.rp-detail-icon {
+  display: grid;
+  place-items: center;
+
+  width: 53px;
+  height: 53px;
+
+  flex-shrink: 0;
+
+  border-radius: 13px;
+
+  background: #fff0de;
+  color: #ff8614;
+}
+
+.rp-detail-title {
+  min-width: 0;
+}
+
+.rp-detail-title h3 {
+  margin: 0 0 4px;
+
+  color: #063b7c;
+
+  font-size: 23px;
+  font-weight: 850;
+}
+
+.rp-detail-title p {
+  margin: 0;
+
+  color: #6682a5;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   INFORMATIONS DU RÔLE
+   ========================================================= */
+
+.rp-detail-grid {
+  display: grid;
+  grid-template-columns:
+    1.2fr 1fr 0.8fr;
+
+  margin: 0 15px 15px;
+  padding: 14px 0;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 11px;
+
+  background: #ffffff;
+}
+
+.rp-detail-info {
+  min-width: 0;
+
+  padding: 0 16px;
+}
+
+.rp-detail-info + .rp-detail-info {
+  border-left: 1px solid #e1e9f2;
+}
+
+.rp-detail-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 9px;
+
+  color: #063b7c;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rp-detail-label svg {
+  color: #0c4d9b;
+  flex-shrink: 0;
+}
+
+.rp-detail-info p {
+  margin: 0;
+
+  color: #6682a5;
+
+  font-size: 12px;
+  line-height: 1.6;
+
+  overflow-wrap: anywhere;
+}
+
+.rp-detail-info small {
+  display: block;
+  margin-top: 7px;
+
+  color: #6682a5;
+
+  font-size: 10px;
+}
+
+.rp-role-badge {
+  display: inline-block;
+
+  padding: 6px 9px;
+
+  border-radius: 7px;
+
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.rp-role-badge.system {
+  background: #fff1e3;
+  color: #c36a0a;
+}
+
+.rp-role-badge.editable {
+  background: #e6f8ef;
+  color: #16834e;
+}
+
+/* =========================================================
+   ÉDITION DE LA FICHE
+   ========================================================= */
+
+.rp-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  margin: 0 16px 17px;
+  padding: 17px;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 11px;
+
+  background: #f8fafc;
+}
+
+.rp-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  color: #063b7c;
+
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.rp-edit-form input,
+.rp-edit-form textarea {
+  width: 100%;
+
+  padding: 10px 12px;
+
+  border: 1px solid #dce5ef;
+  border-radius: 9px;
+
+  background: #ffffff;
+  color: #1f344d;
+
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.rp-edit-form textarea {
+  resize: vertical;
+}
+
+.rp-edit-form p {
+  margin: 0;
+
+  color: #6682a5;
+
+  font-size: 11px;
+}
+
+.rp-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+/* =========================================================
+   MATRICE DES PERMISSIONS
+   ========================================================= */
+
+.rp-permissions-heading {
+  padding-bottom: 14px;
+}
+
+.rp-reset-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-height: 36px;
+
+  padding: 8px 11px;
+
+  flex-shrink: 0;
+
+  border: 1px solid #ffb76e;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #e9740b;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.rp-reset-button:hover:not(:disabled) {
+  background: #fff2e4;
+}
+
+.rp-reset-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rp-system-notice {
+  margin: 0 15px 13px;
+  padding: 9px 12px;
+
+  border-radius: 8px;
+
+  background: #f3f7fb;
+  color: #6682a5;
+
+  font-size: 11px;
+}
+
+.rp-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+
+  padding: 0 14px;
+}
+
+.rp-table {
+  width: 100%;
+  min-width: 720px;
+
+  border-collapse: collapse;
+
+  font-size: 12px;
+}
+
+.rp-table th {
+  padding: 12px 9px;
+
+  background: #f3f7fb;
+  color: #526f91;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-align: center;
+  white-space: nowrap;
+}
+
+.rp-table th:first-child {
+  text-align: left;
+  min-width: 165px;
+}
+
+.rp-table td {
+  height: 37px;
+
+  padding: 8px 9px;
+
+  border: 1px solid #e1e9f2;
+
+  color: #063b7c;
+
+  text-align: center;
+}
+
+.rp-table td:first-child {
+  text-align: left;
+}
+
+.rp-table tbody tr:hover {
+  background: #fafcff;
+}
+
+/* MODULE */
+
+.rp-module-name {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  white-space: nowrap;
+}
+
+.rp-module-name svg {
+  flex-shrink: 0;
+  color: #0c4d9b;
+}
+
+.rp-module-name strong {
+  font-size: 11px;
+  font-weight: 750;
+}
+
+/* CHECKBOX */
+
+.rp-checkbox {
+  width: 17px;
+  height: 17px;
+
+  margin: 0;
+
+  accent-color: #ff8614;
+
+  cursor: pointer;
+}
+
+.rp-checkbox:disabled {
+  cursor: not-allowed;
+}
+
+.rp-unavailable {
+  color: #a7b5c6 !important;
+}
+
+/* PIED DU TABLEAU */
+
+.rp-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  margin: 14px;
+  padding: 12px;
+
+  border-radius: 9px;
+
+  background: #eef6ff;
+}
+
+.rp-table-footer span {
+  color: #6682a5;
+  font-size: 11px;
+}
+
+.rp-table-footer a {
+  color: #063b7c;
+
+  text-decoration: none;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.rp-table-footer a:hover {
+  color: #ff8614;
+}
+
+/* =========================================================
+   ACCESSIBILITÉ
+   ========================================================= */
+
+.rp-page button:focus-visible,
+.rp-page a:focus-visible,
+.rp-page input:focus-visible,
+.rp-page textarea:focus-visible {
+  outline: 3px solid rgba(255, 134, 20, 0.4);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1250px) {
+  .rp-layout {
+    grid-template-columns:
+      minmax(240px, 300px)
+      minmax(0, 1fr);
+  }
+
+  .rp-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rp-detail-info {
+    padding: 12px 16px;
+  }
+
+  .rp-detail-info + .rp-detail-info {
+    border-left: none;
+    border-top: 1px solid #e1e9f2;
+  }
+}
+
+@media (max-width: 1050px) {
+  .rp-stats {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .rp-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .rp-detail-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .rp-detail-info + .rp-detail-info {
+    border-left: 1px solid #e1e9f2;
+    border-top: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .rp-page {
+    padding: 20px 15px 40px;
+  }
+
+  .rp-header h1 {
+    font-size: 25px;
+  }
+
+  .rp-stats {
+    gap: 9px;
+  }
+
+  .rp-stat {
+    padding: 13px;
+    gap: 9px;
+  }
+
+  .rp-stat strong {
+    font-size: 21px;
+  }
+
+  .rp-stat span {
+    font-size: 10px;
+  }
+
+  .rp-role-detail {
+    align-items: flex-start;
+  }
+
+  .rp-detail-title h3 {
+    font-size: 20px;
+  }
+
+  .rp-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rp-detail-info + .rp-detail-info {
+    border-left: none;
+    border-top: 1px solid #e1e9f2;
+  }
+
+  .rp-permissions-heading {
+    flex-wrap: wrap;
+  }
+}
