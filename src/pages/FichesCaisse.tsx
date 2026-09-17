@@ -10,6 +10,8 @@ import {
   Banknote,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Coins,
   CreditCard,
   Download,
@@ -46,6 +48,8 @@ import type {
   FicheCaisse,
   TypeFicheCaisse,
 } from '../types/ob'
+
+import { calculerCoffre } from '../services/coffre'
 
 import './FichesCaisse.css'
 
@@ -263,7 +267,34 @@ function FichesCaisse() {
   const {
     fichesCaisse,
     setFichesCaisse,
+    depotsBanque,
   } = useObData()
+
+  /* =======================================================
+     INTÉGRATION AUTOMATIQUE DES ANCIENNES FICHES
+     ======================================================= */
+
+  useEffect(() => {
+    if (
+      !fichesCaisse.some(
+        fiche => fiche.statutCoffre !== 'CONTROLEE',
+      )
+    ) {
+      return
+    }
+
+    setFichesCaisse(current =>
+      current.map(fiche =>
+        fiche.statutCoffre === 'CONTROLEE'
+          ? fiche
+          : {
+              ...fiche,
+              statutCoffre: 'CONTROLEE',
+            },
+      ),
+    )
+  }, [fichesCaisse, setFichesCaisse])
+
 
   const [
     search,
@@ -553,6 +584,137 @@ function FichesCaisse() {
      TOTAUX
      ======================================================= */
 
+     /* =======================================================
+   PAGINATION DES FICHES DE CAISSE
+   ======================================================= */
+
+// Préférence enregistrée dans le navigateur.
+// Par défaut : 20 fiches par page.
+
+const [pageSize, setPageSize] = useState<PageSize>(() => {
+  try {
+    const saved = localStorage.getItem(PAGE_SIZE_KEY)
+
+    if (saved === 'infini') {
+      return 'infini'
+    }
+
+    if (
+      saved === '20' ||
+      saved === '50' ||
+      saved === '100'
+    ) {
+      return Number(saved) as 20 | 50 | 100
+    }
+  } catch {
+    // La pagination reste utilisable sans localStorage.
+  }
+
+  return 20
+})
+
+const [page, setPage] = useState(1)
+
+// Mémorisation de la préférence utilisateur.
+
+useEffect(() => {
+  try {
+    localStorage.setItem(
+      PAGE_SIZE_KEY,
+      String(pageSize),
+    )
+  } catch {
+    // Pas de blocage si le stockage est indisponible.
+  }
+}, [pageSize])
+
+// Retour en page 1 après modification des filtres.
+
+useEffect(() => {
+  setPage(1)
+}, [
+  search,
+  typeFilter,
+  secteurFilter,
+  dateFilter,
+])
+
+// Calcul du nombre total de pages.
+
+const pageCount =
+  pageSize === 'infini'
+    ? 1
+    : Math.max(
+        1,
+        Math.ceil(filteredFiches.length / pageSize),
+      )
+
+// Évite de rester sur une page inexistante
+// après une suppression ou une modification des données.
+
+const currentPage = Math.min(page, pageCount)
+
+useEffect(() => {
+  setPage(current =>
+    Math.min(current, pageCount),
+  )
+}, [pageCount])
+
+// Liste réellement affichée dans le tableau.
+// filteredFiches reste intact pour les totaux et exports.
+
+const visibleFiches = useMemo(() => {
+  if (pageSize === 'infini') {
+    return filteredFiches
+  }
+
+  const start =
+    (currentPage - 1) * pageSize
+
+  return filteredFiches.slice(
+    start,
+    start + pageSize,
+  )
+}, [
+  filteredFiches,
+  pageSize,
+  currentPage,
+])
+
+// Numéros affichés : exemple "21–40 sur 87".
+
+const firstVisible =
+  filteredFiches.length === 0
+    ? 0
+    : pageSize === 'infini'
+      ? 1
+      : (currentPage - 1) * pageSize + 1
+
+const lastVisible =
+  pageSize === 'infini'
+    ? filteredFiches.length
+    : Math.min(
+        currentPage * pageSize,
+        filteredFiches.length,
+      )
+
+// Afficher au maximum cinq boutons numérotés.
+
+const firstPageButton = Math.max(
+  1,
+  Math.min(
+    currentPage - 2,
+    pageCount - 4,
+  ),
+)
+
+const pageButtons = Array.from(
+  {
+    length: Math.min(5, pageCount),
+  },
+  (_, index) => firstPageButton + index,
+)
+
   const totals =
     useMemo(() => {
       return filteredFiches.reduce(
@@ -671,67 +833,119 @@ function FichesCaisse() {
      MODIFICATION
      ======================================================= */
 
-  function openEditModal(
-    fiche: FicheCaisse,
-  ) {
-    setDetailFiche(
-      null,
-    )
+  function openEditModal(fiche: FicheCaisse) {
+    // Une fiche contrôlée alimente déjà le coffre : correction bloquée.
+    if (fiche.statutCoffre === 'CONTROLEE') {
+      window.alert(
+        'Cette fiche est contrôlée et intégrée au coffre. Une procédure de correction dédiée est nécessaire pour modifier ses montants.',
+      )
+      return
+    }
 
-    setEditingFiche(
-      fiche,
-    )
-
-    setModalMode(
-      'edit',
-    )
-
-    setModalOpen(
-      true,
-    )
-
-    setActionMenuId(
-      null,
-    )
+    setDetailFiche(null)
+    setEditingFiche(fiche)
+    setModalMode('edit')
+    setModalOpen(true)
+    setActionMenuId(null)
   }
 
   /* =======================================================
      SAUVEGARDE
+
+     Création et modification = fiche à contrôler.
+     Une fiche contrôlée ne peut pas être écrasée par le formulaire.
      ======================================================= */
 
-  function saveFiche(
-    fiche: FicheCaisse,
-  ) {
-    if (
-      modalMode ===
-      'edit'
-    ) {
-      setFichesCaisse(
-        (current) =>
-          current.map(
-            (item) =>
-              item.id ===
-              fiche.id
-                ? fiche
-                : item,
-          ),
+  function saveFiche(fiche: FicheCaisse) {
+    try {
+      if (modalMode === 'edit') {
+        const originale = fichesCaisse.find(item => item.id === fiche.id)
+
+        if (!originale) {
+          throw new Error('Impossible de retrouver la fiche à modifier.')
+        }
+
+        if (originale.statutCoffre === 'CONTROLEE') {
+          throw new Error('Cette fiche est contrôlée et ne peut pas être modifiée.')
+        }
+      } else if (fichesCaisse.some(item => item.id === fiche.id)) {
+        throw new Error('Cet identifiant de fiche existe déjà.')
+      }
+
+      const prochaineFiche: FicheCaisse = {
+        ...fiche,
+        statutCoffre: 'CONTROLEE',
+        dateControleCoffre: new Date().toISOString(),
+}
+
+      // Validation des quantités et des chèques avant la sauvegarde.
+      // La simulation ne déclenche aucun mouvement réel du coffre.
+      calculerCoffre(
+        prochaineFiche.campagne,
+        [{ ...prochaineFiche, statutCoffre: 'CONTROLEE' }],
+        [],
       )
-    } else {
-      setFichesCaisse(
-        (current) => [
-          ...current,
-          fiche,
-        ],
+
+      setFichesCaisse(current =>
+        modalMode === 'edit'
+          ? current.map(item => item.id === fiche.id ? prochaineFiche : item)
+          : [...current, prochaineFiche],
+      )
+
+      setModalOpen(false)
+      setEditingFiche(null)
+    } catch (error) {
+      window.alert(
+        error instanceof Error ? error.message : 'Enregistrement impossible.',
       )
     }
+  }
 
-    setModalOpen(
-      false,
+  /* =======================================================
+     CONTRÔLER POUR LE COFFRE
+
+     La fiche conserve son ID et n'est pas dupliquée.
+     Le coffre calcule ensuite les entrées automatiquement.
+     ======================================================= */
+
+  function controlerFiche(fiche: FicheCaisse) {
+    if (fiche.statutCoffre === 'CONTROLEE') return
+
+    const prochaineFiche: FicheCaisse = {
+      ...fiche,
+      statutCoffre: 'CONTROLEE',
+      dateControleCoffre: new Date().toISOString(),
+    }
+
+    const prochainesFiches = fichesCaisse.map(item =>
+      item.id === fiche.id ? prochaineFiche : item,
     )
 
-    setEditingFiche(
-      null,
+    try {
+      // Refuser la validation si elle conduit à un stock incohérent.
+      calculerCoffre(fiche.campagne, prochainesFiches, depotsBanque)
+    } catch (error) {
+      window.alert(
+        `Impossible de contrôler cette fiche.\n\n${
+          error instanceof Error ? error.message : 'Erreur inconnue.'
+        }`,
+      )
+      return
+    }
+
+    const confirme = window.confirm(
+      `Contrôler la fiche ${fiche.numero} ?\n\n` +
+      'Ses pièces, billets et chèques seront ajoutés au coffre. ' +
+      'La fiche sera ensuite verrouillée pour éviter une modification involontaire.',
     )
+
+    if (!confirme) return
+
+    setFichesCaisse(prochainesFiches)
+    setDetailFiche(current =>
+      current?.id === fiche.id ? prochaineFiche : current,
+    )
+    setActionMenuId(null)
   }
 
   /* =======================================================
@@ -968,7 +1182,7 @@ function FichesCaisse() {
     )
 
     doc.text(
-      'Fiches de caisse contrôlées',
+      'Fiches de caisse',
       8,
       10,
     )
@@ -1115,7 +1329,7 @@ function FichesCaisse() {
     worksheet.getCell(
       'A2',
     ).value =
-      'FICHE DE CAISSE CONTRÔLÉE'
+      'FICHE DE CAISSE'
 
     worksheet.mergeCells(
       'A3:C3',
@@ -1638,7 +1852,7 @@ function FichesCaisse() {
     )
 
     doc.text(
-      'FICHE DE CAISSE CONTRÔLÉE',
+      'FICHE DE CAISSE',
       center,
       20,
       {
@@ -2417,7 +2631,7 @@ function FichesCaisse() {
           </h1>
 
           <p>
-            Saisie et centralisation des fiches de caisse contrôlées de l'Opération Brioches.
+            Chaque fiche enregistrée est automatiquement intégrée au coffre de l'Opération Brioches.
           </p>
 
         </div>
@@ -2537,7 +2751,9 @@ function FichesCaisse() {
           }
           label="Fiches contrôlées"
           value={String(
-            filteredFiches.length,
+            filteredFiches.filter(
+              fiche => fiche.statutCoffre === 'CONTROLEE',
+            ).length,
           )}
         />
 
@@ -2746,7 +2962,7 @@ function FichesCaisse() {
           <div>
 
             <h2>
-              Fiches de caisse contrôlées
+              Fiches de caisse
             </h2>
 
             <span>
@@ -3063,7 +3279,7 @@ function FichesCaisse() {
 
             <tbody>
 
-              {filteredFiches.map(
+              {visibleFiches.map(
                 (
                   fiche,
                 ) => (
@@ -3079,9 +3295,21 @@ function FichesCaisse() {
                   >
 
                     <td className="fiche-caisse-number">
-                      {
-                        fiche.numero
-                      }
+                      {fiche.numero}
+                      <small
+                        style={{
+                          display: 'block',
+                          marginTop: 5,
+                          color: fiche.statutCoffre === 'CONTROLEE'
+                            ? '#16834e'
+                            : '#b96711',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {fiche.statutCoffre === 'CONTROLEE'
+                          ? '✓ Contrôlée — intégrée au coffre'
+                          : 'À contrôler — hors coffre'}
+                      </small>
                     </td>
 
                     {visibleColumns.date && (
@@ -3209,18 +3437,35 @@ function FichesCaisse() {
                           />
                         </button>
 
+                        {fiche.statutCoffre !== 'CONTROLEE' && (
+                          <button
+                            type="button"
+                            title="Contrôler et intégrer au coffre"
+                            aria-label={`Contrôler la fiche ${fiche.numero}`}
+                            onClick={() => controlerFiche(fiche)}
+                            style={{
+                              width: 'auto',
+                              minWidth: 95,
+                              padding: '6px 9px',
+                              background: '#fff0de',
+                              color: '#a65b13',
+                              fontSize: 11,
+                              fontWeight: 800,
+                            }}
+                          >
+                            <Check size={15} /> Contrôler
+                          </button>
+                        )}
+
                         <button
                           type="button"
-                          title="Modifier"
-                          onClick={() =>
-                            openEditModal(
-                              fiche,
-                            )
-                          }
+                          title={fiche.statutCoffre === 'CONTROLEE'
+                            ? 'Fiche verrouillée après contrôle'
+                            : 'Modifier'}
+                          disabled={fiche.statutCoffre === 'CONTROLEE'}
+                          onClick={() => openEditModal(fiche)}
                         >
-                          <Edit3
-                            size={18}
-                          />
+                          <Edit3 size={18} />
                         </button>
 
                         <div className="fiche-row-more-wrapper">
@@ -3248,6 +3493,19 @@ function FichesCaisse() {
                           {actionMenuId ===
                             fiche.id && (
                             <div className="fiche-row-more-menu">
+
+                              {fiche.statutCoffre !== 'CONTROLEE' && (
+                                <button
+                                  type="button"
+                                  onClick={() => controlerFiche(fiche)}
+                                >
+                                  <Check size={18} />
+                                  <div>
+                                    <strong>Contrôler pour le coffre</strong>
+                                    <span>Intégrer les espèces et les chèques</span>
+                                  </div>
+                                </button>
+                              )}
 
                               <button
                                 type="button"
@@ -3338,6 +3596,136 @@ function FichesCaisse() {
           )}
 
         </div>
+{/* =================================================
+    PAGINATION DU TABLEAU
+================================================= */}
+
+<nav
+  className="fiches-caisse-pagination"
+  aria-label="Pagination des fiches de caisse"
+>
+
+  {/* NOMBRE DE FICHES AFFICHÉES */}
+
+  <div
+    className="fiches-caisse-pagination-info"
+    aria-live="polite"
+  >
+    {firstVisible}–{lastVisible}
+    {' sur '}
+    {filteredFiches.length}
+    {' fiches'}
+  </div>
+
+  {/* CHOIX DU NOMBRE DE LIGNES */}
+
+  <div className="fiches-caisse-pagination-controls">
+
+    <label htmlFor="fiches-caisse-page-size">
+      Afficher
+    </label>
+
+    <select
+      id="fiches-caisse-page-size"
+      value={String(pageSize)}
+      onChange={(event) => {
+        const value = event.target.value
+
+        setPageSize(
+          value === 'infini'
+            ? 'infini'
+            : Number(value) as 20 | 50 | 100,
+        )
+
+        setPage(1)
+      }}
+    >
+      <option value="20">
+        20 par page
+      </option>
+
+      <option value="50">
+        50 par page
+      </option>
+
+      <option value="100">
+        100 par page
+      </option>
+
+      <option value="infini">
+        Infini — tout afficher
+      </option>
+    </select>
+
+  </div>
+
+  {/* BOUTONS DE NAVIGATION */}
+
+  {pageSize !== 'infini' && pageCount > 1 && (
+
+    <div className="fiches-caisse-pagination-pages">
+
+      {/* PAGE PRÉCÉDENTE */}
+
+      <button
+        type="button"
+        aria-label="Page précédente"
+        disabled={currentPage === 1}
+        onClick={() =>
+          setPage(current =>
+            Math.max(1, current - 1),
+          )
+        }
+      >
+        <ChevronLeft size={17} />
+      </button>
+
+      {/* NUMÉROS DES PAGES */}
+
+      {pageButtons.map(number => (
+
+        <button
+          key={number}
+          type="button"
+          aria-label={`Page ${number}`}
+          aria-current={
+            number === currentPage
+              ? 'page'
+              : undefined
+          }
+          className={
+            number === currentPage
+              ? 'active'
+              : ''
+          }
+          onClick={() => setPage(number)}
+        >
+          {number}
+        </button>
+
+      ))}
+
+      {/* PAGE SUIVANTE */}
+
+      <button
+        type="button"
+        aria-label="Page suivante"
+        disabled={currentPage === pageCount}
+        onClick={() =>
+          setPage(current =>
+            Math.min(pageCount, current + 1),
+          )
+        }
+      >
+        <ChevronRight size={17} />
+      </button>
+
+    </div>
+
+  )}
+
+</nav>
+
 
       </section>
 
@@ -3454,7 +3842,7 @@ function FicheDetailModal({
           <div>
 
             <span>
-              Fiche de caisse contrôlée
+              Fiche de caisse
             </span>
 
             <h2>
@@ -4121,7 +4509,7 @@ function FicheCaisseModal({
           <div>
 
             <span>
-              Fiche de caisse contrôlée
+              Fiche de caisse
             </span>
 
             <h2>
@@ -5358,6 +5746,7 @@ function createEmptyFiche(
     montantDonsAutres: 0,
 
     remarque: '',
+    statutCoffre: 'A_CONTROLER',
   }
 }
 

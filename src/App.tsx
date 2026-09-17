@@ -55,6 +55,14 @@ import Commandes from './pages/Commandes'
 import FichesCaisse from './pages/FichesCaisse'
 
 /* =========================================================
+   NOUVEAU : COFFRE ET SUIVI BANQUE
+   ========================================================= */
+
+import Coffre from './pages/Coffre'
+import SuiviBanque from './pages/Suivibanque'
+import RecapitulatifGlobal from './pages/RecapitulatifGlobal'
+
+/* =========================================================
    ADMINISTRATION
    ========================================================= */
 
@@ -165,12 +173,37 @@ function App() {
                 />
 
                 {/* ========================================
-                    FICHES DE CAISSE
+                    DONS PERÇUS — FICHES DE CAISSE
                 ======================================== */}
 
                 <Route
                   path="/encaissements/fiches-caisse"
                   element={<FichesCaisse />}
+                />
+
+                {/* ========================================
+                    DONS PERÇUS — COFFRE
+                    NOUVEAU
+                ======================================== */}
+
+                <Route
+                  path="/encaissements/coffre"
+                  element={<Coffre />}
+                />
+
+                {/* ========================================
+                    DONS PERÇUS — SUIVI BANQUE
+                    NOUVEAU
+                ======================================== */}
+
+                <Route
+                  path="/encaissements/suivi-banque"
+                  element={<SuiviBanque />}
+                />
+
+               <Route
+                  path="/encaissements/recapitulatif-global"
+                   element={<RecapitulatifGlobal />}
                 />
 
                 {/* ========================================
@@ -225,7 +258,7 @@ function App() {
 
                 {/* ========================================
                     ADMINISTRATION
-                    JOURNAL D'ACTIVITÉ — NOUVEAU
+                    JOURNAL D'ACTIVITÉ
                 ======================================== */}
 
                 <Route
@@ -260,7 +293,3 @@ function App() {
 }
 
 export default App
-
-{/* ==========================================
-                  Attention ObDataProvider : je ne l'ai pas ajouté ici, car il doit rester à son emplacement actuel, là où il fournit déjà les données à Commandes et Donateurs. Il faut une seule instance qui englobe aussi la nouvelle page Campagnes.
-              ========================================== */}

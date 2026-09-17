@@ -1,4 +1,8 @@
-import { useEffect, useState } from 'react'
+import {
+  useEffect,
+  useState,
+  type ComponentType,
+} from 'react'
 
 import {
   NavLink,
@@ -6,525 +10,873 @@ import {
 } from 'react-router-dom'
 
 import {
-  BarChart3,
   Building2,
-  CalendarDays,
   ChevronDown,
-  Database,
-  Euro,
-  History,
-  Home,
-  KeyRound,
-  LayoutDashboard,
+  House,
+  LayoutGrid,
+  Mail,
   Map,
-  Megaphone,
+  Menu,
+  Package,
   Settings,
   ShieldCheck,
   ShoppingCart,
-  Truck,
-  Users,
+  HandCoins,
+  Wallet,
+  X,
 } from 'lucide-react'
+
+import {
+  useGeneralSettings,
+} from '../contexts/GeneralSettingsContext'
 
 import './Sidebar.css'
 
 /* =========================================================
-   SIDEBAR — OPÉRATION BRIOCHES
+   TYPES
+   ========================================================= */
+
+type IconComponent = ComponentType<{
+  size?: number
+  strokeWidth?: number
+  className?: string
+}>
+
+type SidebarItem = {
+  label: string
+  to?: string
+  badge?: string
+}
+
+type SidebarSection = {
+  id: string
+  label: string
+  icon: IconComponent
+  items: SidebarItem[]
+}
+
+/* =========================================================
+   ARBORESCENCE VALIDÉE
+   ========================================================= */
+
+const sections: SidebarSection[] = [
+  {
+    id: 'gestion',
+    label: 'Gestion',
+    icon: LayoutGrid,
+    items: [
+      {
+        label: 'Tableau de bord',
+        to: '/dashboard',
+      },
+      {
+        label: 'Suivi caisse et TPE',
+      },
+      {
+        label: 'BDD Donateurs',
+        to: '/bdd/donateurs',
+      },
+      {
+        label: 'BDD Mairies',
+      },
+    ],
+  },
+
+  {
+    id: 'commandes-dons',
+    label: 'Commandes dons',
+    icon: ShoppingCart,
+    items: [
+      {
+        label: 'Commandes entreprises',
+        to: '/commandes',
+        badge: 'Base',
+      },
+      {
+        label: 'Livraisons / Retraits',
+      },
+      {
+        label: 'Suivi global entreprises',
+      },
+      {
+        label: 'Commandes Mairies & RS',
+      },
+    ],
+  },
+
+  {
+    id: 'commandes-achats',
+    label: 'Commandes achats',
+    icon: Package,
+    items: [
+      {
+        label: 'GMS',
+      },
+      {
+        label: 'Artisans',
+      },
+    ],
+  },
+
+  {
+    id: 'etablissements',
+    label: 'Établissements',
+    icon: Building2,
+    items: [
+      {
+        label: "Vue d'ensemble",
+        to: '/etablissement',
+      },
+      {
+        label: 'Commandes établissements',
+      },
+      {
+        label: 'Stocks',
+      },
+      {
+        label: 'Ventes',
+      },
+      {
+        label: 'Vue globale — Siège',
+      },
+    ],
+  },
+
+  {
+    id: 'dons-percus',
+    label: 'Dons perçus',
+    icon: HandCoins,
+    items: [
+      {
+        label: 'Fiches de caisse',
+        to: '/encaissements/fiches-caisse',
+      },
+      {
+        label: 'Coffre',
+        to: '/encaissements/coffre',
+      },
+      {
+        label: 'Suivi banque',
+        to: '/encaissements/suivi-banque',
+      },
+      {
+        label: 'Récapitulatif global',
+        to: '/encaissements/recapitulatif-global',
+      },
+    ],
+  },
+
+  {
+    id: 'finance',
+    label: 'Finance',
+    icon: Wallet,
+    items: [
+      {
+        label: "Vue d'ensemble",
+        to: '/comptabilite',
+      },
+      {
+        label: 'Justificatifs de dons',
+      },
+      {
+        label: 'Mécénat',
+      },
+      {
+        label: 'Pertes / Écarts',
+      },
+    ],
+  },
+
+  {
+    id: 'geographie',
+    label: 'Géographie',
+    icon: Map,
+    items: [],
+  },
+
+  {
+    id: 'communication',
+    label: 'Communication',
+    icon: Mail,
+    items: [
+      {
+        label: "Vue d'ensemble",
+        to: '/communication',
+      },
+      {
+        label: 'Mails automatiques',
+      },
+      {
+        label: 'Relances',
+      },
+    ],
+  },
+
+  {
+    id: 'administration',
+    label: 'Administration',
+    icon: ShieldCheck,
+    items: [
+      {
+        label: "Vue d'ensemble",
+        to: '/administration',
+      },
+      {
+        label: 'Utilisateurs',
+        to: '/administration/utilisateurs',
+      },
+      {
+        label: 'Rôles et permissions',
+        to: '/administration/roles',
+        badge: 'Plus tard',
+      },
+      {
+        label: 'Campagnes',
+        to: '/administration/campagnes',
+      },
+      {
+        label: 'Paramètres généraux',
+        to: '/administration/parametres',
+      },
+      {
+        label: "Journal d'activité",
+        to: '/administration/journal',
+      },
+    ],
+  },
+]
+
+/* =========================================================
+   STOCKAGE DU MODE OUVERT / FERMÉ
+   ========================================================= */
+
+const SIDEBAR_STORAGE_KEY =
+  'ob-sidebar-desktop-open-v1'
+
+function loadDesktopOpen(): boolean {
+  try {
+    return (
+      localStorage.getItem(
+        SIDEBAR_STORAGE_KEY,
+      ) !== 'false'
+    )
+  } catch {
+    return true
+  }
+}
+
+/* =========================================================
+   DÉTECTION DU GROUPE ACTIF
+   ========================================================= */
+
+function getActiveSection(
+  pathname: string,
+): string | null {
+  for (const section of sections) {
+    const active = section.items.some(
+      (item) => {
+        if (!item.to) {
+          return false
+        }
+
+        // Les vues d'ensemble correspondent
+        // uniquement à leur route exacte.
+        if (
+          item.to === '/administration' ||
+          item.to === '/communication' ||
+          item.to === '/comptabilite' ||
+          item.to === '/etablissement'
+        ) {
+          return pathname === item.to
+        }
+
+        return (
+          pathname === item.to ||
+          pathname.startsWith(
+            `${item.to}/`,
+          )
+        )
+      },
+    )
+
+    if (active) {
+      return section.id
+    }
+  }
+
+  return null
+}
+
+/* =========================================================
+   COMPOSANT
    ========================================================= */
 
 function Sidebar() {
   const location = useLocation()
 
+  const {
+    settings,
+  } = useGeneralSettings()
+
   /* =======================================================
-     ÉTAT DU MENU ADMINISTRATION
+     ÉTATS
      ======================================================= */
 
-  const isAdminRoute =
-    location.pathname === '/administration' ||
-    location.pathname.startsWith('/administration/')
+  const [
+    desktopOpen,
+    setDesktopOpen,
+  ] = useState<boolean>(
+    loadDesktopOpen,
+  )
 
-  const [adminOpen, setAdminOpen] = useState(isAdminRoute)
+  const [
+    mobileOpen,
+    setMobileOpen,
+  ] = useState(false)
 
-  // Ouvrir automatiquement le menu quand on arrive
-  // sur une page Administration.
+  const [
+    expandedSections,
+    setExpandedSections,
+  ] = useState<Record<string, boolean>>(
+    {
+      gestion: true,
+    },
+  )
+
+  /* =======================================================
+     IDENTITÉ
+     ======================================================= */
+
+  const applicationName =
+    settings.applicationName.trim() ||
+    'Opération Brioches'
+
+  const organizationName =
+    settings.organizationName.trim() ||
+    'AEIM'
+
+  /* =======================================================
+     PAGE ACTIVE
+     ======================================================= */
+
+  const activeSection = getActiveSection(
+    location.pathname,
+  )
+
+  /* =======================================================
+     SAUVEGARDER LA PRÉFÉRENCE ORDINATEUR
+     ======================================================= */
+
   useEffect(() => {
-    if (
-      location.pathname === '/administration' ||
-      location.pathname.startsWith('/administration/')
-    ) {
-      setAdminOpen(true)
+    try {
+      localStorage.setItem(
+        SIDEBAR_STORAGE_KEY,
+        String(desktopOpen),
+      )
+    } catch {
+      // La navigation reste utilisable même
+      // si le stockage est indisponible.
     }
-  }, [location.pathname])
+  }, [desktopOpen])
 
   /* =======================================================
-     CLASSES DES LIENS
+     CHANGEMENT DE PAGE
      ======================================================= */
 
-  const mainLinkClass = ({
-    isActive,
-  }: {
-    isActive: boolean
-  }) =>
-    `sidebar-link ${isActive ? 'active' : ''}`
+  useEffect(() => {
+    // Ouvrir automatiquement le groupe
+    // correspondant à la nouvelle page.
+    if (activeSection) {
+      setExpandedSections(
+        (current) => ({
+          ...current,
+          [activeSection]: true,
+        }),
+      )
+    }
 
-  const subLinkClass = ({
-    isActive,
-  }: {
-    isActive: boolean
-  }) =>
-    `sidebar-submenu-link ${isActive ? 'active' : ''}`
+    // Fermer le tiroir mobile après navigation.
+    setMobileOpen(false)
+  }, [
+    activeSection,
+    location.pathname,
+  ])
+
+  /* =======================================================
+     ÉCHAP : FERMETURE MOBILE
+     ======================================================= */
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      return
+    }
+
+    function handleEscape(
+      event: KeyboardEvent,
+    ) {
+      if (event.key === 'Escape') {
+        setMobileOpen(false)
+      }
+    }
+
+    window.addEventListener(
+      'keydown',
+      handleEscape,
+    )
+
+    return () => {
+      window.removeEventListener(
+        'keydown',
+        handleEscape,
+      )
+    }
+  }, [mobileOpen])
+
+  /* =======================================================
+     BURGER
+     ======================================================= */
+
+  function toggleDesktop() {
+    setDesktopOpen(
+      (current) => !current,
+    )
+  }
+
+  function toggleMobile() {
+    setMobileOpen(
+      (current) => !current,
+    )
+  }
+
+  /* =======================================================
+     ACCORDÉONS
+     ======================================================= */
+
+  function toggleSection(
+    id: string,
+  ) {
+    setExpandedSections(
+      (current) => ({
+        ...current,
+        [id]: !current[id],
+      }),
+    )
+  }
+
+  /* =======================================================
+     FERMER APRÈS NAVIGATION
+     ======================================================= */
+
+  function closeMobile() {
+    setMobileOpen(false)
+  }
 
   /* =======================================================
      AFFICHAGE
      ======================================================= */
 
   return (
-    <aside className="sidebar">
+    <>
 
-      {/* =====================================================
-          LOGO
-      ===================================================== */}
+      {/* ================================================
+          CONTENEUR DE LA SIDEBAR
 
-      <div className="sidebar-logo">
+          C'est lui qui passe de 276px à 0px.
+          ================================================= */}
 
-        <div className="sidebar-logo-mark">
-          OB
-        </div>
-
-        <div>
-          <strong>Opération Brioches</strong>
-          <span>AEIM</span>
-        </div>
-
-      </div>
-
-      {/* =====================================================
-          NAVIGATION PRINCIPALE
-      ===================================================== */}
-
-      <nav
-        className="sidebar-nav"
-        aria-label="Navigation principale"
+      <div
+        className={`ob-sidebar-shell ${
+          desktopOpen
+            ? 'ob-sidebar-shell--open'
+            : 'ob-sidebar-shell--closed'
+        }`}
       >
 
-        {/* ===================================================
-            ACCUEIL
-        =================================================== */}
+        {/* ==============================================
+            SIDEBAR
+            ============================================== */}
 
-        <NavLink
-          to="/"
-          end
-          className={mainLinkClass}
+        <aside
+          id="ob-main-sidebar"
+          className={`ob-sidebar ${
+            mobileOpen
+              ? 'ob-sidebar--mobile-open'
+              : ''
+          } ${
+            desktopOpen
+              ? ''
+              : 'ob-sidebar--desktop-closed'
+          }`}
+          aria-label="Menu principal"
         >
-          <Home size={19} />
 
-          <span>Accueil</span>
-        </NavLink>
+          {/* ============================================
+              EN-TÊTE
+              ============================================ */}
 
-        {/* ===================================================
-            TABLEAU DE BORD
-        =================================================== */}
-
-        <NavLink
-          to="/dashboard"
-          className={mainLinkClass}
-        >
-          <BarChart3 size={19} />
-
-          <span>Tableau de bord</span>
-        </NavLink>
-
-        {/* ===================================================
-            OPÉRATION BRIOCHES
-        =================================================== */}
-
-        <div className="sidebar-menu-group">
-
-          <div className="sidebar-section-title">
-
-            <div className="sidebar-section-title-left">
-              <ShoppingCart size={18} />
-
-              <span>Opération</span>
-            </div>
-
-            <ChevronDown size={15} />
-
-          </div>
-
-          <div className="sidebar-submenu">
+          <div className="ob-sidebar-header">
 
             <NavLink
-              to="/commandes"
-              className={subLinkClass}
+              to="/"
+              className="ob-sidebar-brand"
+              onClick={closeMobile}
             >
-              Commandes
-            </NavLink>
 
-            <NavLink
-              to="/livraisons"
-              className={subLinkClass}
-            >
-              Livraisons / Retraits
-            </NavLink>
+              <div className="ob-sidebar-logo">
+                OB
+              </div>
 
-            <NavLink
-              to="/suivi-operation"
-              className={subLinkClass}
-            >
-              Suivi global
+              <div className="ob-sidebar-brand-info">
+
+                <strong>
+                  {applicationName}
+                </strong>
+
+                <span>
+                  {organizationName}
+                </span>
+
+              </div>
+
             </NavLink>
 
           </div>
 
-        </div>
+          {/* ============================================
+              NAVIGATION
+              ============================================ */}
 
-        {/* ===================================================
-            ENCAISSEMENTS
-        =================================================== */}
-
-        <div className="sidebar-menu-group">
-
-          <div className="sidebar-section-title">
-
-            <div className="sidebar-section-title-left">
-              <Euro size={18} />
-
-              <span>Encaissements</span>
-            </div>
-
-            <ChevronDown size={15} />
-
-          </div>
-
-          <div className="sidebar-submenu">
-
-            <NavLink
-              to="/encaissements/fiches-caisse"
-              className={subLinkClass}
-            >
-              Fiches de caisse
-            </NavLink>
-
-            <NavLink
-              to="/encaissements/etablissements"
-              className={subLinkClass}
-            >
-              Établissements
-            </NavLink>
-
-            <NavLink
-              to="/encaissements/entreprises"
-              className={subLinkClass}
-            >
-              Entreprises
-            </NavLink>
-
-            <NavLink
-              to="/encaissements/mairies"
-              className={subLinkClass}
-            >
-              Mairies
-            </NavLink>
-
-            <NavLink
-              to="/encaissements/stands"
-              className={subLinkClass}
-            >
-              Stands
-            </NavLink>
-
-            <NavLink
-              to="/encaissements/recap"
-              className={subLinkClass}
-            >
-              Récap général
-            </NavLink>
-
-          </div>
-
-        </div>
-
-        {/* ===================================================
-            FINANCE
-        =================================================== */}
-
-        <div className="sidebar-menu-group">
-
-          <div className="sidebar-section-title">
-
-            <div className="sidebar-section-title-left">
-              <Euro size={18} />
-
-              <span>Finance</span>
-            </div>
-
-            <ChevronDown size={15} />
-
-          </div>
-
-          <div className="sidebar-submenu">
-
-            <NavLink
-              to="/finance/recettes"
-              className={subLinkClass}
-            >
-              Recettes
-            </NavLink>
-
-            <NavLink
-              to="/finance/depenses"
-              className={subLinkClass}
-            >
-              Dépenses
-            </NavLink>
-
-            <NavLink
-              to="/finance/factures"
-              className={subLinkClass}
-            >
-              Factures
-            </NavLink>
-
-            <NavLink
-              to="/finance/mecenat"
-              className={subLinkClass}
-            >
-              Mécénat / Sponsoring
-            </NavLink>
-
-            <NavLink
-              to="/finance/pertes"
-              className={subLinkClass}
-            >
-              Pertes / Écarts
-            </NavLink>
-
-          </div>
-
-        </div>
-
-        {/* ===================================================
-            STRUCTURES
-        =================================================== */}
-
-        <NavLink
-          to="/structures"
-          className={mainLinkClass}
-        >
-          <Building2 size={19} />
-
-          <span>Structures</span>
-        </NavLink>
-
-        {/* ===================================================
-            GÉOGRAPHIE
-        =================================================== */}
-
-        <NavLink
-          to="/geographie"
-          className={mainLinkClass}
-        >
-          <Map size={19} />
-
-          <span>Géographie</span>
-        </NavLink>
-
-        {/* ===================================================
-            COMMUNICATION
-        =================================================== */}
-
-        <NavLink
-          to="/communication"
-          className={mainLinkClass}
-        >
-          <Megaphone size={19} />
-
-          <span>Communication</span>
-        </NavLink>
-
-        {/* ===================================================
-            BASE DE DONNÉES
-        =================================================== */}
-
-        <div className="sidebar-menu-group">
-
-          <div className="sidebar-section-title">
-
-            <div className="sidebar-section-title-left">
-              <Database size={18} />
-
-              <span>Base de données</span>
-            </div>
-
-            <ChevronDown size={15} />
-
-          </div>
-
-          <div className="sidebar-submenu">
-
-            <NavLink
-              to="/bdd"
-              end
-              className={subLinkClass}
-            >
-              <Database size={15} />
-
-              Vue d'ensemble
-            </NavLink>
-
-            <NavLink
-              to="/bdd/donateurs"
-              className={subLinkClass}
-            >
-              <Users size={15} />
-
-              Donateurs
-            </NavLink>
-
-          </div>
-
-        </div>
-
-        {/* ===================================================
-            ADMINISTRATION
-        =================================================== */}
-
-        <div className="sidebar-menu-group">
-
-          {/* BOUTON OUVRIR / FERMER */}
-
-          <button
-            type="button"
-            className={`sidebar-section-title sidebar-section-button ${
-              isAdminRoute ? 'is-current' : ''
-            }`}
-            aria-expanded={adminOpen}
-            aria-controls="sidebar-admin-submenu"
-            onClick={() =>
-              setAdminOpen((current) => !current)
-            }
+          <nav
+            className="ob-sidebar-nav"
+            aria-label="Rubriques Opération Brioches"
           >
 
-            <div className="sidebar-section-title-left">
+            {/* ACCUEIL */}
 
-              <ShieldCheck size={19} />
-
-              <span>Administration</span>
-
-            </div>
-
-            <ChevronDown
-              size={16}
-              className={`sidebar-chevron ${
-                adminOpen ? 'is-open' : ''
-              }`}
-            />
-
-          </button>
-
-          {/* SOUS-MENU ADMINISTRATION */}
-
-          {adminOpen && (
-            <div
-              id="sidebar-admin-submenu"
-              className="sidebar-submenu sidebar-admin-submenu"
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `ob-sidebar-home ${
+                  isActive
+                    ? 'is-active'
+                    : ''
+                }`
+              }
+              onClick={closeMobile}
             >
 
-              {/* VUE D'ENSEMBLE */}
+              <House size={19} />
 
-              <NavLink
-                to="/administration"
-                end
-                className={subLinkClass}
-              >
-                <LayoutDashboard size={16} />
+              <span>
+                Accueil
+              </span>
 
-                <span>Vue d'ensemble</span>
-              </NavLink>
+            </NavLink>
 
-              {/* UTILISATEURS */}
+            <div className="ob-sidebar-separator" />
 
-              <NavLink
-                to="/administration/utilisateurs"
-                className={subLinkClass}
-              >
-                <Users size={16} />
+            {/* SECTIONS */}
 
-                <span>Utilisateurs</span>
-              </NavLink>
+            {sections.map(
+              (section) => {
+                const SectionIcon =
+                  section.icon
 
-              {/* RÔLES ET PERMISSIONS */}
+                const expanded =
+                  Boolean(
+                    expandedSections[
+                      section.id
+                    ],
+                  )
 
-              <NavLink
-                to="/administration/roles"
-                className={subLinkClass}
-              >
-                <KeyRound size={16} />
+                const active =
+                  activeSection ===
+                  section.id
 
-                <span>Rôles et permissions</span>
-              </NavLink>
+                /* ======================================
+                   SECTION SANS PAGE
+                   ====================================== */
 
-              {/* CAMPAGNES */}
+                if (
+                  section.items.length === 0
+                ) {
+                  return (
 
-              <NavLink
-                to="/administration/campagnes"
-                className={subLinkClass}
-              >
-                <CalendarDays size={16} />
+                    <div
+                      key={section.id}
+                      className="ob-sidebar-section"
+                    >
 
-                <span>Campagnes</span>
-              </NavLink>
+                      <div
+                        className="ob-sidebar-group ob-sidebar-group--disabled"
+                        aria-disabled="true"
+                      >
 
-              {/* PARAMÈTRES */}
+                        <SectionIcon size={19} />
 
-              <NavLink
-                to="/administration/parametres"
-                className={subLinkClass}
-              >
-                <Settings size={16} />
+                        <span className="ob-sidebar-group-label">
+                          {section.label}
+                        </span>
 
-                <span>Paramètres généraux</span>
-              </NavLink>
+                        <span className="ob-sidebar-badge">
+                          À venir
+                        </span>
 
-              {/* JOURNAL D'ACTIVITÉ */}
+                      </div>
 
-              <NavLink
-                to="/administration/journal"
-                className={subLinkClass}
-              >
-                <History size={16} />
+                    </div>
 
-                <span>Journal d'activité</span>
-              </NavLink>
+                  )
+                }
+
+                /* ======================================
+                   SECTION AVEC SOUS-MENU
+                   ====================================== */
+
+                return (
+
+                  <div
+                    key={section.id}
+                    className="ob-sidebar-section"
+                  >
+
+                    <button
+                      type="button"
+                      className={`ob-sidebar-group ${
+                        active
+                          ? 'is-current'
+                          : ''
+                      }`}
+                      onClick={() =>
+                        toggleSection(
+                          section.id,
+                        )
+                      }
+                      aria-expanded={
+                        expanded
+                      }
+                      aria-controls={`ob-sidebar-panel-${section.id}`}
+                    >
+
+                      <SectionIcon size={19} />
+
+                      <span className="ob-sidebar-group-label">
+                        {section.label}
+                      </span>
+
+                      <ChevronDown
+                        size={16}
+                        className={`ob-sidebar-chevron ${
+                          expanded
+                            ? 'is-expanded'
+                            : ''
+                        }`}
+                      />
+
+                    </button>
+
+                    {/* SOUS-MENU */}
+
+                    <div
+                      id={`ob-sidebar-panel-${section.id}`}
+                      className="ob-sidebar-submenu"
+                      hidden={!expanded}
+                    >
+
+                      {section.items.map(
+                        (item) => {
+
+                          /* ============================
+                             RUBRIQUE À VENIR
+                             ============================ */
+
+                          if (!item.to) {
+                            return (
+
+                              <div
+                                key={item.label}
+                                className="ob-sidebar-link ob-sidebar-link--disabled"
+                                aria-disabled="true"
+                                title="Rubrique à développer"
+                              >
+
+                                <span className="ob-sidebar-dot" />
+
+                                <span className="ob-sidebar-link-label">
+                                  {item.label}
+                                </span>
+
+                                <span className="ob-sidebar-badge">
+                                  À venir
+                                </span>
+
+                              </div>
+
+                            )
+                          }
+
+                          /* ============================
+                             LIEN EXISTANT
+                             ============================ */
+
+                          return (
+
+                            <NavLink
+                              key={item.label}
+                              to={item.to}
+                              end
+                              className={({ isActive }) =>
+                                `ob-sidebar-link ${
+                                  isActive
+                                    ? 'is-active'
+                                    : ''
+                                }`
+                              }
+                              onClick={closeMobile}
+                            >
+
+                              <span className="ob-sidebar-dot" />
+
+                              <span className="ob-sidebar-link-label">
+                                {item.label}
+                              </span>
+
+                              {item.badge && (
+
+                                <span className="ob-sidebar-badge ob-sidebar-badge--special">
+
+                                  {item.badge}
+
+                                </span>
+
+                              )}
+
+                            </NavLink>
+
+                          )
+                        },
+                      )}
+
+                    </div>
+
+                  </div>
+
+                )
+              },
+            )}
+
+          </nav>
+
+          {/* ============================================
+              PIED DE PAGE
+              ============================================ */}
+
+          <footer className="ob-sidebar-footer">
+
+            <div className="ob-sidebar-footer-icon">
+              <Settings size={18} />
+            </div>
+
+            <div>
+
+              <strong>
+                {applicationName}
+              </strong>
+
+              <span>
+                Application en développement
+              </span>
 
             </div>
-          )}
 
-        </div>
+          </footer>
 
-      </nav>
-
-      {/* =====================================================
-          BAS DE SIDEBAR
-      ===================================================== */}
-
-      <div className="sidebar-footer">
-
-        <div className="sidebar-footer-icon">
-          <Truck size={18} />
-        </div>
-
-        <div>
-          <strong>Opération Brioches</strong>
-
-          <span>
-            Ensemble, faisons la différence.
-          </span>
-        </div>
+        </aside>
 
       </div>
 
-    </aside>
+      {/* ================================================
+          BURGER ORDINATEUR
+
+          Toujours visible, même menu fermé.
+          ================================================= */}
+
+      <button
+        type="button"
+        className={`ob-sidebar-burger ob-sidebar-burger--desktop ${
+          desktopOpen
+            ? 'is-open'
+            : 'is-closed'
+        }`}
+        onClick={toggleDesktop}
+        aria-label={
+          desktopOpen
+            ? 'Fermer le menu latéral'
+            : 'Ouvrir le menu latéral'
+        }
+        aria-controls="ob-main-sidebar"
+        aria-expanded={desktopOpen}
+        title={
+          desktopOpen
+            ? 'Masquer le menu'
+            : 'Afficher le menu'
+        }
+      >
+
+        {desktopOpen ? (
+          <X size={21} />
+        ) : (
+          <Menu size={21} />
+        )}
+
+      </button>
+
+      {/* ================================================
+          BURGER MOBILE
+          ================================================= */}
+
+      <button
+        type="button"
+        className={`ob-sidebar-burger ob-sidebar-burger--mobile ${
+          mobileOpen
+            ? 'is-mobile-open'
+            : ''
+        }`}
+        onClick={toggleMobile}
+        aria-label={
+          mobileOpen
+            ? 'Fermer le menu'
+            : 'Ouvrir le menu'
+        }
+        aria-controls="ob-main-sidebar"
+        aria-expanded={mobileOpen}
+      >
+
+        {mobileOpen ? (
+          <X size={21} />
+        ) : (
+          <Menu size={21} />
+        )}
+
+      </button>
+
+      {/* ================================================
+          FOND MOBILE
+          ================================================= */}
+
+      {mobileOpen && (
+
+        <button
+          type="button"
+          className="ob-sidebar-overlay"
+          aria-label="Fermer le menu"
+          onClick={closeMobile}
+        />
+
+      )}
+
+    </>
   )
 }
 

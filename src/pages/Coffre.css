@@ -1,0 +1,814 @@
+/* =========================================================
+   OPÉRATION BRIOCHES — PAGE COFFRE
+   ========================================================= */
+
+/* =========================================================
+   VARIABLES LOCALES
+   ========================================================= */
+
+.coffre-page {
+  --coffre-navy: #063b7c;
+  --coffre-navy-dark: #052d5c;
+  --coffre-orange: #ff8614;
+  --coffre-orange-light: #fff0de;
+  --coffre-cream: #faf8f4;
+  --coffre-white: #ffffff;
+  --coffre-border: #e1e9f2;
+  --coffre-text: #1f344d;
+  --coffre-muted: #6682a5;
+  --coffre-green: #16834e;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+
+  padding: 30px 34px 48px;
+
+  background: var(--coffre-cream);
+  color: var(--coffre-text);
+
+  font-family: inherit;
+}
+
+.coffre-page *,
+.coffre-page *::before,
+.coffre-page *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   EN-TÊTE
+   ========================================================= */
+
+.coffre-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+
+  margin-bottom: 24px;
+}
+
+.coffre-title-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  width: 66px;
+  height: 66px;
+
+  border-radius: 17px;
+
+  background: var(--coffre-orange-light);
+  color: var(--coffre-orange);
+}
+
+.coffre-heading > div:last-child {
+  min-width: 0;
+}
+
+.coffre-eyebrow {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: var(--coffre-orange);
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 1.1px;
+}
+
+.coffre-heading h1 {
+  margin: 0;
+
+  color: var(--coffre-navy);
+
+  font-size: 32px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.coffre-heading p {
+  margin: 7px 0 0;
+
+  color: var(--coffre-muted);
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   BARRE D'ACTIONS
+   ========================================================= */
+
+.coffre-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+
+  margin-bottom: 20px;
+  padding: 17px 20px;
+
+  border: 1px solid var(--coffre-border);
+  border-radius: 15px;
+
+  background: var(--coffre-white);
+}
+
+.coffre-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  color: var(--coffre-navy);
+
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.coffre-toolbar select {
+  min-width: 220px;
+  height: 42px;
+
+  padding: 0 35px 0 13px;
+
+  border: 1px solid #d6e0ed;
+  border-radius: 9px;
+
+  background: #ffffff;
+  color: var(--coffre-text);
+
+  font-family: inherit;
+  font-size: 13px;
+
+  cursor: pointer;
+}
+
+.coffre-toolbar select:focus-visible {
+  outline: 3px solid #ffce9e;
+  outline-offset: 2px;
+}
+
+.coffre-toolbar select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.coffre-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.coffre-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  min-height: 42px;
+
+  padding: 10px 15px;
+
+  border: 1px solid var(--coffre-border);
+  border-radius: 9px;
+
+  background: #ffffff;
+  color: var(--coffre-navy);
+
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.coffre-actions a:hover {
+  background: #f1f6fc;
+  border-color: #c6d7ea;
+
+  transform: translateY(-1px);
+}
+
+/* BOUTON SUIVI BANQUE */
+
+.coffre-actions a:last-child {
+  border-color: var(--coffre-orange);
+
+  background: var(--coffre-orange);
+  color: #ffffff;
+}
+
+.coffre-actions a:last-child:hover {
+  background: #ea7508;
+  border-color: #ea7508;
+}
+
+/* =========================================================
+   MESSAGES D'INFORMATION
+   ========================================================= */
+
+.coffre-alert,
+.coffre-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  margin-bottom: 17px;
+  padding: 15px 17px;
+
+  border-radius: 11px;
+
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.coffre-alert {
+  border: 1px solid #f4d9b8;
+
+  background: #fff6ea;
+  color: #875323;
+}
+
+.coffre-alert > svg {
+  flex-shrink: 0;
+
+  margin-top: 1px;
+
+  color: var(--coffre-orange);
+}
+
+.coffre-alert strong {
+  font-weight: 800;
+}
+
+/* ERREUR BLOQUANTE */
+
+.coffre-error {
+  border: 1px solid #f1bec6;
+
+  background: #fff0f2;
+  color: #a42a40;
+}
+
+.coffre-error > svg {
+  flex-shrink: 0;
+}
+
+.coffre-error strong {
+  display: block;
+
+  margin-bottom: 5px;
+
+  font-weight: 800;
+}
+
+.coffre-error p {
+  margin: 0;
+}
+
+/* =========================================================
+   INDICATEURS PRINCIPAUX
+   ========================================================= */
+
+.coffre-kpis {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 15px;
+
+  margin-bottom: 20px;
+}
+
+.coffre-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  min-width: 0;
+  min-height: 166px;
+
+  padding: 21px;
+
+  border: 1px solid var(--coffre-border);
+  border-radius: 15px;
+
+  background: var(--coffre-white);
+
+  box-shadow: 0 3px 14px rgba(6, 59, 124, 0.025);
+}
+
+.coffre-kpi > svg {
+  flex-shrink: 0;
+
+  margin-bottom: 15px;
+
+  color: var(--coffre-orange);
+}
+
+.coffre-kpi > span {
+  margin-bottom: 9px;
+
+  color: var(--coffre-muted);
+
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.coffre-kpi > strong {
+  display: block;
+
+  max-width: 100%;
+
+  margin-bottom: 9px;
+
+  color: var(--coffre-navy);
+
+  font-size: clamp(20px, 2vw, 29px);
+  font-weight: 850;
+
+  line-height: 1.25;
+
+  overflow-wrap: anywhere;
+
+  font-variant-numeric: tabular-nums;
+}
+
+.coffre-kpi > small {
+  color: var(--coffre-muted);
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* TOTAL GÉNÉRAL MIS EN AVANT */
+
+.coffre-kpi.principal {
+  border-color: #f2c99e;
+
+  background: linear-gradient(
+    145deg,
+    #fff9f2 0%,
+    #ffeed9 100%
+  );
+}
+
+.coffre-kpi.principal > svg {
+  color: var(--coffre-orange);
+}
+
+.coffre-kpi.principal > strong {
+  color: var(--coffre-navy-dark);
+}
+
+/* =========================================================
+   CARTES GÉNÉRALES
+   ========================================================= */
+
+.coffre-card {
+  min-width: 0;
+
+  margin-bottom: 20px;
+  padding: 21px;
+
+  border: 1px solid var(--coffre-border);
+  border-radius: 15px;
+
+  background: var(--coffre-white);
+
+  box-shadow: 0 3px 14px rgba(6, 59, 124, 0.025);
+}
+
+.coffre-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin: 0 0 20px;
+
+  color: var(--coffre-navy);
+
+  font-size: 17px;
+  font-weight: 800;
+
+  line-height: 1.4;
+}
+
+.coffre-card h2 > svg {
+  flex-shrink: 0;
+
+  color: var(--coffre-orange);
+}
+
+/* =========================================================
+   GRILLE PIÈCES / BILLETS
+   ========================================================= */
+
+.coffre-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.25fr)
+    minmax(0, 1fr);
+
+  align-items: start;
+
+  gap: 18px;
+}
+
+.coffre-grid .coffre-card {
+  height: 100%;
+}
+
+/* =========================================================
+   TABLEAUX
+   ========================================================= */
+
+.coffre-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+
+  border: 1px solid var(--coffre-border);
+  border-radius: 10px;
+}
+
+.coffre-table {
+  width: 100%;
+  min-width: 430px;
+
+  border-collapse: collapse;
+
+  background: #ffffff;
+
+  font-size: 12px;
+}
+
+.coffre-table thead {
+  background: #f2f6fb;
+}
+
+.coffre-table th {
+  padding: 14px 11px;
+
+  color: var(--coffre-navy);
+
+  font-size: 11px;
+  font-weight: 800;
+
+  text-align: right;
+  white-space: nowrap;
+}
+
+.coffre-table th:first-child {
+  text-align: left;
+}
+
+.coffre-table td {
+  padding: 13px 11px;
+
+  border-top: 1px solid #edf1f6;
+
+  color: var(--coffre-text);
+
+  text-align: right;
+  white-space: nowrap;
+
+  font-variant-numeric: tabular-nums;
+}
+
+.coffre-table td:first-child {
+  text-align: left;
+}
+
+.coffre-table td strong {
+  color: var(--coffre-navy);
+
+  font-weight: 750;
+}
+
+.coffre-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.coffre-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+/* LIGNE TOTAL */
+
+.coffre-table tfoot tr {
+  background: var(--coffre-orange-light);
+}
+
+.coffre-table tfoot td {
+  padding: 15px 11px;
+
+  border-top: 1px solid #f6d9ba;
+
+  color: #a65b13;
+
+  font-weight: 850;
+}
+
+/* =========================================================
+   BLOCS DE TOTAUX
+
+   Utilisés pour :
+   - les espèces ;
+   - les chèques ;
+   - le poids théorique.
+   ========================================================= */
+
+.coffre-cheques {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 15px;
+}
+
+.coffre-cheques > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+
+  min-width: 0;
+  min-height: 104px;
+
+  padding: 20px;
+
+  border: 1px solid #f5e0c8;
+  border-radius: 11px;
+
+  background: #fff9f2;
+}
+
+.coffre-cheques span {
+  color: var(--coffre-muted);
+
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.coffre-cheques strong {
+  color: var(--coffre-navy);
+
+  font-size: clamp(20px, 2vw, 27px);
+  font-weight: 850;
+
+  font-variant-numeric: tabular-nums;
+
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   NOTES EXPLICATIVES
+   ========================================================= */
+
+.coffre-note {
+  margin: 18px 0 0;
+
+  color: var(--coffre-muted);
+
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+/* =========================================================
+   ORIGINE DES DONNÉES
+   ========================================================= */
+
+.coffre-bottom {
+  margin-bottom: 0;
+}
+
+.coffre-source {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 13px 0;
+
+  border-bottom: 1px solid #edf1f6;
+
+  color: var(--coffre-text);
+
+  font-size: 13px;
+}
+
+.coffre-source:last-of-type {
+  border-bottom: none;
+}
+
+.coffre-source > svg {
+  flex-shrink: 0;
+
+  color: var(--coffre-orange);
+}
+
+.coffre-source strong {
+  color: var(--coffre-navy);
+
+  font-weight: 850;
+}
+
+/* =========================================================
+   ACCESSIBILITÉ
+   ========================================================= */
+
+.coffre-page a:focus-visible,
+.coffre-page button:focus-visible {
+  outline: 3px solid #ffce9e;
+  outline-offset: 3px;
+}
+
+/* =========================================================
+   RESPONSIVE — ÉCRANS MOYENS
+   ========================================================= */
+
+@media (max-width: 1250px) {
+
+  .coffre-kpis {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .coffre-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+/* =========================================================
+   RESPONSIVE — TABLETTES
+   ========================================================= */
+
+@media (max-width: 850px) {
+
+  .coffre-page {
+    padding: 24px 20px 38px;
+  }
+
+  .coffre-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .coffre-toolbar label {
+    width: 100%;
+  }
+
+  .coffre-toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .coffre-actions {
+    width: 100%;
+  }
+
+  .coffre-actions a {
+    flex: 1;
+  }
+
+}
+
+/* =========================================================
+   RESPONSIVE — MOBILES
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+  .coffre-page {
+    padding: 18px 13px 32px;
+  }
+
+  .coffre-heading {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .coffre-title-icon {
+    width: 49px;
+    height: 49px;
+
+    border-radius: 12px;
+  }
+
+  .coffre-title-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .coffre-heading h1 {
+    font-size: 26px;
+  }
+
+  .coffre-heading p {
+    font-size: 12px;
+  }
+
+  .coffre-toolbar {
+    padding: 15px;
+  }
+
+  .coffre-actions {
+    flex-direction: column;
+  }
+
+  .coffre-actions a {
+    width: 100%;
+  }
+
+  .coffre-kpis {
+    grid-template-columns: 1fr;
+    gap: 11px;
+  }
+
+  .coffre-kpi {
+    min-height: 135px;
+    padding: 18px;
+  }
+
+  .coffre-card {
+    padding: 16px;
+  }
+
+  .coffre-card h2 {
+    font-size: 16px;
+  }
+
+  .coffre-cheques {
+    grid-template-columns: 1fr;
+  }
+
+  .coffre-cheques > div {
+    min-height: 90px;
+  }
+
+  .coffre-table {
+    font-size: 11px;
+  }
+
+  .coffre-table th,
+  .coffre-table td {
+    padding: 11px 9px;
+  }
+
+}
+
+/* =========================================================
+   IMPRESSION
+
+   Conserve uniquement le contenu utile.
+   ========================================================= */
+
+@media print {
+
+  .coffre-page {
+    padding: 0;
+    background: white;
+  }
+
+  .coffre-toolbar,
+  .coffre-alert,
+  .coffre-actions {
+    display: none !important;
+  }
+
+  .coffre-kpis,
+  .coffre-grid {
+    display: block;
+  }
+
+  .coffre-kpi,
+  .coffre-card {
+    margin-bottom: 15px;
+
+    box-shadow: none;
+
+    break-inside: avoid;
+  }
+
+  .coffre-table-scroll {
+    overflow: visible;
+  }
+
+  .coffre-table {
+    min-width: 0;
+  }
+
+}

@@ -1,0 +1,1408 @@
+/* =========================================================
+   OPÉRATION BRIOCHES
+   SUIVI BANQUE — HISTORIQUE + FORMULAIRE DÉROULANT
+   ========================================================= */
+
+/* =========================================================
+   1. PAGE ET VARIABLES
+   ========================================================= */
+
+.suivib-page {
+  --sb-navy: #063b7c;
+  --sb-navy-dark: #052d5c;
+  --sb-orange: #ff8614;
+  --sb-orange-dark: #e87509;
+  --sb-cream: #fffaf6;
+  --sb-white: #ffffff;
+  --sb-text: #1f344d;
+  --sb-muted: #6682a5;
+  --sb-border: #dce6f3;
+  --sb-green: #16834e;
+  --sb-red: #b6384a;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+
+  padding: 28px 32px 48px;
+
+  background: var(--sb-cream);
+  color: var(--sb-text);
+
+  font-family:
+    Inter,
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.suivib-page *,
+.suivib-page *::before,
+.suivib-page *::after {
+  box-sizing: border-box;
+}
+
+.suivib-page button,
+.suivib-page input,
+.suivib-page select,
+.suivib-page textarea {
+  font-family: inherit;
+}
+
+.suivib-page button {
+  cursor: pointer;
+}
+
+.suivib-page button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   2. RETOUR AU COFFRE
+   ========================================================= */
+
+.suivib-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  width: fit-content;
+
+  margin-bottom: 22px;
+
+  color: var(--sb-muted);
+
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+
+  transition: color 0.2s ease;
+}
+
+.suivib-back:hover {
+  color: var(--sb-orange);
+}
+
+/* =========================================================
+   3. EN-TÊTE PRINCIPAL
+   ========================================================= */
+
+.suivib-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 23px;
+}
+
+.suivib-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  min-width: 0;
+}
+
+.suivib-heading-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  width: 60px;
+  height: 60px;
+
+  border-radius: 15px;
+
+  background: #fff0df;
+  color: var(--sb-orange);
+}
+
+.suivib-eyebrow {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: var(--sb-orange);
+
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.suivib-header h1 {
+  margin: 0;
+
+  color: var(--sb-navy);
+
+  font-size: 30px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.suivib-header p {
+  margin: 7px 0 0;
+
+  color: var(--sb-muted);
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   4. BOUTONS COMMUNS
+   ========================================================= */
+
+.suivib-primary,
+.suivib-secondary,
+.suivib-cancel,
+.suivib-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 9px;
+
+  border-radius: 10px;
+
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.3;
+
+  text-decoration: none;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Bouton orange : + Dépôt banque */
+
+.suivib-primary {
+  min-height: 43px;
+
+  padding: 10px 17px;
+
+  border: 1px solid var(--sb-orange);
+
+  background: var(--sb-orange);
+  color: #ffffff;
+
+  white-space: nowrap;
+}
+
+.suivib-primary:hover:not(:disabled) {
+  border-color: var(--sb-orange-dark);
+  background: var(--sb-orange-dark);
+
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 5px 13px rgba(255, 134, 20, 0.16);
+}
+
+/* Bouton Fermer */
+
+.suivib-secondary {
+  min-height: 42px;
+
+  padding: 10px 16px;
+
+  border: 1px solid var(--sb-border);
+
+  background: #ffffff;
+  color: var(--sb-navy);
+}
+
+.suivib-secondary:hover:not(:disabled) {
+  background: #f3f7fc;
+}
+
+/* Bouton Annuler une remise */
+
+.suivib-cancel {
+  min-height: 33px;
+
+  padding: 7px 11px;
+
+  border: 1px solid #efc5cc;
+
+  background: #fff2f3;
+  color: var(--sb-red);
+
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.suivib-cancel:hover:not(:disabled) {
+  background: #ffe7ea;
+}
+
+/* Bouton X du formulaire */
+
+.suivib-close {
+  flex-shrink: 0;
+
+  width: 39px;
+  height: 39px;
+
+  padding: 0;
+
+  border: 1px solid var(--sb-border);
+
+  background: #ffffff;
+  color: var(--sb-navy);
+}
+
+.suivib-close:hover:not(:disabled) {
+  background: #f3f7fc;
+}
+
+/* =========================================================
+   5. SÉLECTION DE CAMPAGNE
+   ========================================================= */
+
+.suivib-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 13px;
+
+  margin-bottom: 22px;
+  padding: 16px 18px;
+
+  border: 1px solid var(--sb-border);
+  border-radius: 13px;
+
+  background: var(--sb-white);
+
+  box-shadow:
+    0 3px 12px rgba(6, 59, 124, 0.025);
+}
+
+.suivib-toolbar > label {
+  color: var(--sb-navy);
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.suivib-toolbar select {
+  width: min(100%, 310px);
+  min-height: 41px;
+
+  padding: 9px 12px;
+
+  border: 1px solid var(--sb-border);
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #ffffff;
+  color: var(--sb-navy);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.suivib-toolbar select:focus {
+  border-color: var(--sb-orange);
+
+  box-shadow:
+    0 0 0 3px rgba(255, 134, 20, 0.12);
+}
+
+.suivib-toolbar > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-left: auto;
+
+  color: var(--sb-navy);
+
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.suivib-toolbar > a:hover {
+  color: var(--sb-orange);
+}
+
+/* =========================================================
+   6. MESSAGES
+   ========================================================= */
+
+.suivib-error,
+.suivib-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  margin-bottom: 17px;
+  padding: 13px 15px;
+
+  border: 1px solid;
+  border-radius: 10px;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.suivib-error {
+  border-color: #efc0c8;
+
+  background: #fff0f2;
+  color: var(--sb-red);
+}
+
+.suivib-success {
+  border-color: #bce6ce;
+
+  background: #eaf8ef;
+  color: var(--sb-green);
+}
+
+.suivib-error svg,
+.suivib-success svg {
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   7. HISTORIQUE : CARTE PRINCIPALE
+   ========================================================= */
+
+.suivib-history-card {
+  width: 100%;
+  min-width: 0;
+
+  overflow: hidden;
+
+  border: 1px solid var(--sb-border);
+  border-radius: 15px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 4px 18px rgba(6, 59, 124, 0.035);
+}
+
+/* =========================================================
+   8. EN-TÊTE DE L'HISTORIQUE
+   ========================================================= */
+
+.suivib-history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 22px 24px;
+
+  border-bottom: 1px solid var(--sb-border);
+
+  background: #ffffff;
+}
+
+.suivib-history-heading > div {
+  min-width: 0;
+}
+
+.suivib-history-heading h2 {
+  margin: 0;
+
+  color: var(--sb-navy);
+
+  font-size: 20px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.suivib-history-heading p {
+  margin: 7px 0 0;
+
+  color: var(--sb-muted);
+
+  font-size: 12px;
+}
+
+/* Bouton de déroulement */
+
+.suivib-history-heading > .suivib-primary {
+  flex-shrink: 0;
+}
+
+.suivib-history-heading > .suivib-primary[aria-expanded="true"] {
+  border-color: #e5c19b;
+
+  background: #fff0df;
+  color: #a85b14;
+
+  box-shadow: none;
+}
+
+.suivib-history-heading > .suivib-primary[aria-expanded="true"]:hover {
+  background: #ffe5c6;
+}
+
+/* =========================================================
+   9. HISTORIQUE VIDE
+   ========================================================= */
+
+.suivib-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 12px;
+
+  min-height: 260px;
+
+  padding: 35px 20px;
+
+  text-align: center;
+}
+
+.suivib-empty > svg {
+  color: var(--sb-orange);
+}
+
+.suivib-empty strong {
+  color: var(--sb-navy);
+
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.suivib-empty span {
+  max-width: 410px;
+
+  color: var(--sb-muted);
+
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* =========================================================
+   10. TABLEAU HISTORIQUE
+   ========================================================= */
+
+.suivib-table-scroll {
+  width: 100%;
+  max-width: 100%;
+
+  overflow-x: auto;
+
+  scrollbar-width: thin;
+  scrollbar-color: #c5d4e5 transparent;
+}
+
+.suivib-table {
+  width: 100%;
+  min-width: 1060px;
+
+  border-collapse: collapse;
+  border-spacing: 0;
+
+  color: var(--sb-text);
+
+  font-size: 12px;
+  text-align: left;
+}
+
+.suivib-table thead {
+  background: #f5f8fc;
+}
+
+.suivib-table th {
+  padding: 15px 13px;
+
+  border-bottom: 1px solid var(--sb-border);
+
+  color: #526d91;
+
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.3px;
+
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.suivib-table td {
+  padding: 16px 13px;
+
+  border-bottom: 1px solid #e9eef5;
+
+  vertical-align: middle;
+}
+
+.suivib-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.suivib-table tbody tr:hover {
+  background: #fffaf5;
+}
+
+.suivib-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.suivib-table td > strong {
+  display: block;
+
+  color: var(--sb-navy);
+
+  font-size: 12px;
+  font-weight: 800;
+
+  overflow-wrap: anywhere;
+}
+
+.suivib-number {
+  text-align: right;
+
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.suivib-table td.suivib-number {
+  color: #344f73;
+
+  font-weight: 650;
+}
+
+.suivib-table td.suivib-total {
+  color: var(--sb-orange-dark);
+
+  font-weight: 850;
+}
+
+.suivib-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  white-space: nowrap;
+}
+
+.suivib-date svg {
+  color: var(--sb-muted);
+}
+
+.suivib-row-note {
+  display: block;
+
+  max-width: 240px;
+
+  margin-top: 6px;
+
+  color: var(--sb-muted);
+
+  font-size: 10px;
+  font-weight: 450;
+  line-height: 1.5;
+
+  overflow-wrap: anywhere;
+}
+
+.suivib-row-cancelled {
+  background: #fafbfc;
+}
+
+.suivib-row-cancelled td {
+  color: #8a98aa;
+}
+
+.suivib-row-cancelled td > strong,
+.suivib-row-cancelled td.suivib-total {
+  color: #7c8a9d;
+}
+
+/* =========================================================
+   11. BADGES DE STATUT
+   ========================================================= */
+
+.suivib-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: fit-content;
+  min-height: 25px;
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1.2;
+
+  white-space: nowrap;
+}
+
+.suivib-status.recorded {
+  background: #e7f6ec;
+  color: var(--sb-green);
+}
+
+.suivib-status.cancelled {
+  background: #eef1f5;
+  color: #758295;
+}
+
+.suivib-muted {
+  color: #a3afbd;
+}
+
+/* =========================================================
+   12. FORMULAIRE DÉROULANT
+
+   IMPORTANT :
+   Aucune position fixed.
+   Aucun fond de modale.
+   Le formulaire reste dans le flux de la page.
+   ========================================================= */
+
+/* Le JSX applique déjà marginTop: 20px
+   à la carte du formulaire. */
+
+.suivib-history-card[id] {
+  position: relative;
+
+  overflow: visible;
+
+  border-color: #f0cba5;
+
+  box-shadow:
+    0 6px 22px rgba(6, 59, 124, 0.045);
+}
+
+/* Trait orange sur le haut du formulaire */
+
+.suivib-history-card[id]::before {
+  content: "";
+
+  position: absolute;
+  top: -1px;
+  left: 20px;
+  right: 20px;
+
+  height: 3px;
+
+  border-radius: 0 0 4px 4px;
+
+  background: var(--sb-orange);
+}
+
+/* =========================================================
+   13. EN-TÊTE DU FORMULAIRE
+   ========================================================= */
+
+.suivib-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 17px;
+
+  padding: 24px 26px;
+
+  border-bottom: 1px solid var(--sb-border);
+
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #fffaf5 100%
+  );
+}
+
+.suivib-modal-header > div {
+  min-width: 0;
+}
+
+.suivib-modal-header h2 {
+  margin: 0;
+
+  color: var(--sb-navy);
+
+  font-size: 22px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.suivib-modal-header p {
+  margin: 7px 0 0;
+
+  color: var(--sb-muted);
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   14. CONTENEUR DU FORMULAIRE
+   ========================================================= */
+
+.suivib-history-card > form {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+}
+
+.suivib-modal-body {
+  display: flex;
+  flex-direction: column;
+
+  gap: 22px;
+
+  min-width: 0;
+
+  padding: 26px;
+
+  background: #ffffff;
+}
+
+/* =========================================================
+   15. CHAMPS
+   ========================================================= */
+
+.suivib-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+
+  min-width: 0;
+
+  color: var(--sb-navy);
+
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.suivib-field input,
+.suivib-field textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+
+  padding: 10px 12px;
+
+  border: 1px solid #d7e3f0;
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #ffffff;
+  color: var(--sb-text);
+
+  font-size: 13px;
+  font-weight: 450;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.suivib-field textarea {
+  min-height: 85px;
+
+  resize: vertical;
+}
+
+.suivib-field input:focus,
+.suivib-field textarea:focus {
+  border-color: var(--sb-orange);
+
+  box-shadow:
+    0 0 0 3px rgba(255, 134, 20, 0.12);
+}
+
+.suivib-field input::placeholder,
+.suivib-field textarea::placeholder {
+  color: #94a5b9;
+}
+
+.suivib-field small {
+  color: var(--sb-muted);
+
+  font-size: 11px;
+  font-weight: 450;
+}
+
+/* =========================================================
+   16. SECTIONS BILLETS / PIÈCES / CHÈQUES
+   ========================================================= */
+
+.suivib-fieldset {
+  min-width: 0;
+
+  margin: 0;
+  padding: 19px;
+
+  border: 1px solid var(--sb-border);
+  border-radius: 12px;
+
+  background: #fbfcfe;
+}
+
+.suivib-fieldset legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 0 9px;
+
+  color: var(--sb-navy);
+
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.suivib-fieldset legend svg {
+  flex-shrink: 0;
+
+  color: var(--sb-orange);
+}
+
+/* =========================================================
+   17. COUPURES
+   ========================================================= */
+
+.suivib-denominations {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 12px;
+
+  width: 100%;
+}
+
+.suivib-denomination {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  min-width: 0;
+
+  padding: 13px;
+
+  border: 1px solid #e4ebf4;
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.suivib-denomination:focus-within {
+  border-color: #f0bc81;
+  background: #fffdf9;
+}
+
+.suivib-denomination > span {
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+}
+
+.suivib-denomination strong {
+  color: var(--sb-navy);
+
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.suivib-denomination small {
+  color: var(--sb-muted);
+
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.suivib-denomination input {
+  width: 100%;
+  min-width: 0;
+  min-height: 41px;
+
+  padding: 8px 10px;
+
+  border: 1px solid #d9e4f0;
+  border-radius: 8px;
+
+  outline: none;
+
+  background: #ffffff;
+  color: var(--sb-navy);
+
+  font-size: 14px;
+  font-weight: 750;
+
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.suivib-denomination input:focus {
+  border-color: var(--sb-orange);
+
+  box-shadow:
+    0 0 0 3px rgba(255, 134, 20, 0.11);
+}
+
+/* =========================================================
+   18. CHÈQUES
+   ========================================================= */
+
+.suivib-checks {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+/* =========================================================
+   19. RÉCAPITULATIF DU DÉPÔT
+   ========================================================= */
+
+.suivib-recap {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 12px;
+
+  padding: 17px;
+
+  border: 1px solid #f1d4b3;
+  border-radius: 12px;
+
+  background: #fff8f0;
+}
+
+.suivib-recap > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+
+  min-width: 0;
+
+  padding: 15px;
+
+  border: 1px solid #f4e3d1;
+  border-radius: 10px;
+
+  background: #ffffff;
+}
+
+.suivib-recap span {
+  color: var(--sb-muted);
+
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.suivib-recap strong {
+  color: var(--sb-navy);
+
+  font-size: 21px;
+  font-weight: 850;
+
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.suivib-recap > .suivib-recap-total {
+  grid-column: 1 / -1;
+
+  border-color: #f4c89d;
+
+  background: #fff0df;
+}
+
+.suivib-recap-total span {
+  color: #965b25;
+
+  font-weight: 800;
+}
+
+.suivib-recap-total strong {
+  color: var(--sb-orange-dark);
+
+  font-size: 27px;
+}
+
+/* =========================================================
+   20. INFORMATION SOUS LE FORMULAIRE
+   ========================================================= */
+
+.suivib-modal-hint {
+  margin: 0;
+
+  padding: 13px 15px;
+
+  border-left: 3px solid var(--sb-orange);
+  border-radius: 0 8px 8px 0;
+
+  background: #fff7ee;
+  color: #855b32;
+
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+/* =========================================================
+   21. ACTIONS DU FORMULAIRE
+   ========================================================= */
+
+.suivib-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+
+  gap: 11px;
+
+  padding: 19px 26px;
+
+  border-top: 1px solid var(--sb-border);
+
+  border-radius: 0 0 15px 15px;
+
+  background: #f9fbfe;
+}
+
+/* =========================================================
+   22. INDICATEURS SOUS L'HISTORIQUE
+   ========================================================= */
+
+.suivib-stats {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 15px;
+
+  margin-bottom: 25px;
+}
+
+.suivib-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  min-width: 0;
+  min-height: 155px;
+
+  padding: 20px;
+
+  border: 1px solid var(--sb-border);
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 3px 15px rgba(6, 59, 124, 0.025);
+}
+
+.suivib-stat > svg {
+  margin-bottom: 13px;
+
+  color: var(--sb-orange);
+}
+
+.suivib-stat > span {
+  margin-bottom: 7px;
+
+  color: var(--sb-muted);
+
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.suivib-stat > strong {
+  color: var(--sb-navy);
+
+  font-size: 24px;
+  font-weight: 850;
+  line-height: 1.3;
+
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.suivib-stat > small {
+  margin-top: 8px;
+
+  color: var(--sb-muted);
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.suivib-stat-featured {
+  border-color: #f5cda5;
+
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #fff5e9 100%
+  );
+}
+
+.suivib-stat-featured > strong {
+  color: var(--sb-orange-dark);
+}
+
+/* =========================================================
+   23. ACCESSIBILITÉ
+   ========================================================= */
+
+.suivib-page button:focus-visible,
+.suivib-page a:focus-visible,
+.suivib-page select:focus-visible {
+  outline: 3px solid #ffca90;
+  outline-offset: 3px;
+}
+
+/* =========================================================
+   24. ÉCRANS MOYENS
+   ========================================================= */
+
+@media (max-width: 1350px) {
+  .suivib-stats {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* =========================================================
+   25. TABLETTES
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .suivib-page {
+    padding: 23px 20px 38px;
+  }
+
+  .suivib-denominations {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .suivib-history-heading {
+    padding: 20px;
+  }
+
+  .suivib-modal-header,
+  .suivib-modal-body,
+  .suivib-modal-footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+/* =========================================================
+   26. MOBILES
+   ========================================================= */
+
+@media (max-width: 650px) {
+  .suivib-page {
+    padding: 17px 13px 30px;
+  }
+
+  /* En-tête */
+
+  .suivib-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .suivib-heading {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .suivib-heading-icon {
+    width: 48px;
+    height: 48px;
+
+    border-radius: 12px;
+  }
+
+  .suivib-heading-icon svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .suivib-header h1 {
+    font-size: 25px;
+  }
+
+  /* Campagne */
+
+  .suivib-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .suivib-toolbar select {
+    width: 100%;
+  }
+
+  .suivib-toolbar > a {
+    margin-left: 0;
+  }
+
+  /* Historique */
+
+  .suivib-history-heading {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 17px;
+
+    padding: 19px;
+  }
+
+  .suivib-history-heading h2 {
+    font-size: 19px;
+  }
+
+  .suivib-history-heading > .suivib-primary {
+    width: 100%;
+  }
+
+  /* Formulaire déroulant */
+
+  .suivib-modal-header {
+    padding: 19px;
+  }
+
+  .suivib-modal-header h2 {
+    font-size: 20px;
+  }
+
+  .suivib-modal-body {
+    gap: 18px;
+
+    padding: 19px;
+  }
+
+  .suivib-fieldset {
+    padding: 13px;
+  }
+
+  .suivib-denominations {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .suivib-checks {
+    grid-template-columns: 1fr;
+  }
+
+  /* Récapitulatif */
+
+  .suivib-recap {
+    padding: 12px;
+  }
+
+  .suivib-recap strong {
+    font-size: 17px;
+  }
+
+  .suivib-recap-total strong {
+    font-size: 23px;
+  }
+
+  /* Actions */
+
+  .suivib-modal-footer {
+    padding: 16px 19px;
+  }
+
+  .suivib-modal-footer button {
+    flex: 1;
+  }
+
+  /* Statistiques */
+
+  .suivib-stats {
+    grid-template-columns: 1fr;
+    gap: 11px;
+  }
+
+  .suivib-stat {
+    min-height: 125px;
+    padding: 17px;
+  }
+}
+
+/* =========================================================
+   27. TRÈS PETITS ÉCRANS
+   ========================================================= */
+
+@media (max-width: 380px) {
+  .suivib-denominations {
+    grid-template-columns: 1fr;
+  }
+
+  .suivib-recap {
+    grid-template-columns: 1fr;
+  }
+
+  .suivib-recap > .suivib-recap-total {
+    grid-column: auto;
+  }
+
+  .suivib-modal-footer {
+    flex-direction: column;
+  }
+
+  .suivib-modal-footer button {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   28. MOUVEMENTS RÉDUITS
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .suivib-page *,
+  .suivib-page *::before,
+  .suivib-page *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

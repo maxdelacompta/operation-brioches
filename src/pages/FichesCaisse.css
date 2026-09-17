@@ -1455,3 +1455,135 @@
 
   font-size: 9.5px;
 }
+/* =========================================================
+   PAGINATION — FICHES DE CAISSE
+   ========================================================= */
+
+.fiches-caisse-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+
+  gap: 16px;
+
+  padding: 17px 20px;
+
+  border-top: 1px solid #e1e9f2;
+
+  background: #ffffff;
+}
+
+.fiches-caisse-pagination-info {
+  color: #6682a5;
+
+  font-size: 12px;
+  font-weight: 650;
+
+  white-space: nowrap;
+}
+
+.fiches-caisse-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fiches-caisse-pagination-controls label {
+  color: #6682a5;
+
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.fiches-caisse-pagination-controls select {
+  min-height: 38px;
+
+  padding: 8px 12px;
+
+  border: 1px solid #dce5f0;
+  border-radius: 9px;
+
+  background: #ffffff;
+  color: #063b7c;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.fiches-caisse-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fiches-caisse-pagination-pages button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 36px;
+  height: 36px;
+
+  padding: 6px;
+
+  border: 1px solid #dce5f0;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #063b7c;
+
+  font-size: 12px;
+  font-weight: 750;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.fiches-caisse-pagination-pages button:hover:not(:disabled) {
+  border-color: #ff8614;
+
+  background: #fff5e9;
+}
+
+.fiches-caisse-pagination-pages button.active {
+  border-color: #ff8614;
+
+  background: #ff8614;
+  color: #ffffff;
+}
+
+.fiches-caisse-pagination-pages button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.fiches-caisse-pagination-pages button:focus-visible,
+.fiches-caisse-pagination-controls select:focus-visible {
+  outline: 3px solid #ffd0a0;
+  outline-offset: 2px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 750px) {
+
+  .fiches-caisse-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fiches-caisse-pagination-controls {
+    justify-content: space-between;
+  }
+
+  .fiches-caisse-pagination-pages {
+    justify-content: center;
+  }
+
+}
