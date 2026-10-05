@@ -114,6 +114,14 @@ const sections: SidebarSection[] = [
       },
       {
         label: 'Artisans',
+        to: '/commandes-achats/artisans',
+      },
+      {
+        label: 'Industrielles',
+      },
+      {
+        label: 'Base fournisseurs',
+        to: '/commandes-achats/fournisseurs',
       },
     ],
   },
