@@ -13,7 +13,7 @@ import {
   type CampagneJustificatifsSettings,
   type JustificatifTemplateType,
   type PdfFieldPositions,
-} from '../campagneJustificatifs'
+} from './campagneJustificatifs'
 import {
   findDonateurForJustificatif,
   getMissingChorusFields,
