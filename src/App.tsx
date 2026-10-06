@@ -22,6 +22,10 @@ import {
   GeneralSettingsProvider,
 } from './contexts/GeneralSettingsContext'
 
+import {
+  JustificatifsProvider,
+} from './contexts/JustificatifsContext'
+
 /* =========================================================
    LAYOUT PRINCIPAL
 
@@ -55,12 +59,18 @@ import Commandes from './pages/Commandes'
 import FichesCaisse from './pages/FichesCaisse'
 
 /* =========================================================
-   NOUVEAU : COFFRE ET SUIVI BANQUE
+   COFFRE ET SUIVI BANQUE
    ========================================================= */
 
 import Coffre from './pages/Coffre'
 import SuiviBanque from './pages/Suivibanque'
 import RecapitulatifGlobal from './pages/RecapitulatifGlobal'
+
+/* =========================================================
+   FINANCE — JUSTIFICATIFS DE DONS
+   ========================================================= */
+
+import JustificatifsDons from './pages/JustificatifsDons'
 
 /* =========================================================
    ADMINISTRATION
@@ -90,199 +100,211 @@ function App() {
 
         <GeneralSettingsProvider>
 
-          <BrowserRouter>
+          <JustificatifsProvider>
 
-            <Routes>
+            <BrowserRouter>
 
-              {/* ==========================================
-                  LAYOUT COMMUN
-              ========================================== */}
+              <Routes>
 
-              <Route element={<AppLayout />}>
+                {/* ==========================================
+                    LAYOUT COMMUN
+                ========================================== */}
 
-                {/* ========================================
-                    ACCUEIL
-                ======================================== */}
+                <Route element={<AppLayout />}>
 
-                <Route
-                  path="/"
-                  element={<Accueil />}
-                />
+                  {/* ========================================
+                      ACCUEIL
+                  ======================================== */}
 
-                {/* ========================================
-                    TABLEAU DE BORD
-                ======================================== */}
+                  <Route
+                    path="/"
+                    element={<Accueil />}
+                  />
 
-                <Route
-                  path="/dashboard"
-                  element={<Dashboard />}
-                />
+                  {/* ========================================
+                      TABLEAU DE BORD
+                  ======================================== */}
 
-                {/* ========================================
-                    COMMUNICATION
-                ======================================== */}
+                  <Route
+                    path="/dashboard"
+                    element={<Dashboard />}
+                  />
 
-                <Route
-                  path="/communication"
-                  element={<Communication />}
-                />
+                  {/* ========================================
+                      COMMUNICATION
+                  ======================================== */}
 
-                {/* ========================================
-                    COMPTABILITÉ
-                ======================================== */}
+                  <Route
+                    path="/communication"
+                    element={<Communication />}
+                  />
 
-                <Route
-                  path="/comptabilite"
-                  element={<Comptabilite />}
-                />
+                  {/* ========================================
+                      COMPTABILITÉ
+                  ======================================== */}
 
-                {/* ========================================
-                    ÉTABLISSEMENT
-                ======================================== */}
+                  <Route
+                    path="/comptabilite"
+                    element={<Comptabilite />}
+                  />
 
-                <Route
-                  path="/etablissement"
-                  element={<Etablissement />}
-                />
+                  {/* ========================================
+                      ÉTABLISSEMENT
+                  ======================================== */}
 
-                {/* ========================================
-                    BASE DE DONNÉES
-                ======================================== */}
+                  <Route
+                    path="/etablissement"
+                    element={<Etablissement />}
+                  />
 
-                <Route
-                  path="/bdd"
-                  element={<Bdd />}
-                />
+                  {/* ========================================
+                      BASE DE DONNÉES
+                  ======================================== */}
 
-                {/* ========================================
-                    DONATEURS
-                ======================================== */}
+                  <Route
+                    path="/bdd"
+                    element={<Bdd />}
+                  />
 
-                <Route
-                  path="/bdd/donateurs"
-                  element={<Donateurs />}
-                />
+                  {/* ========================================
+                      DONATEURS
+                  ======================================== */}
 
-                {/* ========================================
-                    COMMANDES
-                ======================================== */}
+                  <Route
+                    path="/bdd/donateurs"
+                    element={<Donateurs />}
+                  />
 
-                <Route
-                  path="/commandes"
-                  element={<Commandes />}
-                />
+                  {/* ========================================
+                      COMMANDES
+                  ======================================== */}
 
-                {/* ========================================
-                    DONS PERÇUS — FICHES DE CAISSE
-                ======================================== */}
+                  <Route
+                    path="/commandes"
+                    element={<Commandes />}
+                  />
 
-                <Route
-                  path="/encaissements/fiches-caisse"
-                  element={<FichesCaisse />}
-                />
+                  {/* ========================================
+                      DONS PERÇUS — FICHES DE CAISSE
+                  ======================================== */}
 
-                {/* ========================================
-                    DONS PERÇUS — COFFRE
-                    NOUVEAU
-                ======================================== */}
+                  <Route
+                    path="/encaissements/fiches-caisse"
+                    element={<FichesCaisse />}
+                  />
 
-                <Route
-                  path="/encaissements/coffre"
-                  element={<Coffre />}
-                />
+                  {/* ========================================
+                      DONS PERÇUS — COFFRE
+                  ======================================== */}
 
-                {/* ========================================
-                    DONS PERÇUS — SUIVI BANQUE
-                    NOUVEAU
-                ======================================== */}
+                  <Route
+                    path="/encaissements/coffre"
+                    element={<Coffre />}
+                  />
 
-                <Route
-                  path="/encaissements/suivi-banque"
-                  element={<SuiviBanque />}
-                />
+                  {/* ========================================
+                      DONS PERÇUS — SUIVI BANQUE
+                  ======================================== */}
 
-               <Route
-                  path="/encaissements/recapitulatif-global"
-                   element={<RecapitulatifGlobal />}
-                />
+                  <Route
+                    path="/encaissements/suivi-banque"
+                    element={<SuiviBanque />}
+                  />
 
-                {/* ========================================
-                    ADMINISTRATION
-                    VUE D'ENSEMBLE
-                ======================================== */}
+                  {/* ========================================
+                      DONS PERÇUS — RÉCAPITULATIF GLOBAL
+                  ======================================== */}
 
-                <Route
-                  path="/administration"
-                  element={<Administration />}
-                />
+                  <Route
+                    path="/encaissements/recapitulatif-global"
+                    element={<RecapitulatifGlobal />}
+                  />
 
-                {/* ========================================
-                    ADMINISTRATION
-                    UTILISATEURS
-                ======================================== */}
+                  {/* ========================================
+                      FINANCE — JUSTIFICATIFS DE DONS
+                  ======================================== */}
 
-                <Route
-                  path="/administration/utilisateurs"
-                  element={<Utilisateurs />}
-                />
+                  <Route
+                    path="/finance/justificatifs-dons"
+                    element={<JustificatifsDons />}
+                  />
 
-                {/* ========================================
-                    ADMINISTRATION
-                    RÔLES ET PERMISSIONS
-                ======================================== */}
+                  {/* ========================================
+                      ADMINISTRATION
+                      VUE D'ENSEMBLE
+                  ======================================== */}
 
-                <Route
-                  path="/administration/roles"
-                  element={<RolesPermissions />}
-                />
+                  <Route
+                    path="/administration"
+                    element={<Administration />}
+                  />
 
-                {/* ========================================
-                    ADMINISTRATION
-                    CAMPAGNES
-                ======================================== */}
+                  {/* ========================================
+                      ADMINISTRATION
+                      UTILISATEURS
+                  ======================================== */}
 
-                <Route
-                  path="/administration/campagnes"
-                  element={<Campagnes />}
-                />
+                  <Route
+                    path="/administration/utilisateurs"
+                    element={<Utilisateurs />}
+                  />
 
-                {/* ========================================
-                    ADMINISTRATION
-                    PARAMÈTRES GÉNÉRAUX
-                ======================================== */}
+                  {/* ========================================
+                      ADMINISTRATION
+                      RÔLES ET PERMISSIONS
+                  ======================================== */}
 
-                <Route
-                  path="/administration/parametres"
-                  element={<ParametresGeneraux />}
-                />
+                  <Route
+                    path="/administration/roles"
+                    element={<RolesPermissions />}
+                  />
 
-                {/* ========================================
-                    ADMINISTRATION
-                    JOURNAL D'ACTIVITÉ
-                ======================================== */}
+                  {/* ========================================
+                      ADMINISTRATION
+                      CAMPAGNES
+                  ======================================== */}
 
-                <Route
-                  path="/administration/journal"
-                  element={<JournalActivite />}
-                />
+                  <Route
+                    path="/administration/campagnes"
+                    element={<Campagnes />}
+                  />
 
-                {/* ========================================
-                    AUTRES RUBRIQUES ADMINISTRATION
+                  {/* ========================================
+                      ADMINISTRATION
+                      PARAMÈTRES GÉNÉRAUX
+                  ======================================== */}
 
-                    Route provisoire pour les sections
-                    qui n'ont pas encore de page dédiée.
-                ======================================== */}
+                  <Route
+                    path="/administration/parametres"
+                    element={<ParametresGeneraux />}
+                  />
 
-                <Route
-                  path="/administration/:section"
-                  element={<Administration />}
-                />
+                  {/* ========================================
+                      ADMINISTRATION
+                      JOURNAL D'ACTIVITÉ
+                  ======================================== */}
 
-              </Route>
+                  <Route
+                    path="/administration/journal"
+                    element={<JournalActivite />}
+                  />
 
-            </Routes>
+                  {/* ========================================
+                      AUTRES RUBRIQUES ADMINISTRATION
+                  ======================================== */}
 
-          </BrowserRouter>
+                  <Route
+                    path="/administration/:section"
+                    element={<Administration />}
+                  />
+
+                </Route>
+
+              </Routes>
+
+            </BrowserRouter>
+
+          </JustificatifsProvider>
 
         </GeneralSettingsProvider>
 

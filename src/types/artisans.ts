@@ -95,9 +95,43 @@ export type TypeFournisseur = 'ARTISAN' | 'GMS' | 'INDUSTRIEL'
  * rupture des anciennes commandes et de l'import Excel déjà enregistré.
  */
 export type Fournisseur = Artisan & {
+  /**
+   * Type principal historique du fournisseur.
+   */
   type: TypeFournisseur
+
+  /**
+   * Un fournisseur peut appartenir à plusieurs catégories.
+   * Optionnel pour rester compatible avec les anciennes données.
+   */
+  categories?: TypeFournisseur[]
+
+  /**
+   * Secteur géographique / organisationnel éventuel.
+   */
+  secteur?: string
+
   siret?: string
   codePostal?: string
   ville?: string
   conditionsReglement?: string
+}
+
+/**
+ * Retourne les catégories d'un fournisseur.
+ *
+ * Les anciennes fiches ne possèdent pas forcément `categories`.
+ * Dans ce cas, le champ historique `type` devient la catégorie par défaut.
+ */
+export function categoriesFournisseur(
+  fournisseur: Fournisseur,
+): TypeFournisseur[] {
+  if (
+    fournisseur.categories &&
+    fournisseur.categories.length > 0
+  ) {
+    return [...new Set(fournisseur.categories)]
+  }
+
+  return [fournisseur.type]
 }

@@ -119,6 +119,10 @@ type PdfMoneyRow = {
   amount: string
 }
 
+type PageSize = 20 | 50 | 100 | 'infini'
+
+const PAGE_SIZE_KEY = 'ob-fiches-caisse-page-size'
+
 /* =========================================================
    CONFIGURATION
    ========================================================= */

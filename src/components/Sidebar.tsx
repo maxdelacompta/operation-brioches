@@ -185,6 +185,7 @@ const sections: SidebarSection[] = [
       },
       {
         label: 'Justificatifs de dons',
+        to: '/finance/justificatifs-dons',
       },
       {
         label: 'Mécénat',

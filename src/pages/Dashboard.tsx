@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  Bell,
   Building2,
   FileText,
   Gift,
