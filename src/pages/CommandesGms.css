@@ -1,0 +1,230 @@
+.gms-page {
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+  color: #173b6d;
+}
+
+.gms-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.gms-header h1 {
+  margin: 4px 0 4px;
+  font-size: 30px;
+  color: #0d376e;
+}
+
+.gms-header p {
+  margin: 0;
+  color: #6f7e94;
+}
+
+.gms-eyebrow {
+  color: #f47a19;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.gms-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.gms-stat,
+.gms-card {
+  border: 1px solid #e2e9f2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.gms-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.gms-stat-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: #eef5fc;
+  color: #0d4a8d;
+}
+
+.gms-stat span {
+  display: block;
+  margin-bottom: 2px;
+  color: #7b8798;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gms-stat strong {
+  font-size: 20px;
+  color: #173b6d;
+}
+
+.gms-card {
+  overflow: hidden;
+}
+
+.gms-toolbar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 220px 220px;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid #e7edf4;
+}
+
+.gms-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #dbe4ef;
+  border-radius: 10px;
+  color: #718198;
+}
+
+.gms-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  color: #173b6d;
+}
+
+.gms-toolbar select {
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid #dbe4ef;
+  border-radius: 10px;
+  background: #fff;
+  color: #173b6d;
+  font: inherit;
+}
+
+.gms-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  color: #67778d;
+  font-size: 13px;
+}
+
+.gms-results strong {
+  color: #173b6d;
+}
+
+.gms-results span {
+  font-size: 11px;
+}
+
+.gms-table-wrap {
+  overflow-x: auto;
+}
+
+.gms-table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.gms-table th,
+.gms-table td {
+  padding: 12px 14px;
+  border-top: 1px solid #edf1f6;
+  text-align: left;
+  font-size: 13px;
+}
+
+.gms-table th {
+  background: #f7f9fc;
+  color: #53647b;
+  font-size: 11px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.gms-table tbody tr:hover {
+  background: #fbfcfe;
+}
+
+.gms-code {
+  font-weight: 800;
+  color: #0d4a8d;
+}
+
+.gms-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gms-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #5c6b7e;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.gms-status--confirmee,
+.gms-status--terminee {
+  background: #eaf8f0;
+  color: #16834b;
+}
+
+.gms-status--a_verifier,
+.gms-status--brouillon {
+  background: #fff4df;
+  color: #a56309;
+}
+
+.gms-status--annulee {
+  background: #fff0f0;
+  color: #b43d3d;
+}
+
+.gms-status--retrait_prevu {
+  background: #eef5fc;
+  color: #0d5aa8;
+}
+
+.gms-empty {
+  padding: 30px !important;
+  text-align: center !important;
+  color: #7d8999;
+}
+
+@media (max-width: 1000px) {
+  .gms-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .gms-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .gms-results {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

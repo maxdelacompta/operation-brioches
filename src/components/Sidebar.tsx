@@ -71,6 +71,7 @@ const sections: SidebarSection[] = [
       },
       {
         label: 'Suivi caisse et TPE',
+        to: '/gestion/suivi-caisse-tpe',
       },
       {
         label: 'BDD Donateurs',
@@ -78,6 +79,7 @@ const sections: SidebarSection[] = [
       },
       {
         label: 'BDD Mairies',
+        to: '/bdd/mairies',
       },
     ],
   },
@@ -94,12 +96,15 @@ const sections: SidebarSection[] = [
       },
       {
         label: 'Livraisons / Retraits',
+        to: '/commandes/livraisons-retraits',
       },
       {
         label: 'Suivi global entreprises',
+        to: '/commandes/suivi-global-entreprises',
       },
       {
         label: 'Commandes Mairies & RS',
+        to: '/commandes/mairies-rs',
       },
     ],
   },
@@ -110,18 +115,20 @@ const sections: SidebarSection[] = [
     icon: Package,
     items: [
       {
-        label: 'GMS',
-      },
-      {
         label: 'Artisans',
         to: '/commandes-achats/artisans',
       },
       {
-        label: 'Industrielles',
+        label: 'Fournisseurs',
+        to: '/commandes-achats/artisans/fournisseurs',
       },
       {
-        label: 'Base fournisseurs',
-        to: '/commandes-achats/fournisseurs',
+        label: 'Suivi des livraisons',
+        to: '/commandes-achats/artisans/planning',
+      },
+      {
+        label: 'GMS',
+        to: '/commandes-achats/gms',
       },
     ],
   },
@@ -200,7 +207,24 @@ const sections: SidebarSection[] = [
     id: 'geographie',
     label: 'Géographie',
     icon: Map,
-    items: [],
+    items: [
+      {
+        label: 'Carte des ventes',
+        to: '/geographie/carte',
+      },
+      {
+        label: 'Analyse par secteur',
+        to: '/geographie/secteurs',
+      },
+      {
+        label: 'Comparaison des canaux',
+        to: '/geographie/comparaison',
+      },
+      {
+        label: 'Couverture territoriale',
+        to: '/geographie/couverture',
+      },
+    ],
   },
 
   {
@@ -242,6 +266,10 @@ const sections: SidebarSection[] = [
       {
         label: 'Campagnes',
         to: '/administration/campagnes',
+      },
+      {
+        label: 'Établissements AEIM',
+        to: '/administration/etablissements',
       },
       {
         label: 'Paramètres généraux',

@@ -1,0 +1,491 @@
+.mairies-page {
+  width: 100%;
+  min-height: 100vh;
+  padding: 30px;
+  color: #063b7c;
+}
+
+.mairies-page * { box-sizing: border-box; }
+
+.mairies-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.mairies-header h1,
+.mairie-profile-info h1 {
+  margin: 4px 0 5px;
+  color: #063b7c;
+  font-size: 32px;
+  line-height: 1.05;
+}
+
+.mairies-header p { margin: 0; color: #6682a5; }
+
+.mairies-eyebrow {
+  color: #ff8614;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+}
+
+.mairies-primary-button,
+.mairies-secondary-button,
+.mairies-back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mairies-primary-button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  color: #1f344d;
+  background: #ffa74f;
+}
+
+.mairies-primary-button:hover { background: #ff8614; }
+
+.mairies-secondary-button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+  color: #063b7c;
+  background: #fff;
+}
+
+.mairies-back-button {
+  margin-bottom: 18px;
+  padding: 6px 0;
+  border: 0;
+  color: #063b7c;
+  background: transparent;
+}
+
+.mairies-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.mairies-kpi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 84px;
+  padding: 16px;
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 5px 18px rgba(18, 59, 122, .06);
+}
+
+.mairies-kpi-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 50%;
+}
+
+.mairies-kpi-icon.neutral { color: #68594c; background: #f3eee8; }
+.mairies-kpi-icon.green { color: #1a8b51; background: #e7f7ed; }
+.mairies-kpi-icon.orange { color: #ba7200; background: #fff2d9; }
+.mairies-kpi-icon.red { color: #cd4151; background: #fde8eb; }
+
+.mairies-kpi div { flex: 1; }
+.mairies-kpi small, .mairies-kpi strong { display: block; }
+.mairies-kpi small { color: #506b8b; font-size: 11px; }
+.mairies-kpi strong { margin-top: 2px; color: #0d2243; font-size: 25px; }
+.mairies-kpi em { color: #778aa1; font-size: 10px; font-style: normal; }
+
+.mairies-card,
+.mairie-profile,
+.mairie-tabs,
+.mairie-detail-card,
+.mairie-list-card {
+  border: 1px solid #e1e9f2;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 5px 18px rgba(18, 59, 122, .06);
+}
+
+.mairies-card { overflow: visible; }
+
+.mairies-toolbar {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) 200px 200px auto;
+  gap: 10px;
+  align-items: end;
+  padding: 16px;
+  border-bottom: 1px solid #e1e9f2;
+}
+
+.mairies-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+  color: #6682a5;
+}
+
+.mairies-search:focus-within { border-color: #ffa74f; }
+.mairies-search input { width: 100%; border: 0; outline: 0; color: #063b7c; background: transparent; }
+
+.mairies-filter { display: flex; flex-direction: column; gap: 5px; }
+.mairies-filter span { color: #6682a5; font-size: 9px; font-weight: 800; }
+.mairies-filter select {
+  width: 100%;
+  height: 42px;
+  padding: 0 11px;
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+  color: #063b7c;
+  background: #fff;
+}
+
+.mairies-subtoolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 16px;
+  color: #6682a5;
+  background: #f8fafc;
+  font-size: 11px;
+}
+
+.mairies-subtoolbar strong { color: #063b7c; }
+.mairies-subtoolbar label { display: inline-flex; align-items: center; gap: 6px; }
+.mairies-subtoolbar span { margin-left: auto; }
+
+.mairies-table-wrapper { width: 100%; overflow-x: auto; }
+.mairies-table { width: 100%; min-width: 1120px; border-collapse: collapse; }
+.mairies-table th {
+  padding: 11px 13px;
+  border-top: 1px solid #e1e9f2;
+  border-bottom: 1px solid #e1e9f2;
+  color: #6682a5;
+  background: #f4f7fb;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.mairies-table td {
+  padding: 11px 13px;
+  border-bottom: 1px solid #edf1f5;
+  color: #063b7c;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.mairies-table tbody tr { cursor: pointer; }
+.mairies-table tbody tr:hover { background: rgba(255, 167, 79, .08); }
+.mairies-table tbody tr.archived { opacity: .55; }
+.mairies-table td strong, .mairies-table td small { display: block; }
+.mairies-table td small { margin-top: 2px; color: #7d8fa7; font-size: 9px; }
+.mairie-code { font-weight: 900; }
+
+.mairies-actions { position: relative; display: flex; gap: 5px; }
+.mairies-actions > button,
+.mairies-action-menu-wrap > button {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border: 1px solid #d9e2ed;
+  border-radius: 8px;
+  color: #315a89;
+  background: white;
+  cursor: pointer;
+}
+.mairies-action-menu-wrap { position: relative; }
+.mairies-action-menu {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: 36px;
+  min-width: 130px;
+  padding: 5px;
+  border: 1px solid #dce5ef;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 10px 25px rgba(15, 45, 80, .14);
+}
+.mairies-action-menu button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 7px;
+  color: #254f7d;
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+}
+.mairies-action-menu button:hover { background: #f4f7fb; }
+
+.mairie-participation {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  min-height: 25px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 850;
+}
+.participation-oui { color: #177b49; background: #ddf5e7; }
+.participation-a_contacter { color: #a66300; background: #ffedc7; }
+.participation-non { color: #c63c4c; background: #ffe0e4; }
+
+.mairies-empty { padding: 35px !important; color: #7c8fa7 !important; text-align: center !important; }
+
+.mairie-profile {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 21px;
+}
+.mairie-avatar {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  flex: 0 0 70px;
+  border-radius: 18px;
+  color: #a66600;
+  background: #f6efe5;
+}
+.mairie-profile-info { flex: 1; }
+.mairie-profile-info h1 { font-size: 27px; }
+.mairie-profile-badges { display: flex; gap: 7px; flex-wrap: wrap; }
+.mairie-profile-badges > span:not(.mairie-participation) {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #5d6980;
+  background: #f1f4f8;
+  font-size: 9px;
+  font-weight: 800;
+}
+.mairie-profile-badges .active { color: #11804a !important; background: rgba(24,185,104,.12) !important; }
+.mairie-profile-badges .archived { color: #7d8b9b !important; }
+.mairie-profile-actions { display: flex; gap: 8px; }
+
+.mairie-tabs {
+  display: flex;
+  align-items: center;
+  margin: 18px 0;
+  padding: 0 8px;
+  overflow-x: auto;
+  border-radius: 12px;
+}
+.mairie-tabs button {
+  flex-shrink: 0;
+  padding: 13px 12px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: #6682a5;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+.mairie-tabs button.active { color: #063b7c; border-bottom-color: #ffa74f; }
+
+.mairie-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.mairie-detail-grid-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mairie-detail-card { padding: 18px; }
+.mairie-detail-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 13px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8eef5;
+  color: #063b7c;
+  font-size: 14px;
+}
+.mairie-detail-card h2 svg { color: #b3184d; }
+.mairie-info-row {
+  display: grid;
+  grid-template-columns: minmax(105px, .8fr) minmax(0, 1.2fr);
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+.mairie-info-row:last-child { border-bottom: 0; }
+.mairie-info-row > span { color: #6682a5; font-size: 10px; }
+.mairie-info-row > strong { display: flex; align-items: center; gap: 6px; color: #123e72; font-size: 11px; overflow-wrap: anywhere; }
+
+.mairie-map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 72px;
+  margin-top: 10px;
+  border-radius: 9px;
+  color: #a36500;
+  background: linear-gradient(135deg, #f1ece5, #faf8f4);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.mairie-bottom-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-top: 14px; }
+.mairie-document-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.mairie-document-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+  background: #f9fbfd;
+}
+.mairie-document-summary-item strong, .mairie-document-summary-item small { display: block; }
+.mairie-document-summary-item strong { color: #123e72; font-size: 10px; }
+.mairie-document-summary-item small { margin-top: 2px; color: #7b8da4; font-size: 8px; }
+.mairie-document-summary-item .ok { color: #1a9a59; }
+.mairie-document-summary-item .missing { color: #bfc7d1; }
+.mairie-notes { margin: 0; color: #5e7189; font-size: 11px; line-height: 1.5; }
+
+.mairie-list-card { overflow: hidden; }
+.mairie-list-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e5ecf4;
+}
+.mairie-list-card > header h2 { margin: 0; font-size: 15px; }
+.mairie-list-card > header span { color: #74879f; font-size: 10px; }
+.mairie-list-row,
+.mairie-history-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto 110px minmax(170px, .8fr);
+  gap: 16px;
+  align-items: center;
+  padding: 13px 18px;
+  border-bottom: 1px solid #edf1f5;
+}
+.mairie-history-row { grid-template-columns: auto 1fr; }
+.mairie-list-row strong, .mairie-list-row small, .mairie-history-row strong, .mairie-history-row small { display: block; }
+.mairie-list-row strong, .mairie-history-row strong { color: #123e72; font-size: 11px; }
+.mairie-list-row small, .mairie-history-row small { margin-top: 2px; color: #7d8fa5; font-size: 9px; }
+.mairie-document-status { justify-self: start; padding: 5px 9px; border-radius: 999px; font-size: 9px; font-weight: 800; }
+.mairie-document-status.yes { color: #147a46; background: #e4f7eb; }
+.mairie-document-status.no { color: #b8434f; background: #fde7ea; }
+.mairies-empty-section { padding: 42px 18px; color: #7b8da4; text-align: center; font-size: 11px; }
+
+.mairies-overlay {
+  position: fixed;
+  z-index: 2400;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 24, 48, .52);
+}
+.mairies-modal {
+  width: min(900px, 100%);
+  max-height: 94vh;
+  overflow: hidden;
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(4, 28, 55, .32);
+}
+.mairies-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 20px;
+  color: #fff;
+  background: linear-gradient(135deg, #0a417f, #062957);
+}
+.mairies-modal-header span { display: block; margin-bottom: 3px; color: #ffc47c; font-size: 9px; font-weight: 900; letter-spacing: .1em; }
+.mairies-modal-header h2 { margin: 0; font-size: 21px; }
+.mairies-modal-header button { display: grid; place-items: center; width: 35px; height: 35px; border: 1px solid rgba(255,255,255,.25); border-radius: 9px; color: #fff; background: rgba(255,255,255,.08); cursor: pointer; }
+.mairies-modal-body { max-height: calc(94vh - 135px); overflow-y: auto; padding: 17px 20px; }
+.mairies-form-section { margin-bottom: 12px; padding: 14px; border: 1px solid #e1e8f1; border-radius: 12px; }
+.mairies-form-section > header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #174983; }
+.mairies-form-section h3 { margin: 0; font-size: 12px; }
+.mairies-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mairies-form-grid > label { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
+.mairies-form-grid > label.wide { grid-column: 1 / -1; }
+.mairies-form-grid > label > span { color: #5c718d; font-size: 10px; font-weight: 800; }
+.mairies-form-grid input,
+.mairies-form-grid select,
+.mairies-form-grid textarea {
+  width: 100%;
+  min-height: 41px;
+  padding: 9px 11px;
+  border: 1px solid #d2deeb;
+  border-radius: 9px;
+  color: #063b7c;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  outline: none;
+}
+.mairies-form-grid textarea { resize: vertical; }
+.mairies-form-grid input:focus,
+.mairies-form-grid select:focus,
+.mairies-form-grid textarea:focus { border-color: #ffa74f; }
+.mairies-error { padding: 10px 12px; border: 1px solid #ffc2bc; border-radius: 9px; color: #ae2d24; background: #fff3f1; font-size: 10px; font-weight: 750; }
+.mairies-modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 13px 20px; border-top: 1px solid #e1e9f2; background: #fbfcfe; }
+
+@media (max-width: 1250px) {
+  .mairie-detail-grid-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mairies-toolbar { grid-template-columns: 1fr 1fr; }
+  .mairies-search { grid-column: 1 / -1; }
+}
+
+@media (max-width: 900px) {
+  .mairies-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mairie-bottom-grid { grid-template-columns: 1fr; }
+  .mairie-document-summary { grid-template-columns: 1fr; }
+  .mairie-profile { align-items: flex-start; flex-wrap: wrap; }
+  .mairie-profile-actions { width: 100%; }
+}
+
+@media (max-width: 700px) {
+  .mairies-page { padding: 16px; }
+  .mairies-header { flex-direction: column; }
+  .mairies-header > button { width: 100%; }
+  .mairies-kpis,
+  .mairies-toolbar,
+  .mairie-detail-grid,
+  .mairie-detail-grid-four,
+  .mairies-form-grid { grid-template-columns: 1fr; }
+  .mairies-search { grid-column: auto; }
+  .mairies-subtoolbar { align-items: flex-start; flex-direction: column; }
+  .mairies-subtoolbar span { margin-left: 0; }
+  .mairie-profile-actions { flex-direction: column; }
+  .mairie-profile-actions button { width: 100%; }
+  .mairies-form-grid > label.wide { grid-column: auto; }
+  .mairies-overlay { padding: 0; }
+  .mairies-modal { width: 100%; min-height: 100vh; max-height: 100vh; border-radius: 0; }
+}

@@ -12,21 +12,31 @@ import { PermissionsProvider } from './contexts/PermissionsContext'
 import { GeneralSettingsProvider } from './contexts/GeneralSettingsContext'
 import { ArtisansProvider } from './contexts/ArtisansContext'
 import { JustificatifsProvider } from './contexts/JustificatifsContext'
+import { EtablissementsProvider } from './contexts/EtablissementsContext'
+import { MairiesProvider } from './contexts/MairiesContext'
+import { CommandesMairiesRsProvider } from './contexts/CommandesMairiesRsContext'
 
 import AppLayout from './layouts/AppLayout'
 
 import Accueil from './pages/Accueil'
 import Dashboard from './pages/Dashboard'
+import SuiviCaisseTpe from './pages/SuiviCaisseTpe'
 import Communication from './pages/Communication'
 import Comptabilite from './pages/Comptabilite'
 import Etablissement from './pages/Etablissement'
 
 import Bdd from './pages/Bdd'
 import Donateurs from './pages/Donateurs'
+import Mairies from './pages/Mairies'
 
 import Commandes from './pages/Commandes'
+import LivraisonsRetraits from './pages/LivraisonsRetraits'
+import SuiviGlobalEntreprises from './pages/SuiviGlobalEntreprises'
+import CommandesMairiesRs from './pages/CommandesMairiesRs'
 import CommandesArtisans from './pages/CommandesArtisans'
 import Fournisseurs from './pages/Fournisseurs'
+import CommandesGms from './pages/CommandesGms'
+import Geographie from './pages/Geographie'
 
 import FichesCaisse from './pages/FichesCaisse'
 import Coffre from './pages/Coffre'
@@ -41,6 +51,7 @@ import RolesPermissions from './pages/RolesPermissions'
 import Campagnes from './pages/Campagnes'
 import ParametresGeneraux from './pages/ParametresGeneraux'
 import JournalActivite from './pages/JournalActivite'
+import AdminEtablissements from './pages/AdminEtablissements'
 
 function App() {
   return (
@@ -48,20 +59,40 @@ function App() {
       <PermissionsProvider>
         <GeneralSettingsProvider>
           <ArtisansProvider>
-            <JustificatifsProvider>
-              <BrowserRouter>
+            <EtablissementsProvider>
+              <MairiesProvider>
+                <CommandesMairiesRsProvider>
+                <JustificatifsProvider>
+                <BrowserRouter>
                 <Routes>
                   <Route element={<AppLayout />}>
                     <Route path="/" element={<Accueil />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route
+                      path="/gestion/suivi-caisse-tpe"
+                      element={<SuiviCaisseTpe />}
+                    />
                     <Route path="/communication" element={<Communication />} />
                     <Route path="/comptabilite" element={<Comptabilite />} />
                     <Route path="/etablissement" element={<Etablissement />} />
 
                     <Route path="/bdd" element={<Bdd />} />
                     <Route path="/bdd/donateurs" element={<Donateurs />} />
+                    <Route path="/bdd/mairies" element={<Mairies />} />
 
                     <Route path="/commandes" element={<Commandes />} />
+                    <Route
+                      path="/commandes/livraisons-retraits"
+                      element={<LivraisonsRetraits />}
+                    />
+                    <Route
+                      path="/commandes/suivi-global-entreprises"
+                      element={<SuiviGlobalEntreprises />}
+                    />
+                    <Route
+                      path="/commandes/mairies-rs"
+                      element={<CommandesMairiesRs />}
+                    />
 
                     <Route
                       path="/commandes-achats/artisans"
@@ -70,6 +101,10 @@ function App() {
                     <Route
                       path="/commandes-achats/fournisseurs"
                       element={<Fournisseurs />}
+                    />
+                    <Route
+                      path="/commandes-achats/gms"
+                      element={<CommandesGms />}
                     />
                     <Route
                       path="/commandes-achats/artisans/fournisseurs"
@@ -104,6 +139,32 @@ function App() {
                     />
 
                     <Route
+                      path="/geographie"
+                      element={
+                        <Navigate
+                          to="/geographie/carte"
+                          replace
+                        />
+                      }
+                    />
+                    <Route
+                      path="/geographie/carte"
+                      element={<Geographie />}
+                    />
+                    <Route
+                      path="/geographie/secteurs"
+                      element={<Geographie />}
+                    />
+                    <Route
+                      path="/geographie/comparaison"
+                      element={<Geographie />}
+                    />
+                    <Route
+                      path="/geographie/couverture"
+                      element={<Geographie />}
+                    />
+
+                    <Route
                       path="/administration"
                       element={<Administration />}
                     />
@@ -120,6 +181,10 @@ function App() {
                       element={<Campagnes />}
                     />
                     <Route
+                      path="/administration/etablissements"
+                      element={<AdminEtablissements />}
+                    />
+                    <Route
                       path="/administration/parametres"
                       element={<ParametresGeneraux />}
                     />
@@ -133,8 +198,11 @@ function App() {
                     />
                   </Route>
                 </Routes>
-              </BrowserRouter>
-            </JustificatifsProvider>
+                </BrowserRouter>
+              </JustificatifsProvider>
+                </CommandesMairiesRsProvider>
+              </MairiesProvider>
+            </EtablissementsProvider>
           </ArtisansProvider>
         </GeneralSettingsProvider>
       </PermissionsProvider>
