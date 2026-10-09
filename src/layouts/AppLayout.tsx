@@ -1,3 +1,6 @@
+import { useUsers } from '../contexts/UsersContext'
+import UserTestPanel from '../components/UserTestPanel'
+import PermissionGate from '../components/PermissionGate'
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 
@@ -6,6 +9,7 @@ import Topbar from '../components/Topbar'
 import Chat from '../components/Chat'
 
 function AppLayout() {
+  const { currentUserId } = useUsers()
   const [chatOpen, setChatOpen] = useState(false)
 
   const [unreadCount, setUnreadCount] = useState(0)
@@ -30,11 +34,15 @@ function AppLayout() {
           onVisibilityChange={setTopbarVisible}
         />
 
-        <Outlet />
+        <UserTestPanel placement="status" />
+        <PermissionGate>
+          <Outlet key={currentUserId} />
+        </PermissionGate>
 
       </main>
 
       <Chat
+        key={currentUserId}
         isOpen={chatOpen}
         showFloating={!topbarVisible}
         onToggle={toggleChat}

@@ -1,3 +1,4 @@
+import { usePermissions } from '../contexts/PermissionsContext'
 import {
   useMemo,
   useState,
@@ -66,10 +67,15 @@ function Utilisateurs() {
   const {
     users,
     currentUserId,
+    currentUser,
     addUser,
     updateUser,
     toggleUserStatus,
   } = useUsers()
+
+  const { hasPermission } = usePermissions()
+  const canCreate = Boolean(currentUser && hasPermission(currentUser.role, 'utilisateurs', 'creer'))
+  const canEdit = Boolean(currentUser && hasPermission(currentUser.role, 'utilisateurs', 'modifier'))
 
   const [search, setSearch] = useState('')
 
@@ -142,6 +148,7 @@ function Utilisateurs() {
      ======================================================= */
 
   function openCreate() {
+    if (!canCreate) return
     setEditingId(null)
     setForm({ ...emptyForm })
     setError('')
@@ -150,6 +157,7 @@ function Utilisateurs() {
   }
 
   function openEdit(user: AppUser) {
+    if (!canEdit) return
     setEditingId(user.id)
 
     setForm({
@@ -177,6 +185,10 @@ function Utilisateurs() {
 
   function saveUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (editingId ? !canEdit : !canCreate) {
+      setError('Votre rôle ne permet pas cette action.')
+      return
+    }
     setError('')
 
     const input: UserInput = {
@@ -262,6 +274,7 @@ function Utilisateurs() {
         <button
           type="button"
           className="users-primary-button"
+          disabled={!canCreate}
           onClick={openCreate}
         >
           <Plus size={18} />
@@ -593,6 +606,7 @@ function Utilisateurs() {
                         type="button"
                         title={`Modifier ${user.name}`}
                         aria-label={`Modifier ${user.name}`}
+                        disabled={!canEdit}
                         onClick={() => openEdit(user)}
                       >
                         <Pencil size={17} />
@@ -601,7 +615,7 @@ function Utilisateurs() {
                       <button
                         type="button"
                         disabled={
-                          user.id === currentUserId
+                          !canEdit || user.id === currentUserId || user.id === 'demo-admin'
                         }
                         title={
                           user.id === currentUserId
@@ -616,6 +630,7 @@ function Utilisateurs() {
                             : 'Activer'
                         } ${user.name}`}
                         onClick={() => {
+                          if (!canEdit) return
                           toggleUserStatus(user.id)
 
                           setNotice(

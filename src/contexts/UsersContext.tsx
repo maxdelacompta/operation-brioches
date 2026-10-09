@@ -2,7 +2,6 @@ import {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from 'react'
@@ -128,6 +127,10 @@ type UsersContextValue = {
   users: AppUser[]
   currentUserId: string
   currentUser: AppUser | null
+  isTestingUser: boolean
+  canTestUsers: boolean
+  testUser: (id: string) => boolean
+  stopTestingUser: () => void
   addUser: (input: UserInput) => void
   updateUser: (id: string, input: UserInput) => void
   toggleUserStatus: (id: string) => void
@@ -163,12 +166,27 @@ export function UsersProvider({
     }
   }, [users])
 
+  // Simulation locale : le compte de départ reste l’administrateur de démonstration.
+  // Aucun identifiant de connexion réel n’est remplacé.
+  const [testUserId, setTestUserId] = useState<string | null>(null)
+  const administrator = users.find(user => user.id === DEMO_CURRENT_USER_ID) ?? null
+  const canTestUsers = administrator?.role === 'administrateur' && administrator.status === 'actif'
+  const testedUser = canTestUsers
+    ? users.find(user => user.id === testUserId && user.status === 'actif')
+    : undefined
+  const isTestingUser = Boolean(testedUser)
+
+  function testUser(id: string) {
+    if (!canTestUsers || !users.some(user => user.id === id && user.status === 'actif')) return false
+    setTestUserId(id === DEMO_CURRENT_USER_ID ? null : id)
+    return true
+  }
+
+  function stopTestingUser() { setTestUserId(null) }
+
   /* UTILISATEUR ACTUEL */
 
-  const currentUser =
-    users.find(
-      (user) => user.id === DEMO_CURRENT_USER_ID,
-    ) ?? null
+  const currentUser = testedUser ?? administrator
 
   /* AJOUT */
 
@@ -194,6 +212,7 @@ export function UsersProvider({
           ? {
               ...user,
               ...input,
+              role: id === DEMO_CURRENT_USER_ID ? 'administrateur' : input.role,
             }
           : user,
       ),
@@ -226,17 +245,18 @@ export function UsersProvider({
 
   /* VALEUR PARTAGÉE */
 
-  const value = useMemo<UsersContextValue>(
-    () => ({
-      users,
-      currentUserId: DEMO_CURRENT_USER_ID,
-      currentUser,
-      addUser,
-      updateUser,
-      toggleUserStatus,
-    }),
-    [users, currentUser],
-  )
+  const value: UsersContextValue = {
+    users,
+    currentUserId: currentUser?.id ?? DEMO_CURRENT_USER_ID,
+    currentUser,
+    isTestingUser,
+    canTestUsers,
+    testUser,
+    stopTestingUser,
+    addUser,
+    updateUser,
+    toggleUserStatus,
+  }
 
   return (
     <UsersContext.Provider value={value}>

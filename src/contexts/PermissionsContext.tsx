@@ -114,6 +114,24 @@ export const PERMISSION_MODULES = [
     ],
   },
   {
+    key: 'stock_brioches',
+    label: 'Stock Brioches',
+    path: '/etablissements/stock-brioches',
+    actions: ['consulter', 'creer', 'modifier', 'exporter'],
+  },
+  {
+    key: 'suivi_brioches',
+    label: 'Suivi Brioches',
+    path: '/etablissements/suivi-brioches',
+    actions: ['consulter', 'creer', 'modifier', 'exporter', 'supprimer'],
+  },
+  {
+    key: 'recap_brioches',
+    label: 'Récap global Brioches',
+    path: '/etablissements/recap-global',
+    actions: ['consulter', 'exporter'],
+  },
+  {
     key: 'bdd',
     label: 'Base de données',
     path: '/bdd',
@@ -328,7 +346,10 @@ export function PermissionsProvider({
     module: PermissionModule,
     action: PermissionAction,
   ) {
-    return permissions[role][module].includes(action)
+    // L'administrateur conserve tous les droits, même pour un module
+    // ajouté après la dernière sauvegarde locale des permissions.
+    if (role === 'administrateur') return true
+    return permissions[role]?.[module]?.includes(action) ?? false
   }
 
   /* MODIFICATION */

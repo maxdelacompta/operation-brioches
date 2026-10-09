@@ -26,6 +26,8 @@ import {
   X,
 } from 'lucide-react'
 
+import { useUsers } from '../contexts/UsersContext'
+
 import {
   useGeneralSettings,
 } from '../contexts/GeneralSettingsContext'
@@ -125,23 +127,9 @@ const sections: SidebarSection[] = [
     label: 'Établissements',
     icon: Building2,
     items: [
-      {
-        label: "Vue d'ensemble",
-        to: '/etablissement',
-      },
-      {
-        label: 'Référentiel AEIM',
-        to: '/administration/etablissements',
-      },
-      {
-        label: 'Commandes établissements',
-      },
-      {
-        label: 'Stocks',
-      },
-      {
-        label: 'Ventes',
-      },
+      { label: 'Stock Brioches', to: '/etablissements/stock-brioches' },
+      { label: 'Suivi Brioches', to: '/etablissements/suivi-brioches' },
+      { label: 'Récap global', to: '/etablissements/recap-global' },
     ],
   },
   {
@@ -237,6 +225,7 @@ const sections: SidebarSection[] = [
         label: "Vue d'ensemble",
         to: '/administration',
       },
+      { label: 'Liste des établissements', to: '/administration/etablissements' },
       {
         label: 'Utilisateurs',
         to: '/administration/utilisateurs',
@@ -328,6 +317,7 @@ function getActiveSection(
 
 export default function Sidebar() {
   const location = useLocation()
+  const { currentUser } = useUsers()
   const { settings } =
     useGeneralSettings()
 
@@ -747,7 +737,7 @@ export default function Sidebar() {
                         id={`ob-sidebar-section-${section.id}`}
                         className="ob-sidebar-submenu"
                       >
-                        {section.items.map(
+                        {section.items.filter(item => item.to !== '/etablissements/recap-global' || ['administrateur','comptabilite','communication'].includes(currentUser?.role ?? '')).map(
                           (item) =>
                             item.to ? (
                               <NavLink

@@ -5,6 +5,7 @@ import {
   Routes,
 } from 'react-router-dom'
 
+import './App.css'
 import './styles/index.css'
 
 import { UsersProvider } from './contexts/UsersContext'
@@ -26,6 +27,9 @@ import SuiviCaisseTpe from './pages/SuiviCaisseTpe'
 import Communication from './pages/Communication'
 import Comptabilite from './pages/Comptabilite'
 import Etablissement from './pages/Etablissement'
+import SuiviBrioches from './pages/SuiviBrioches'
+import StockBrioches from './pages/StockBrioches'
+import RecapBrioches from './pages/RecapBrioches'
 
 import Bdd from './pages/Bdd'
 import Donateurs from './pages/Donateurs'
@@ -77,6 +81,9 @@ function App() {
                     <Route path="/communication" element={<Communication />} />
                     <Route path="/comptabilite" element={<Comptabilite />} />
                     <Route path="/etablissement" element={<Etablissement />} />
+                    <Route path="/etablissements/suivi-brioches" element={<SuiviBrioches />} />
+                    <Route path="/etablissements/stock-brioches" element={<StockBrioches />} />
+                    <Route path="/etablissements/recap-global" element={<RecapBrioches />} />
 
                     <Route path="/bdd" element={<Bdd />} />
                     <Route path="/bdd/donateurs" element={<Donateurs />} />

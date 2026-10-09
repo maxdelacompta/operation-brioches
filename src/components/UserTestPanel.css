@@ -1,0 +1,25 @@
+.ob-user-test {
+  margin: 12px var(--ob-page-x);
+  padding: 14px 16px;
+  border: 1px solid var(--ob-border);
+  border-radius: var(--ob-radius-sm);
+  background: var(--ob-surface);
+  color: var(--ob-text);
+  font-size: 13px;
+}
+.ob-user-test--active { border-color: var(--ob-orange-500); background: var(--ob-orange-050); }
+.ob-user-test__controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.ob-user-test__controls label { font-weight: 800; }
+.ob-user-test select { min-width: 0; max-width: 100%; flex: 1 1 220px; }
+.ob-user-test select, .ob-user-test button { padding: 9px 12px; border: 1px solid var(--ob-border-strong); border-radius: 8px; background: white; color: var(--ob-text); }
+.ob-user-test button { font-weight: 700; }
+.ob-user-test p { margin: 10px 0 0; line-height: 1.5; }
+.ob-user-test details { margin-top: 10px; }
+.ob-user-test summary { cursor: pointer; }
+.ob-user-test__rights { display: flex; flex-wrap: wrap; gap: 8px 20px; padding-left: 18px; }
+.ob-access-denied { margin: 24px var(--ob-page-x); padding: 28px; border: 1px solid var(--ob-border); border-radius: var(--ob-radius-md); background: var(--ob-surface); }
+.ob-access-denied h1 { color: var(--ob-navy-950); }
+.ob-access-denied li { margin: 8px 0; }
+
+/* Le sélecteur est intégré à la grille de la page Rôles et permissions. */
+.ob-user-test--permissions { margin: 0; }

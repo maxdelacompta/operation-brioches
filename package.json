@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "check:imports": "node scripts/check-imports.mjs",
+    "test:access": "node --test scripts/access.test.mjs"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
