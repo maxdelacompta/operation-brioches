@@ -973,3 +973,103 @@
     grid-column: auto;
   }
 }
+
+
+
+.geo-department-label[data-department='88'] {
+  border-color: rgba(163, 15, 49, .22);
+}
+
+.geo-department-label::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--department-color);
+  vertical-align: 1px;
+}
+
+@media (max-width: 720px) {
+  .geo-department-label {
+    padding: 4px 7px;
+    font-size: 7px;
+  }
+}
+
+
+/* =========================================================
+   TERRITOIRE 54 / 88 — rendu natif MapLibre
+   ========================================================= */
+
+.geo-map .maplibregl-canvas {
+  background: #e9efe6;
+}
+
+/* Les libellés départementaux sont maintenant des Symbol Layers MapLibre.
+   Aucun Marker HTML n'est utilisé : pas de barre blanche ou de pastille géante. */
+
+
+/* =========================================================
+   LABELS DÉPARTEMENTS — V1.3
+   ========================================================= */
+
+.geo-department-map-label {
+  --dept-color: #123e73;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  width: auto !important;
+  max-width: 190px;
+  min-width: 0 !important;
+
+  padding: 5px 8px;
+
+  border: 1px solid color-mix(in srgb, var(--dept-color) 34%, white);
+  border-radius: 999px;
+
+  color: var(--dept-color);
+  background: rgba(255, 255, 255, 0.90);
+  box-shadow:
+    0 2px 8px rgba(13, 47, 84, 0.14);
+
+  font-family: inherit;
+  line-height: 1;
+  white-space: nowrap;
+
+  pointer-events: none;
+  user-select: none;
+}
+
+.geo-department-map-label strong {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: var(--dept-color);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.geo-department-map-label span {
+  display: inline-grid !important;
+  place-items: center;
+
+  width: 22px !important;
+  height: 18px !important;
+  min-width: 22px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border-radius: 999px;
+
+  color: #fff;
+  background: var(--dept-color);
+
+  font-size: 8px;
+  font-weight: 900;
+}

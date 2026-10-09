@@ -82,9 +82,30 @@ const METRIC_LABELS: Record<GeoMetric, string> = {
 }
 
 const MAP_BOUNDS: [[number, number], [number, number]] = [
-  [5.48, 48.28],
-  [6.98, 49.62],
+  // Emprise métier : Meurthe-et-Moselle + Vosges,
+  // avec un peu d'air autour pour garder Briey / Longwy au nord
+  // et le sud des Vosges visible.
+  [5.30, 47.72],
+  [7.35, 49.68],
 ]
+
+const DEPARTMENT_DEFINITIONS = [
+  {
+    code: '54',
+    name: 'Meurthe-et-Moselle',
+    color: '#123e73',
+  },
+  {
+    code: '88',
+    name: 'Vosges',
+    color: '#a30f31',
+  },
+] as const
+
+const DEPARTMENTS_GEOJSON_URLS = [
+  'https://etalab-datasets.geo.data.gouv.fr/contours-administratifs/2026/geojson/departements-1000m.geojson',
+  'https://etalab-datasets.geo.data.gouv.fr/contours-administratifs/latest/geojson/departements-1000m.geojson',
+] as const
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('fr-FR').format(
@@ -345,6 +366,393 @@ function buildSectorCollection(
         },
       })),
   }
+}
+
+type DepartmentFeature = {
+  type: 'Feature'
+  geometry: unknown
+  properties: {
+    code: string
+    nom: string
+    color: string
+  }
+}
+
+type GenericGeoJsonFeature = {
+  type?: unknown
+  geometry?: unknown
+  properties?: Record<string, unknown>
+}
+
+function departmentDefinition(code: string) {
+  return DEPARTMENT_DEFINITIONS.find(
+    (item) => item.code === code,
+  )
+}
+
+function normalizeDepartmentFeature(
+  feature: GenericGeoJsonFeature,
+): DepartmentFeature | null {
+  if (
+    feature.type !== 'Feature' ||
+    !feature.geometry ||
+    !feature.properties
+  ) {
+    return null
+  }
+
+  const code = String(
+    feature.properties.code ??
+      feature.properties.codeDepartement ??
+      feature.properties.dep ??
+      '',
+  ).trim()
+
+  const definition = departmentDefinition(code)
+
+  if (!definition) {
+    return null
+  }
+
+  return {
+    type: 'Feature',
+    geometry: feature.geometry,
+    properties: {
+      code: definition.code,
+      nom: definition.name,
+      color: definition.color,
+    },
+  }
+}
+
+function extendBoundsFromCoordinates(
+  bounds: maplibregl.LngLatBounds,
+  coordinates: unknown,
+) {
+  if (!Array.isArray(coordinates)) {
+    return
+  }
+
+  if (
+    coordinates.length >= 2 &&
+    typeof coordinates[0] === 'number' &&
+    typeof coordinates[1] === 'number'
+  ) {
+    bounds.extend([
+      coordinates[0],
+      coordinates[1],
+    ])
+
+    return
+  }
+
+  for (const child of coordinates) {
+    extendBoundsFromCoordinates(
+      bounds,
+      child,
+    )
+  }
+}
+
+function fitDepartments(
+  map: MapLibreMap,
+  features: DepartmentFeature[],
+) {
+  const bounds =
+    new maplibregl.LngLatBounds()
+
+  for (const feature of features) {
+    const geometry =
+      feature.geometry as
+        | {
+            coordinates?: unknown
+          }
+        | undefined
+
+    if (geometry?.coordinates) {
+      extendBoundsFromCoordinates(
+        bounds,
+        geometry.coordinates,
+      )
+    }
+  }
+
+  if (!bounds.isEmpty()) {
+    map.fitBounds(bounds, {
+      padding: {
+        top: 105,
+        right: 55,
+        bottom: 55,
+        left: 55,
+      },
+      duration: 900,
+      maxZoom: 9.2,
+    })
+  }
+}
+
+async function fetchDepartmentsGeoJson() {
+  let lastError: unknown = null
+
+  for (const url of DEPARTMENTS_GEOJSON_URLS) {
+    try {
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        throw new Error(
+          `Contours administratifs indisponibles (${response.status})`,
+        )
+      }
+
+      const payload = (await response.json()) as {
+        type?: unknown
+        features?: GenericGeoJsonFeature[]
+      }
+
+      if (
+        payload.type !== 'FeatureCollection' ||
+        !Array.isArray(payload.features)
+      ) {
+        throw new Error(
+          'Le fichier de contours ne contient pas une FeatureCollection valide.',
+        )
+      }
+
+      return payload.features
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  throw lastError ??
+    new Error(
+      'Impossible de charger les contours administratifs.',
+    )
+}
+
+function addDepartmentHtmlLabels(
+  map: MapLibreMap,
+) {
+  const existing =
+    document.querySelectorAll(
+      '.geo-department-map-label',
+    )
+
+  existing.forEach((node) =>
+    node.remove(),
+  )
+
+  const labels = [
+    {
+      code: '54',
+      name: 'Meurthe-et-Moselle',
+      center: [6.02, 48.92] as [number, number],
+      color: '#123e73',
+    },
+    {
+      code: '88',
+      name: 'Vosges',
+      center: [6.42, 48.17] as [number, number],
+      color: '#8d1731',
+    },
+  ]
+
+  for (const label of labels) {
+    const element =
+      document.createElement('div')
+
+    element.className =
+      'geo-department-map-label'
+
+    element.innerHTML = `
+      <strong>${label.name}</strong>
+      <span>${label.code}</span>
+    `
+
+    element.style.setProperty(
+      '--dept-color',
+      label.color,
+    )
+
+    new maplibregl.Marker({
+      element,
+      anchor: 'center',
+    })
+      .setLngLat(label.center)
+      .addTo(map)
+  }
+}
+
+async function loadDepartmentContours(
+  map: MapLibreMap,
+) {
+  try {
+    const allFeatures =
+      await fetchDepartmentsGeoJson()
+
+    const features =
+      allFeatures
+        .map(normalizeDepartmentFeature)
+        .filter(
+          (
+            feature,
+          ): feature is DepartmentFeature =>
+            feature !== null,
+        )
+
+    if (features.length < 2) {
+      throw new Error(
+        `Seulement ${features.length} département(s) trouvé(s) pour les codes 54 / 88.`,
+      )
+    }
+
+    const source = map.getSource(
+      'department-boundaries',
+    ) as GeoJSONSource | undefined
+
+    if (!source) {
+      throw new Error(
+        'La source MapLibre department-boundaries est introuvable.',
+      )
+    }
+
+    source.setData({
+      type: 'FeatureCollection',
+      features,
+    } as never)
+
+    addDepartmentHtmlLabels(map)
+    fitDepartments(map, features)
+
+    console.info(
+      '[Géographie] contours chargés :',
+      features.map(
+        (feature) =>
+          `${feature.properties.code} ${feature.properties.nom}`,
+      ),
+    )
+  } catch (error) {
+    console.error(
+      '[Géographie] impossible de charger les limites 54 / 88 :',
+      error,
+    )
+  }
+}
+
+function addDepartmentLayers(map: MapLibreMap) {
+  if (!map.getSource('department-boundaries')) {
+    map.addSource('department-boundaries', {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: [],
+      },
+    })
+  }
+
+  /*
+   * On dessine de vrais polygones administratifs.
+   * Pas de Marker HTML : le libellé est géré par MapLibre
+   * directement à l'intérieur de chaque département.
+   */
+  if (!map.getLayer('department-fill')) {
+    map.addLayer({
+      id: 'department-fill',
+      type: 'fill',
+      source: 'department-boundaries',
+      paint: {
+        'fill-color': [
+          'match',
+          ['get', 'code'],
+          '54',
+          '#e9f1fa',
+          '88',
+          '#fff0f1',
+          '#f1f5f9',
+        ],
+        'fill-opacity': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          6,
+          0.20,
+          10,
+          0.11,
+        ],
+      },
+    })
+  }
+
+  if (!map.getLayer('department-outline-glow')) {
+    map.addLayer({
+      id: 'department-outline-glow',
+      type: 'line',
+      source: 'department-boundaries',
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          6,
+          7,
+          11,
+          9,
+        ],
+        'line-opacity': 0.96,
+      },
+    })
+  }
+
+  if (!map.getLayer('department-outline')) {
+    map.addLayer({
+      id: 'department-outline',
+      type: 'line',
+      source: 'department-boundaries',
+      paint: {
+        'line-color': [
+          'match',
+          ['get', 'code'],
+          '54',
+          '#123e73',
+          '88',
+          '#a30f31',
+          '#334155',
+        ],
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          6,
+          3.5,
+          11,
+          5,
+        ],
+        'line-opacity': 0.96,
+      },
+    })
+  }
+
+
+  void loadDepartmentContours(map)
+}
+
+function bringDepartmentsToFront(
+  map: MapLibreMap,
+) {
+  /*
+   * Le remplissage reste sous la heatmap,
+   * mais les contours passent au-dessus.
+   * Les noms sont des marqueurs HTML légers et indépendants des glyphes MapLibre.
+   */
+  if (map.getLayer('department-outline-glow')) {
+    map.moveLayer('department-outline-glow')
+  }
+
+  if (map.getLayer('department-outline')) {
+    map.moveLayer('department-outline')
+  }
+
 }
 
 function addDataLayers(map: MapLibreMap) {
@@ -1339,9 +1747,9 @@ export default function Geographie() {
       container:
         mapContainerRef.current,
       style: styleDefinition(),
-      center: [6.13, 48.96],
-      zoom: 8.15,
-      minZoom: 6.5,
+      center: [6.18, 48.69],
+      zoom: 7.55,
+      minZoom: 6.2,
       maxZoom: 16,
       maxBounds: MAP_BOUNDS,
       attributionControl: {
@@ -1362,7 +1770,11 @@ export default function Geographie() {
     )
 
     map.on('load', () => {
+      // Les contours administratifs sont ajoutés avant les couches
+      // de données afin que heatmap et points restent au premier plan.
+      addDepartmentLayers(map)
       addDataLayers(map)
+      bringDepartmentsToFront(map)
       setCoordinateVersion(
         (value) => value + 1,
       )
@@ -1643,7 +2055,7 @@ export default function Geographie() {
     mapRef.current?.fitBounds(
       MAP_BOUNDS,
       {
-        padding: 35,
+        padding: 44,
         duration: 800,
       },
     )
