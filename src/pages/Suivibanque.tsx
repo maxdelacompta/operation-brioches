@@ -35,7 +35,7 @@ import {
   type CoupureKey,
 } from '../services/coffre'
 
-import './SuiviBanque.css'
+import './Suivibanque.css'
 
 /* =========================================================
    TYPES ET CONFIGURATION

@@ -4,10 +4,13 @@
 
 html {
   min-width: 320px;
+  min-height: 100%;
   background: var(--ob-bg);
 }
 
 body {
+  min-width: 320px;
+  min-height: 100vh;
   margin: 0;
   color: var(--ob-text);
   background:
@@ -50,4 +53,9 @@ p {
 :focus-visible {
   outline: 3px solid rgba(255, 138, 33, .30);
   outline-offset: 2px;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
 }

@@ -5,7 +5,6 @@ import {
   Routes,
 } from 'react-router-dom'
 
-import './App.css'
 import './styles/index.css'
 
 import { UsersProvider } from './contexts/UsersContext'

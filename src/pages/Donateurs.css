@@ -25,10 +25,6 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-
-  gap: 24px;
-
-  margin-bottom: 24px;
 }
 
 .donateurs-eyebrow {
@@ -39,7 +35,6 @@
   color: #ff8614;
 
   font-size: 11px;
-  font-weight: 850;
 
   letter-spacing: 0.7px;
   text-transform: uppercase;
@@ -62,8 +57,6 @@
   color: #6682a5;
 
   font-size: 13px;
-
-  line-height: 1.5;
 }
 
 
@@ -292,17 +285,13 @@
    ========================================================= */
 
 .donateurs-table-wrapper {
-  width: 100%;
 
   overflow-x: auto;
   overflow-y: visible;
 }
 
 .donateurs-table {
-  width: 100%;
   min-width: 1320px;
-
-  border-collapse: collapse;
 }
 
 .donateurs-table th {
@@ -318,12 +307,9 @@
   color: #6682a5;
 
   font-size: 9px;
-  font-weight: 850;
 
   text-align: left;
   text-transform: uppercase;
-
-  white-space: nowrap;
 }
 
 .donateurs-table td {
@@ -537,8 +523,6 @@
 .donateur-type {
   display: inline-flex;
 
-  padding: 4px 7px;
-
   border-radius: 999px;
 
   background:
@@ -564,8 +548,6 @@
   justify-content: center;
 
   min-width: 37px;
-
-  padding: 4px 6px;
 
   border-radius: 999px;
 
@@ -594,13 +576,9 @@
 .donateurs-actions {
   display: flex;
   align-items: center;
-
-  gap: 2px;
 }
 
 .donateurs-actions button {
-  width: 28px;
-  height: 28px;
 
   display: grid;
   place-items: center;
@@ -726,8 +704,6 @@
    ========================================================= */
 
 .donateur-tabs {
-  display: flex;
-  align-items: center;
 
   margin: 17px 0;
 
@@ -748,15 +724,8 @@
   flex-shrink: 0;
 
   padding: 12px 11px 10px;
-
-  border: none;
   border-bottom:
     3px solid transparent;
-
-  background: transparent;
-  color: #6682a5;
-
-  cursor: pointer;
 
   font-size: 10px;
   font-weight: 750;
@@ -766,15 +735,9 @@
     border-color 0.15s ease;
 }
 
-.donateur-tabs button:hover {
-  color: #063b7c;
-}
-
 .donateur-tabs button.active {
   border-bottom-color:
     #ffa74f;
-
-  color: #063b7c;
 }
 
 
@@ -876,7 +839,6 @@
   padding: 18px;
 
   border: 1px solid #e1e9f2;
-  border-radius: 14px;
 
   background: white;
 
@@ -1331,7 +1293,6 @@
 }
 
 .donateurs-export-menu span {
-  margin-top: 2px;
 
   color: #6682a5;
 
@@ -1735,7 +1696,6 @@
   color: #405d7d;
 
   font-size: 9px;
-  font-weight: 800;
 
   letter-spacing: 0.15px;
 }
@@ -2207,8 +2167,6 @@
 
   padding: 9px 10px;
 
-  border-radius: 7px;
-
   color: #063b7c;
 
   font-size: 9px;
@@ -2245,7 +2203,6 @@
    ========================================================= */
 
 .donateur-commandes {
-  padding: 24px;
 
   border:
     1px solid #e1e9f2;
@@ -2288,8 +2245,6 @@
     5px 0 0;
 
   color: #6682a5;
-
-  font-size: 12px;
 }
 
 .donateur-commandes-kpis {

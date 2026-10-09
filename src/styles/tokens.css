@@ -1,8 +1,12 @@
 :root {
-  --ob-bg: #fbfaf6;
-  --ob-bg-soft: #fff7ee;
-  --ob-surface: #ffffff;
-  --ob-surface-soft: #fffaf4;
+  --ob-page-warm-1: #fffaf4;
+  --ob-page-warm-2: #f6efe6;
+  --ob-page-warm-3: #f2e8dc;
+
+  --ob-bg: #f4eee5;
+  --ob-bg-soft: #fff4e6;
+  --ob-surface: #fffdf9;
+  --ob-surface-soft: #fff8ef;
 
   --ob-navy-950: #08285a;
   --ob-navy-900: #0b326d;
@@ -60,3 +64,30 @@
 }
 
   /* Valeur pilotée par Sidebar.tsx : 300px si épinglée, 0px sinon. */
+
+/* Variables de compatibilité des pages historiques (valeurs conservées). */
+:root {
+  --navy: #1f344d;
+  --navy-dark: #182b42;
+  --navy-light: #294662;
+
+  --blue: #063b7c;
+  --blue-light: #6682a5;
+
+  --orange: #ffa74f;
+  --orange-dark: #ff8614;
+  --orange-soft: rgba(255, 167, 79, 0.1);
+
+  --green: #18b968;
+  --red: #ef3340;
+
+  --white: #ffffff;
+
+  --background: #fff8f1;
+  --background-secondary: #f7f9fc;
+
+  --border: #e1e9f2;
+
+  --shadow:
+    0 15px 1555px rgba(18, 59, 122, 0.07);
+}

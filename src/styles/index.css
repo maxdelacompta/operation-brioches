@@ -1,11 +1,5 @@
-/* =========================================================
-   INDEX DU DESIGN SYSTEM OPÉRATION BRIOCHES
-   Fichier : src/styles/index.css
-
-   Importé normalement par App.tsx :
-   import './styles/index.css'
-   ========================================================= */
-
+/* Point d’entrée du thème. L’ordre des imports préserve la cascade existante. */
+@import './legacy.css';
 @import './tokens.css';
 @import './base.css';
 @import './layout.css';
@@ -31,10 +25,3 @@
 /* Fond crème / surfaces du thème jeune */
 @import './surfaces.css';
 
-/*
-  NE PAS remettre ici pour le moment :
-  @import './topbar-brand.css';
-  @import './browser-topbar-fix.css';
-
-  On revient volontairement à la base stable avant les essais V9.
-*/

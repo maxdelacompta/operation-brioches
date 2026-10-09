@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import CompactStatCard from '../components/ui/CompactStatCard'
+import { useMemo, useState } from 'react'
 import {
   CalendarDays,
   Euro,
@@ -166,13 +167,13 @@ export default function CommandesGms() {
       </header>
 
       <section className="gms-stats">
-        <StatCard
+        <CompactStatCard className="gms-stat"
           icon={<Package size={21} />}
           label="Commandes"
           value={String(resultats.length)}
         />
 
-        <StatCard
+        <CompactStatCard className="gms-stat"
           icon={<Store size={21} />}
           label="Brioches commandées"
           value={new Intl.NumberFormat('fr-FR').format(
@@ -180,7 +181,7 @@ export default function CommandesGms() {
           )}
         />
 
-        <StatCard
+        <CompactStatCard className="gms-stat"
           icon={<Euro size={21} />}
           label="Montant estimé"
           value={argent(totalMontant)}
@@ -375,25 +376,3 @@ export default function CommandesGms() {
   )
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode
-  label: string
-  value: string
-}) {
-  return (
-    <article className="gms-stat">
-      <div className="gms-stat-icon">
-        {icon}
-      </div>
-
-      <div>
-        <span>{label}</span>
-        <strong>{value}</strong>
-      </div>
-    </article>
-  )
-}

@@ -3,7 +3,6 @@ import {
   CircleDollarSign,
   MapPin,
   RefreshCw,
-  Search,
   Store,
   TrendingUp,
   UsersRound,
