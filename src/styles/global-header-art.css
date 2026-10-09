@@ -1,0 +1,115 @@
+/* =========================================================
+   ILLUSTRATION GLOBALE — TOUTES LES PAGES
+   ========================================================= */
+
+/*
+  Ce composant est monté UNE SEULE FOIS dans AppLayout,
+  juste après la topbar.
+
+  L'image flotte dans la zone haute de la page et ne bloque
+  aucun clic. Elle reste visible quelle que soit la route.
+*/
+
+.ob-global-header-art {
+  position: absolute;
+  z-index: 2;
+
+  top: 76px;
+  right: clamp(155px, 13vw, 235px);
+
+  width: clamp(300px, 27vw, 455px);
+  height: 145px;
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  overflow: visible;
+
+  pointer-events: none;
+  user-select: none;
+}
+
+.ob-global-header-art img {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+  object-position: center bottom;
+
+  filter:
+    drop-shadow(
+      0 9px 18px
+      rgba(18, 52, 95, .08)
+    );
+}
+
+/*
+  Le layout principal doit constituer le repère de positionnement.
+  Les noms ci-dessous couvrent les structures courantes du projet.
+*/
+.app-layout,
+.app-main,
+.app-content,
+.main-content,
+.layout-content,
+.ob-app-main {
+  position: relative;
+}
+
+/*
+  On réserve visuellement la zone de l'illustration dans les headers
+  de pages les plus fréquents afin d'éviter les collisions.
+*/
+.accueil-header,
+.dashboard-header,
+.dashboard-topbar,
+.art-header,
+.ea-header,
+.lr-header,
+.sct-header,
+.sge-header,
+.geo-header,
+.ob-page-header {
+  position: relative;
+  z-index: 3;
+}
+
+/*
+  L'illustration est décorative : les actions à droite doivent rester
+  systématiquement au-dessus.
+*/
+.accueil-customize-button,
+.dashboard-user-actions,
+.art-header-actions,
+.lr-header-actions,
+.sct-header-actions,
+.sge-header-actions,
+.geo-header-controls,
+.ob-page-header__actions {
+  position: relative;
+  z-index: 4;
+}
+
+@media (max-width: 1350px) {
+  .ob-global-header-art {
+    right: 125px;
+    width: 330px;
+  }
+}
+
+@media (max-width: 1120px) {
+  .ob-global-header-art {
+    right: 30px;
+    width: 280px;
+    opacity: .88;
+  }
+}
+
+@media (max-width: 900px) {
+  .ob-global-header-art {
+    display: none;
+  }
+}

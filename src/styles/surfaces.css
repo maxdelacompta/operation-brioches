@@ -1,0 +1,101 @@
+/* =========================================================
+   V8 — FOND GÉNÉRAL PLUS CHALEUREUX
+   ========================================================= */
+
+:root {
+  --ob-bg: #f4eee5;
+  --ob-bg-soft: #fff4e6;
+  --ob-surface: #fffdf9;
+  --ob-surface-soft: #fff8ef;
+
+  --ob-page-warm-1: #fffaf4;
+  --ob-page-warm-2: #f6efe6;
+  --ob-page-warm-3: #f2e8dc;
+}
+
+html,
+body {
+  background:
+    radial-gradient(
+      circle at 92% 6%,
+      rgba(255, 145, 38, .15),
+      transparent 26rem
+    ),
+    radial-gradient(
+      circle at 8% 82%,
+      rgba(18, 63, 122, .055),
+      transparent 30rem
+    ),
+    linear-gradient(
+      180deg,
+      var(--ob-page-warm-1) 0%,
+      var(--ob-page-warm-2) 54%,
+      var(--ob-page-warm-3) 100%
+    ) !important;
+}
+
+#root {
+  min-height: 100vh;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 252, 247, .42) 0%,
+      rgba(246, 239, 230, .58) 100%
+    );
+}
+
+/*
+  On enlève les grands aplats blanc pur des pages racines.
+  Les cartes restent blanches et ressortent davantage.
+*/
+:where(
+  main[class$="-page"],
+  main[class*="-page "],
+  div[class$="-page"],
+  div[class*="-page "]
+) {
+  background:
+    radial-gradient(
+      circle at 88% 3%,
+      rgba(255, 142, 32, .075),
+      transparent 22rem
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 250, 244, .78) 0%,
+      rgba(247, 240, 231, .88) 100%
+    ) !important;
+}
+
+/* Les cards restent claires pour créer du contraste. */
+.ob-card,
+.ob-panel,
+.ob-stat-card,
+.ob-table-wrap {
+  background:
+    rgba(255, 255, 255, .96);
+}
+
+/*
+  Légère profondeur sur les gros blocs déjà existants,
+  sans forcer une classe spécifique à chaque module.
+*/
+:where(
+  main[class$="-page"],
+  main[class*="-page "],
+  div[class$="-page"],
+  div[class*="-page "]
+) section {
+  --ob-section-surface:
+    rgba(255, 255, 255, .94);
+}
+
+/* Topbar volontairement claire pour rester lisible. */
+.topbar,
+.app-topbar,
+.layout-topbar {
+  background:
+    rgba(255, 253, 249, .96);
+  backdrop-filter: blur(10px);
+}

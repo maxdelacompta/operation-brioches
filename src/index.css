@@ -1,8 +1,29 @@
-html,
-body,
-#root {
+/* =========================================================
+   INDEX CSS RACINE
+   Fichier : src/index.css
+
+   Importé normalement par src/main.tsx :
+   import './index.css'
+   ========================================================= */
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
   margin: 0;
-  padding: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
   width: 100%;
   min-height: 100vh;
 }
+
+/*
+  IMPORTANT :
+  Le thème complet de l'Opération Brioches n'est PAS importé ici.
+  Il reste dans src/styles/index.css afin d'éviter les doublons.
+*/

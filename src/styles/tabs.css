@@ -1,0 +1,26 @@
+.ob-tabs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid var(--ob-border);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.ob-tabs__button {
+  flex: 1;
+  min-height: 34px;
+  border: 0;
+  border-radius: 9px;
+  color: #687d96;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.ob-tabs__button.is-active {
+  color: #fff;
+  background: var(--ob-navy-900);
+  box-shadow: 0 3px 8px rgba(18, 63, 122, .16);
+}

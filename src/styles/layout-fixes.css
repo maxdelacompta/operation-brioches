@@ -1,0 +1,82 @@
+/* =========================================================
+   CORRECTION ESPACE GAUCHE — V6
+   ========================================================= */
+
+/*
+  La Sidebar possède déjà un "shell" qui réserve sa largeur quand elle
+  est épinglée. Les anciens layouts de l'application peuvent encore
+  contenir un margin-left / padding-left fixe (250px, 276px, etc.).
+
+  Ces règles neutralisent ce deuxième décalage.
+*/
+
+:root {
+  --ob-layout-left-offset:
+    var(--ob-sidebar-reserved, 0px);
+}
+
+/*
+  Les principaux wrappers connus du projet ne doivent JAMAIS ajouter
+  une seconde marge à gauche : la largeur est déjà prise en charge
+  par .ob-sidebar-shell dans le flex du layout.
+*/
+.app-main,
+.app-content,
+.main-content,
+.layout-main,
+.layout-content,
+.ob-app-main,
+.page-content,
+.main-wrapper,
+.content-wrapper {
+  margin-left: 0 !important;
+  min-width: 0 !important;
+}
+
+/*
+  Si une ancienne règle fixe une largeur du type calc(100% - 250px),
+  on redonne au contenu sa largeur naturelle dans le flex.
+*/
+.app-main,
+.main-content,
+.layout-main,
+.ob-app-main,
+.main-wrapper {
+  width: auto !important;
+  max-width: none !important;
+  flex: 1 1 auto !important;
+}
+
+/*
+  Quand la sidebar est DÉTACHÉE, aucune réserve ne doit subsister.
+*/
+html[data-sidebar-pinned="false"] {
+  --ob-sidebar-reserved: 0px !important;
+}
+
+html[data-sidebar-pinned="false"]
+:is(
+  .app-main,
+  .app-content,
+  .main-content,
+  .layout-main,
+  .layout-content,
+  .ob-app-main,
+  .page-content,
+  .main-wrapper,
+  .content-wrapper,
+  .topbar,
+  .app-topbar,
+  .layout-topbar
+) {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  left: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+/*
+  Les pages elles-mêmes gardent leur padding interne normal.
+  On ne touche donc pas aux .xxx-page.
+*/

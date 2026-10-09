@@ -1,0 +1,115 @@
+.ob-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.ob-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 41px;
+  min-width: min(380px, 100%);
+  padding: 0 12px;
+  border: 1px solid var(--ob-border-strong);
+  border-radius: 11px;
+  color: #6d829d;
+  background: #fff;
+  transition:
+    border-color var(--ob-transition-fast),
+    box-shadow var(--ob-transition-fast);
+}
+
+.ob-search:focus-within {
+  border-color: #aac7e7;
+  box-shadow: 0 0 0 4px rgba(36, 137, 230, .07);
+}
+
+.ob-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--ob-text);
+  background: transparent;
+  font-size: 12px;
+}
+
+.ob-select,
+.ob-input {
+  min-height: 41px;
+  padding: 0 12px;
+  border: 1px solid var(--ob-border-strong);
+  border-radius: 11px;
+  color: var(--ob-text);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.ob-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 41px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 850;
+  transition:
+    transform var(--ob-transition-fast),
+    box-shadow var(--ob-transition-fast),
+    background var(--ob-transition-fast);
+}
+
+.ob-button:hover {
+  transform: translateY(-1px);
+}
+
+.ob-button--primary {
+  color: #fff;
+  background: linear-gradient(180deg, #ff922f 0%, var(--ob-orange-600) 100%);
+  box-shadow: 0 6px 14px rgba(255, 116, 24, .18);
+}
+
+.ob-button--secondary {
+  color: var(--ob-navy-900);
+  border-color: var(--ob-border-strong);
+  background: #fff;
+}
+
+.ob-button--ghost {
+  color: var(--ob-navy-700);
+  border-color: transparent;
+  background: transparent;
+}
+
+.ob-segmented {
+  display: inline-flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ob-segmented__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 41px;
+  padding: 0 15px;
+  border: 1px solid var(--ob-border-strong);
+  border-radius: 11px;
+  color: var(--ob-navy-800);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.ob-segmented__button.is-active {
+  color: #fff;
+  border-color: var(--ob-orange-600);
+  background: linear-gradient(180deg, #ff922f 0%, var(--ob-orange-600) 100%);
+  box-shadow: 0 6px 14px rgba(255, 116, 24, .18);
+}

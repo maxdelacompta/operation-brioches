@@ -1,0 +1,38 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gMain" x1="136" y1="88" x2="374" y2="402" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFD45E"/>
+      <stop offset="0.45" stop-color="#FFAB15"/>
+      <stop offset="0.78" stop-color="#FF8B08"/>
+      <stop offset="1" stop-color="#F56B09"/>
+    </linearGradient>
+    <linearGradient id="gHighlight" x1="177" y1="138" x2="315" y2="309" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF2BF"/>
+      <stop offset="1" stop-color="#FFD06C" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="gCut" x1="187" y1="117" x2="311" y2="355" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF5D5"/>
+      <stop offset="1" stop-color="#FFEAB5"/>
+    </linearGradient>
+    <filter id="shadow" x="74" y="69" width="364" height="359" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#E5710F" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <path d="M118 359C108 334 111 302 128 281C79 252 79 194 117 158C146 130 185 124 217 137C240 93 289 73 332 85C348 89 362 97 372 108C406 82 458 87 486 129C516 174 506 234 463 260C467 269 469 279 468 290C465 329 436 364 398 369C386 401 358 423 323 423C304 423 287 417 274 406C256 420 236 429 213 429C165 429 130 399 118 359Z" fill="url(#gMain)"/>
+    <path d="M118 359C108 334 111 302 128 281C79 252 79 194 117 158C146 130 185 124 217 137C240 93 289 73 332 85C348 89 362 97 372 108C406 82 458 87 486 129C516 174 506 234 463 260C467 269 469 279 468 290C465 329 436 364 398 369C386 401 358 423 323 423C304 423 287 417 274 406C256 420 236 429 213 429C165 429 130 399 118 359Z" fill="url(#gHighlight)" opacity="0.45"/>
+
+    <!-- soft cream separations between lobes -->
+    <path d="M184 103C217 124 252 172 275 234C273 208 275 177 282 144C291 104 307 80 330 68C304 69 279 78 258 95C236 113 219 141 209 174C203 156 195 129 184 103Z" fill="url(#gCut)"/>
+    <path d="M130 223C180 230 225 255 265 311C258 279 259 247 267 220C242 197 211 181 176 173C157 168 138 167 121 169C121 188 124 206 130 223Z" fill="url(#gCut)"/>
+    <path d="M298 233C337 181 377 153 425 140C433 138 439 137 446 136C438 111 425 93 406 80C360 99 323 138 298 233Z" fill="url(#gCut)"/>
+
+    <!-- lower warm grooves -->
+    <path d="M168 277C190 288 208 307 221 333C234 359 239 387 247 411C234 419 219 423 203 423C182 413 164 395 153 373C136 338 142 303 168 277Z" fill="#E66B0B" opacity="0.2"/>
+    <path d="M261 271C274 261 286 260 295 270C307 282 301 301 293 317C280 342 274 364 272 408H248C247 369 251 319 261 271Z" fill="#E66B0B" opacity="0.18"/>
+    <path d="M377 286C403 300 418 329 425 359C428 375 429 391 429 406C417 412 404 416 391 417C385 393 377 361 360 334C354 323 346 315 338 308C348 296 361 289 377 286Z" fill="#E66B0B" opacity="0.16"/>
+
+    <circle cx="171" cy="166" r="8" fill="#FFF3D7" opacity="0.78"/>
+  </g>
+</svg>

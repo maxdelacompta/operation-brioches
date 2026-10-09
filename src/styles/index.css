@@ -1,0 +1,40 @@
+/* =========================================================
+   INDEX DU DESIGN SYSTEM OPÉRATION BRIOCHES
+   Fichier : src/styles/index.css
+
+   Importé normalement par App.tsx :
+   import './styles/index.css'
+   ========================================================= */
+
+@import './tokens.css';
+@import './base.css';
+@import './layout.css';
+@import './sidebar.css';
+
+@import './cards.css';
+@import './filters.css';
+@import './tables.css';
+@import './forms.css';
+@import './tabs.css';
+@import './panels.css';
+@import './badges.css';
+@import './maps.css';
+
+@import './utilities.css';
+
+/* Illustration commune des headers */
+@import './global-header.css';
+
+/* Corrections du layout / ancien décalage à gauche */
+@import './layout-fixes.css';
+
+/* Fond crème / surfaces du thème jeune */
+@import './surfaces.css';
+
+/*
+  NE PAS remettre ici pour le moment :
+  @import './topbar-brand.css';
+  @import './browser-topbar-fix.css';
+
+  On revient volontairement à la base stable avant les essais V9.
+*/

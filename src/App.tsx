@@ -6,6 +6,7 @@ import {
 } from 'react-router-dom'
 
 import './App.css'
+import './styles/index.css'
 
 import { UsersProvider } from './contexts/UsersContext'
 import { PermissionsProvider } from './contexts/PermissionsContext'
@@ -17,6 +18,8 @@ import { MairiesProvider } from './contexts/MairiesContext'
 import { CommandesMairiesRsProvider } from './contexts/CommandesMairiesRsContext'
 
 import AppLayout from './layouts/AppLayout'
+
+import ThemeShowcase from './pages/ThemeShowcase'
 
 import Accueil from './pages/Accueil'
 import Dashboard from './pages/Dashboard'
@@ -114,6 +117,11 @@ function App() {
                           replace
                         />
                       }
+                    />
+
+                    <Route
+                      path="/theme-preview"
+                      element={<ThemeShowcase />}
                     />
 
                     <Route

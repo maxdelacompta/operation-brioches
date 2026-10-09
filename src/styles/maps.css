@@ -1,0 +1,36 @@
+.ob-map-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 560px;
+  border: 1px solid var(--ob-border);
+  border-radius: var(--ob-radius-md);
+  background: #edf3e8;
+  box-shadow: var(--ob-shadow-xs);
+}
+
+.ob-map-toolbar {
+  position: absolute;
+  z-index: 10;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.ob-map-toolbar > * {
+  pointer-events: auto;
+}
+
+.ob-map-floating {
+  position: absolute;
+  z-index: 10;
+  border: 1px solid rgba(213, 224, 236, .9);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 5px 14px rgba(18, 52, 95, .10);
+  backdrop-filter: blur(8px);
+}

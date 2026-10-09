@@ -1,0 +1,267 @@
+/* =========================================================
+   V8 — ILLUSTRATION HEADER UNIVERSELLE
+   ========================================================= */
+
+/*
+  Objectif :
+  - l'image doit apparaître sur TOUTES les pages ;
+  - elle reste dans le fond du header ;
+  - elle ne recouvre jamais les boutons ;
+  - pas besoin de connaître cmr-header, art-header, geo-header, etc.
+
+  On cible tout header placé directement dans un composant racine "...-page".
+*/
+
+/* Anciennes injections désactivées. */
+body::after,
+.accueil-header-illustration,
+.ob-page-header__illustration,
+.ob-global-header-art {
+  display: none !important;
+}
+
+/* Header principal de n'importe quelle page OB. */
+:where(
+  main[class$="-page"],
+  main[class*="-page "],
+  div[class$="-page"],
+  div[class*="-page "]
+) > header:first-of-type,
+.ob-page-header {
+  position: relative;
+  isolation: isolate;
+
+  min-height: 132px;
+
+  overflow: hidden;
+
+  border-radius: 0 0 20px 20px;
+
+  background:
+    linear-gradient(
+      105deg,
+      rgba(255, 253, 249, .96) 0%,
+      rgba(255, 248, 238, .94) 52%,
+      rgba(255, 231, 204, .66) 100%
+    );
+}
+
+/* Illustration décorative. */
+:where(
+  main[class$="-page"],
+  main[class*="-page "],
+  div[class$="-page"],
+  div[class*="-page "]
+) > header:first-of-type::after,
+.ob-page-header::after {
+  content: "";
+
+  position: absolute;
+  z-index: 0;
+
+  top: 50%;
+  right: clamp(210px, 18vw, 350px);
+
+  width: clamp(285px, 25vw, 430px);
+  height: 126px;
+
+  transform: translateY(-50%);
+
+  background:
+    url('/ob/ob-header-community.png')
+    center bottom /
+    contain
+    no-repeat;
+
+  opacity: .90;
+
+  pointer-events: none;
+  user-select: none;
+
+  filter:
+    saturate(1.02)
+    drop-shadow(
+      0 8px 16px
+      rgba(18, 52, 95, .065)
+    );
+}
+
+/* Le contenu réel du header reste devant l'image. */
+:where(
+  main[class$="-page"],
+  main[class*="-page "],
+  div[class$="-page"],
+  div[class*="-page "]
+) > header:first-of-type > *,
+.ob-page-header > * {
+  position: relative;
+  z-index: 2;
+}
+
+/*
+  Cas particuliers de pages dont le premier bloc n'est pas un <header>.
+  Ces sélecteurs couvrent les modules actuellement connus.
+*/
+:is(
+  .accueil-header,
+  .dashboard-header,
+  .dashboard-topbar,
+  .commandes-header,
+  .cmr-header,
+  .art-header,
+  .lr-header,
+  .sct-header,
+  .sge-header,
+  .geo-header,
+  .ea-header
+) {
+  position: relative;
+  isolation: isolate;
+
+  min-height: 132px;
+  overflow: hidden;
+
+  border-radius: 0 0 20px 20px;
+
+  background:
+    linear-gradient(
+      105deg,
+      rgba(255, 253, 249, .96) 0%,
+      rgba(255, 248, 238, .94) 52%,
+      rgba(255, 231, 204, .66) 100%
+    );
+}
+
+:is(
+  .accueil-header,
+  .dashboard-header,
+  .dashboard-topbar,
+  .commandes-header,
+  .cmr-header,
+  .art-header,
+  .lr-header,
+  .sct-header,
+  .sge-header,
+  .geo-header,
+  .ea-header
+)::after {
+  content: "";
+
+  position: absolute;
+  z-index: 0;
+
+  top: 50%;
+  right: clamp(210px, 18vw, 350px);
+
+  width: clamp(285px, 25vw, 430px);
+  height: 126px;
+
+  transform: translateY(-50%);
+
+  background:
+    url('/ob/ob-header-community.png')
+    center bottom /
+    contain
+    no-repeat;
+
+  opacity: .90;
+
+  pointer-events: none;
+}
+
+:is(
+  .accueil-header,
+  .dashboard-header,
+  .dashboard-topbar,
+  .commandes-header,
+  .cmr-header,
+  .art-header,
+  .lr-header,
+  .sct-header,
+  .sge-header,
+  .geo-header,
+  .ea-header
+) > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Sur écrans plus étroits, on réduit sans gêner les actions. */
+@media (max-width: 1350px) {
+  :where(
+    main[class$="-page"],
+    main[class*="-page "],
+    div[class$="-page"],
+    div[class*="-page "]
+  ) > header:first-of-type::after,
+  .ob-page-header::after,
+  :is(
+    .accueil-header,
+    .dashboard-header,
+    .dashboard-topbar,
+    .commandes-header,
+    .cmr-header,
+    .art-header,
+    .lr-header,
+    .sct-header,
+    .sge-header,
+    .geo-header,
+    .ea-header
+  )::after {
+    right: 160px;
+    width: 310px;
+    opacity: .72;
+  }
+}
+
+@media (max-width: 1080px) {
+  :where(
+    main[class$="-page"],
+    main[class*="-page "],
+    div[class$="-page"],
+    div[class*="-page "]
+  ) > header:first-of-type::after,
+  .ob-page-header::after,
+  :is(
+    .accueil-header,
+    .dashboard-header,
+    .dashboard-topbar,
+    .commandes-header,
+    .cmr-header,
+    .art-header,
+    .lr-header,
+    .sct-header,
+    .sge-header,
+    .geo-header,
+    .ea-header
+  )::after {
+    right: 28px;
+    width: 250px;
+    opacity: .34;
+  }
+}
+
+@media (max-width: 900px) {
+  :where(
+    main[class$="-page"],
+    main[class*="-page "],
+    div[class$="-page"],
+    div[class*="-page "]
+  ) > header:first-of-type::after,
+  .ob-page-header::after,
+  :is(
+    .accueil-header,
+    .dashboard-header,
+    .dashboard-topbar,
+    .commandes-header,
+    .cmr-header,
+    .art-header,
+    .lr-header,
+    .sct-header,
+    .sge-header,
+    .geo-header,
+    .ea-header
+  )::after {
+    display: none;
+  }
+}

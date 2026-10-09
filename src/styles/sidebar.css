@@ -1,0 +1,849 @@
+.ob-sidebar-shell {
+  position: relative;
+  width: var(--ob-sidebar-reserved, var(--ob-sidebar-width));
+  flex: 0 0 var(--ob-sidebar-reserved, var(--ob-sidebar-width));
+  min-width: 0;
+  transition:
+    width var(--ob-transition),
+    flex-basis var(--ob-transition);
+}
+
+/*
+  Correction du "double espace" visible avec certains AppLayout :
+  le contenu principal ne doit pas ajouter un ancien margin-left
+  en plus de la place réservée par le shell.
+*/
+.ob-sidebar-shell + * {
+  min-width: 0 !important;
+  margin-left: 0 !important;
+}
+
+.ob-sidebar-shell--floating {
+  width: 0;
+  flex-basis: 0;
+}
+
+.ob-sidebar {
+  position: fixed;
+  z-index: 95;
+  top: 0;
+  left: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  width: var(--ob-sidebar-width);
+  height: 100dvh;
+
+  overflow: hidden;
+
+  border-right: 1px solid #e7ebf0;
+
+  color: var(--ob-navy-900);
+
+  background:
+    radial-gradient(
+      circle at 6% 0%,
+      rgba(255, 138, 33, .10),
+      transparent 17rem
+    ),
+    #fff;
+
+  box-shadow:
+    8px 0 30px rgba(18, 52, 95, .055);
+
+  transform: translateX(0);
+
+  transition:
+    transform var(--ob-transition),
+    box-shadow var(--ob-transition);
+}
+
+.ob-sidebar--floating {
+  box-shadow:
+    18px 0 45px rgba(18, 52, 95, .18);
+}
+
+.ob-sidebar--floating.is-closed {
+  transform: translateX(calc(-100% - 16px));
+}
+
+.ob-sidebar-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+
+  padding: 20px 15px 13px;
+}
+
+.ob-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-width: 0;
+
+  color: inherit;
+  text-decoration: none;
+}
+
+.ob-sidebar-logo {
+  display: grid;
+  place-items: center;
+
+  width: 52px;
+  height: 52px;
+
+  flex: 0 0 52px;
+
+  border-radius: 18px 18px 18px 8px;
+
+  color: #fff;
+
+  background:
+    radial-gradient(
+      circle at 35% 28%,
+      #ffb14d 0 20%,
+      transparent 21%
+    ),
+    linear-gradient(
+      135deg,
+      #ff991f 0%,
+      #ff7117 100%
+    );
+
+  box-shadow:
+    0 8px 20px rgba(255, 116, 24, .24);
+
+  font-family: var(--ob-font-display);
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.ob-sidebar-brand-info {
+  min-width: 0;
+}
+
+.ob-sidebar-brand-info strong,
+.ob-sidebar-brand-info span {
+  display: block;
+}
+
+.ob-sidebar-brand-info strong {
+  overflow: hidden;
+
+  color: var(--ob-navy-950);
+
+  font-family: var(--ob-font-display);
+  font-size: 19px;
+  line-height: 1.03;
+
+  text-overflow: ellipsis;
+}
+
+.ob-sidebar-brand-info span {
+  margin-top: 4px;
+
+  color: #8594a7;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ob-sidebar-pin {
+  display: grid;
+  place-items: center;
+
+  width: 37px;
+  height: 37px;
+
+  border: 1px solid var(--ob-border);
+  border-radius: 11px;
+
+  color: #71849a;
+  background: #fff;
+
+  box-shadow: var(--ob-shadow-xs);
+
+  transition:
+    color var(--ob-transition-fast),
+    border-color var(--ob-transition-fast),
+    background var(--ob-transition-fast),
+    transform var(--ob-transition-fast);
+}
+
+.ob-sidebar-pin:hover {
+  transform: translateY(-1px);
+  color: var(--ob-orange-600);
+  border-color: #ffd0aa;
+  background: #fff8f2;
+}
+
+.ob-sidebar-pin.is-pinned {
+  color: #fff;
+  border-color: var(--ob-orange-600);
+  background: var(--ob-orange-600);
+}
+
+.ob-sidebar-nav {
+  min-height: 0;
+  flex: 1;
+
+  padding: 7px 13px 12px;
+
+  overflow-y: auto;
+
+  scrollbar-width: thin;
+  scrollbar-color: #d9e1ea transparent;
+}
+
+.ob-sidebar-home,
+.ob-sidebar-group,
+.ob-sidebar-link {
+  width: 100%;
+
+  border: 0;
+
+  color: inherit;
+  background: transparent;
+
+  text-decoration: none;
+  font: inherit;
+}
+
+.ob-sidebar-home,
+.ob-sidebar-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-height: 48px;
+
+  padding: 0 13px;
+
+  border-radius: 13px;
+
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.ob-sidebar-home svg,
+.ob-sidebar-group svg {
+  flex: 0 0 auto;
+}
+
+.ob-sidebar-home:hover,
+.ob-sidebar-group:hover {
+  background: #fff8f1;
+}
+
+.ob-sidebar-home.is-active {
+  color: #ef5f18;
+
+  background:
+    linear-gradient(
+      90deg,
+      #fff0e4 0%,
+      #fff8f2 100%
+    );
+}
+
+.ob-sidebar-separator {
+  height: 1px;
+
+  margin: 10px 5px 12px;
+
+  background: #edf1f5;
+}
+
+.ob-sidebar-section + .ob-sidebar-section {
+  margin-top: 4px;
+}
+
+.ob-sidebar-group {
+  cursor: pointer;
+}
+
+.ob-sidebar-group.is-current {
+  color: #ef5f18;
+
+  background:
+    linear-gradient(
+      90deg,
+      #fff0e4 0%,
+      rgba(255, 248, 242, .65) 100%
+    );
+}
+
+.ob-sidebar-group-label {
+  min-width: 0;
+  flex: 1;
+
+  text-align: left;
+}
+
+.ob-sidebar-chevron {
+  transition: transform var(--ob-transition-fast);
+}
+
+.ob-sidebar-chevron.is-expanded {
+  transform: rotate(180deg);
+}
+
+.ob-sidebar-submenu {
+  position: relative;
+
+  display: grid;
+  gap: 3px;
+
+  margin: 3px 0 8px 25px;
+  padding-left: 15px;
+}
+
+.ob-sidebar-submenu::before {
+  content: "";
+
+  position: absolute;
+  top: 3px;
+  bottom: 4px;
+  left: 0;
+
+  width: 1px;
+
+  background: #e5eaf0;
+}
+
+.ob-sidebar-link {
+  display: grid;
+
+  grid-template-columns:
+    7px minmax(0, 1fr) auto;
+
+  align-items: center;
+
+  gap: 8px;
+
+  min-height: 38px;
+
+  padding: 0 11px;
+
+  border-radius: 10px;
+
+  color: #45617f;
+
+  font-size: 10.5px;
+  font-weight: 760;
+}
+
+.ob-sidebar-link:hover {
+  color: var(--ob-navy-900);
+  background: #fbfcfd;
+}
+
+.ob-sidebar-link.is-active {
+  color: #ef5f18;
+  background: #fff1e7;
+  font-weight: 900;
+}
+
+.ob-sidebar-dot {
+  width: 5px;
+  height: 5px;
+
+  border-radius: 50%;
+
+  background: #a6b3c0;
+}
+
+.ob-sidebar-link.is-active .ob-sidebar-dot {
+  background: var(--ob-orange-600);
+}
+
+.ob-sidebar-link--disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.ob-sidebar-badge {
+  padding: 3px 6px;
+
+  border-radius: var(--ob-radius-pill);
+
+  color: #8b99a7;
+  background: #edf1f4;
+
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.ob-sidebar-badge--special {
+  color: #9a5b00;
+  background: #fff0d7;
+}
+
+/* =========================================================
+   ILLUSTRATION BAS SIDEBAR
+   ========================================================= */
+
+.ob-sidebar-community {
+  position: relative;
+
+  margin: 10px 14px 14px;
+
+  overflow: hidden;
+
+  min-height: 150px;
+
+  border: 1px solid #f1dfce;
+  border-radius: 20px;
+
+  background:
+    radial-gradient(
+      circle at 75% 15%,
+      rgba(255, 153, 31, .16),
+      transparent 7rem
+    ),
+    linear-gradient(
+      135deg,
+      #fffaf4,
+      #fff0e1
+    );
+
+  box-shadow: var(--ob-shadow-xs);
+}
+
+.ob-sidebar-community img {
+  display: block;
+
+  width: 100%;
+  height: 150px;
+
+  padding: 7px 8px 0;
+
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.ob-sidebar-community::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.42);
+}
+
+/* =========================================================
+   BOUTON BURGER POUR MODE NON ÉPINGLÉ
+   ========================================================= */
+
+.ob-sidebar-burger {
+  position: fixed;
+  z-index: 110;
+
+  display: grid;
+  place-items: center;
+
+  width: 40px;
+  height: 40px;
+
+  border: 1px solid var(--ob-border);
+  border-radius: 12px;
+
+  color: var(--ob-navy-900);
+  background: rgba(255,255,255,.98);
+
+  box-shadow: var(--ob-shadow-sm);
+}
+
+.ob-sidebar-burger--desktop {
+  top: 14px;
+  left: 14px;
+}
+
+.ob-sidebar-burger--desktop.with-panel {
+  left: calc(var(--ob-sidebar-width) + 12px);
+}
+
+.ob-sidebar-burger--mobile {
+  display: none;
+}
+
+.ob-sidebar-overlay {
+  position: fixed;
+  z-index: 90;
+
+  inset: 0;
+
+  border: 0;
+
+  background: rgba(8, 40, 90, .24);
+
+  backdrop-filter: blur(2px);
+}
+
+@media (max-width: 1100px) {
+  :root {
+    --ob-sidebar-width: 280px;
+  }
+}
+
+@media (max-width: 900px) {
+  .ob-sidebar-shell {
+    width: 0 !important;
+    flex-basis: 0 !important;
+  }
+
+  .ob-sidebar {
+    z-index: 130;
+
+    width: min(88vw, 310px);
+
+    transform:
+      translateX(calc(-100% - 16px));
+  }
+
+  .ob-sidebar--mobile-open {
+    transform: translateX(0);
+  }
+
+  .ob-sidebar-burger--desktop {
+    display: none;
+  }
+
+  .ob-sidebar-burger--mobile {
+    display: grid;
+
+    top: 12px;
+    left: 12px;
+  }
+
+  .ob-sidebar-overlay {
+    z-index: 120;
+  }
+}
+
+
+/* =========================================================
+   DÉPLOIEMENT AU SURVOL DU BORD GAUCHE
+   ========================================================= */
+
+.ob-sidebar-edge-trigger {
+  position: fixed;
+  z-index: 92;
+
+  top: 0;
+  bottom: 0;
+  left: 0;
+
+  width: 18px;
+
+  cursor: e-resize;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 116, 24, .12),
+      transparent
+    );
+
+  opacity: 0;
+
+  transition: opacity 140ms ease;
+}
+
+.ob-sidebar-edge-trigger:hover {
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .ob-sidebar-edge-trigger {
+    display: none;
+  }
+}
+
+/* En desktop le menu flottant ne grise plus le contenu. */
+@media (min-width: 901px) {
+  .ob-sidebar-overlay {
+    display: none !important;
+  }
+}
+
+
+/* =========================================================
+   NAVBAR V5 — CORRECTIONS VISUELLES
+   ========================================================= */
+
+/*
+  L'épingle reste toujours visible dans le coin supérieur droit.
+*/
+.ob-sidebar-header {
+  position: relative;
+  padding-right: 64px;
+}
+
+.ob-sidebar-pin {
+  position: absolute;
+  z-index: 12;
+
+  top: 20px;
+  right: 15px;
+}
+
+.ob-sidebar-pin.is-pinned {
+  color: var(--ob-orange-600);
+  border-color: #ffd2ae;
+  background: #fff7ef;
+  box-shadow: none;
+}
+
+.ob-sidebar-pin.is-pinned:hover {
+  color: #fff;
+  border-color: var(--ob-orange-600);
+  background: var(--ob-orange-600);
+}
+
+/*
+  Le contenu de la nav ne doit plus redémarrer au milieu du menu
+  quand on revient sur Accueil : Sidebar.tsx repositionne l'item actif.
+*/
+.ob-sidebar-nav {
+  scroll-behavior: smooth;
+}
+
+/*
+  L'illustration du bas reste entière.
+*/
+.ob-sidebar-community {
+  min-height: 155px;
+}
+
+.ob-sidebar-community img {
+  width: 100%;
+  height: 155px;
+
+  padding: 6px 10px 0;
+
+  object-fit: contain !important;
+  object-position: center bottom !important;
+}
+
+/*
+  En mode flottant, ombre plus propre.
+*/
+.ob-sidebar--floating {
+  border-right:
+    1px solid rgba(220, 228, 238, .86);
+
+  box-shadow:
+    18px 0 44px
+    rgba(18, 52, 95, .16);
+}
+
+
+/* =========================================================
+   BURGER = ÉPINGLAGE DIRECT — V6
+   ========================================================= */
+
+.ob-sidebar-burger--desktop {
+  transition:
+    transform var(--ob-transition-fast),
+    background var(--ob-transition-fast),
+    border-color var(--ob-transition-fast);
+}
+
+.ob-sidebar-burger--desktop:hover {
+  transform: translateY(-1px);
+  color: #fff;
+  border-color: var(--ob-orange-600);
+  background: var(--ob-orange-600);
+}
+
+/*
+  Le trigger de bord gauche reste réservé au mode flottant.
+  Un clic sur le burger, lui, fixe désormais le menu.
+*/
+.ob-sidebar-edge-trigger {
+  width: 20px;
+}
+
+
+/* =========================================================
+   V7 — SIDEBAR FLOTTANTE SOUS LA TOPBAR
+   ========================================================= */
+
+:root {
+  --ob-topbar-height: 68px;
+}
+
+/*
+  La sidebar ÉPINGLÉE garde son comportement normal pleine hauteur.
+  La sidebar DÉTACHÉE / flottante descend sous la bannière du haut :
+  elle ne masque donc plus la campagne, les notifications ni le profil.
+*/
+@media (min-width: 901px) {
+  .ob-sidebar--floating {
+    top: var(--ob-topbar-height);
+    height:
+      calc(
+        100dvh -
+        var(--ob-topbar-height)
+      );
+
+    border-top-right-radius: 18px;
+  }
+
+  .ob-sidebar-edge-trigger {
+    top: var(--ob-topbar-height);
+  }
+
+  /*
+    Le burger reste dans la bannière du haut.
+  */
+  .ob-sidebar-burger--desktop {
+    top: 14px;
+  }
+}
+
+/* =========================================================
+   V7 — ACCORDÉONS NAVBAR
+   ========================================================= */
+
+/*
+  La V7 rend les sous-menus conditionnellement en React.
+  Ces règles garantissent aussi qu'aucun ancien CSS ne force leur affichage.
+*/
+.ob-sidebar-submenu {
+  display: grid;
+}
+
+.ob-sidebar-submenu[hidden] {
+  display: none !important;
+}
+
+.ob-sidebar-group {
+  position: relative;
+  z-index: 1;
+}
+
+.ob-sidebar-group:active {
+  transform: translateY(1px);
+}
+
+/*
+  Rotation très visible pour confirmer l'ouverture/fermeture.
+*/
+.ob-sidebar-chevron {
+  transition:
+    transform 160ms ease,
+    color 160ms ease;
+}
+
+.ob-sidebar-chevron.is-expanded {
+  transform: rotate(180deg);
+  color: var(--ob-orange-600);
+}
+
+
+/* =========================================================
+   V10 — LOGO BRIOCHE SANS CARRÉ + CROIX DE FERMETURE
+   ========================================================= */
+
+/*
+  Le carré orange "OB" disparaît complètement.
+  On conserve uniquement le dessin de brioche du favicon.
+*/
+.ob-sidebar-logo {
+  width: 54px !important;
+  height: 54px !important;
+  flex: 0 0 54px !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  background: transparent !important;
+  box-shadow: none !important;
+
+  overflow: visible !important;
+}
+
+.ob-sidebar-logo img {
+  display: block;
+
+  width: 54px;
+  height: 54px;
+
+  object-fit: contain;
+
+  filter:
+    drop-shadow(
+      0 6px 10px
+      rgba(245, 106, 18, .15)
+    );
+}
+
+/*
+  Croix simple à droite :
+  elle ferme entièrement la navbar.
+*/
+.ob-sidebar-close {
+  display: grid;
+  place-items: center;
+
+  width: 38px;
+  height: 38px;
+
+  flex: 0 0 38px;
+
+  border:
+    1px solid #ffd5b5;
+  border-radius: 12px;
+
+  color: var(--ob-orange-600);
+  background: #fff8f1;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 3px 10px
+    rgba(18, 52, 95, .05);
+
+  transition:
+    transform var(--ob-transition-fast),
+    color var(--ob-transition-fast),
+    border-color var(--ob-transition-fast),
+    background var(--ob-transition-fast);
+}
+
+.ob-sidebar-close:hover {
+  transform: translateY(-1px);
+
+  color: #fff;
+  border-color: var(--ob-orange-600);
+  background: var(--ob-orange-600);
+}
+
+.ob-sidebar-close:active {
+  transform: translateY(0);
+}
+
+/*
+  Un peu plus d'air entre la brioche et le nom.
+*/
+.ob-sidebar-brand {
+  gap: 10px !important;
+}
+
+.ob-sidebar-header {
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto !important;
+}

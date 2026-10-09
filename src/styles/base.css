@@ -1,0 +1,53 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--ob-bg);
+}
+
+body {
+  margin: 0;
+  color: var(--ob-text);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 143, 45, .10), transparent 24rem),
+    linear-gradient(180deg, #fffdfa 0%, var(--ob-bg) 42%, #f9f8f4 100%);
+  font-family: var(--ob-font-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+::selection {
+  color: #fff;
+  background: var(--ob-orange-500);
+}
+
+:focus-visible {
+  outline: 3px solid rgba(255, 138, 33, .30);
+  outline-offset: 2px;
+}

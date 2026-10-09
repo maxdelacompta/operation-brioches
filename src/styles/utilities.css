@@ -1,0 +1,44 @@
+.ob-muted {
+  color: var(--ob-text-muted) !important;
+}
+
+.ob-soft {
+  color: var(--ob-text-soft) !important;
+}
+
+.ob-orange {
+  color: var(--ob-orange-600) !important;
+}
+
+.ob-navy {
+  color: var(--ob-navy-900) !important;
+}
+
+.ob-text-right {
+  text-align: right !important;
+}
+
+.ob-text-center {
+  text-align: center !important;
+}
+
+.ob-flex {
+  display: flex !important;
+}
+
+.ob-flex-center {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ob-gap-8 {
+  gap: 8px !important;
+}
+
+.ob-gap-12 {
+  gap: 12px !important;
+}
+
+.ob-w-full {
+  width: 100% !important;
+}

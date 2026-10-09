@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type ComponentType,
 } from 'react'
@@ -12,16 +13,15 @@ import {
 import {
   Building2,
   ChevronDown,
+  HandCoins,
   House,
   LayoutGrid,
   Mail,
   Map,
   Menu,
   Package,
-  Settings,
   ShieldCheck,
   ShoppingCart,
-  HandCoins,
   Wallet,
   X,
 } from 'lucide-react'
@@ -30,11 +30,6 @@ import {
   useGeneralSettings,
 } from '../contexts/GeneralSettingsContext'
 
-import './Sidebar.css'
-
-/* =========================================================
-   TYPES
-   ========================================================= */
 
 type IconComponent = ComponentType<{
   size?: number
@@ -54,10 +49,6 @@ type SidebarSection = {
   icon: IconComponent
   items: SidebarItem[]
 }
-
-/* =========================================================
-   ARBORESCENCE VALIDÉE
-   ========================================================= */
 
 const sections: SidebarSection[] = [
   {
@@ -83,7 +74,6 @@ const sections: SidebarSection[] = [
       },
     ],
   },
-
   {
     id: 'commandes-dons',
     label: 'Commandes dons',
@@ -92,7 +82,6 @@ const sections: SidebarSection[] = [
       {
         label: 'Commandes entreprises',
         to: '/commandes',
-        badge: 'Base',
       },
       {
         label: 'Livraisons / Retraits',
@@ -108,7 +97,6 @@ const sections: SidebarSection[] = [
       },
     ],
   },
-
   {
     id: 'commandes-achats',
     label: 'Commandes achats',
@@ -120,7 +108,7 @@ const sections: SidebarSection[] = [
       },
       {
         label: 'Fournisseurs',
-        to: '/commandes-achats/artisans/fournisseurs',
+        to: '/commandes-achats/fournisseurs',
       },
       {
         label: 'Suivi des livraisons',
@@ -132,7 +120,6 @@ const sections: SidebarSection[] = [
       },
     ],
   },
-
   {
     id: 'etablissements',
     label: 'Établissements',
@@ -143,6 +130,10 @@ const sections: SidebarSection[] = [
         to: '/etablissement',
       },
       {
+        label: 'Référentiel AEIM',
+        to: '/administration/etablissements',
+      },
+      {
         label: 'Commandes établissements',
       },
       {
@@ -151,12 +142,8 @@ const sections: SidebarSection[] = [
       {
         label: 'Ventes',
       },
-      {
-        label: 'Vue globale — Siège',
-      },
     ],
   },
-
   {
     id: 'dons-percus',
     label: 'Dons perçus',
@@ -180,7 +167,6 @@ const sections: SidebarSection[] = [
       },
     ],
   },
-
   {
     id: 'finance',
     label: 'Finance',
@@ -202,7 +188,6 @@ const sections: SidebarSection[] = [
       },
     ],
   },
-
   {
     id: 'geographie',
     label: 'Géographie',
@@ -221,12 +206,11 @@ const sections: SidebarSection[] = [
         to: '/geographie/comparaison',
       },
       {
-        label: 'Couverture territoriale',
+        label: 'Secteurs et établissements',
         to: '/geographie/couverture',
       },
     ],
   },
-
   {
     id: 'communication',
     label: 'Communication',
@@ -244,7 +228,6 @@ const sections: SidebarSection[] = [
       },
     ],
   },
-
   {
     id: 'administration',
     label: 'Administration',
@@ -261,15 +244,10 @@ const sections: SidebarSection[] = [
       {
         label: 'Rôles et permissions',
         to: '/administration/roles',
-        badge: 'Plus tard',
       },
       {
         label: 'Campagnes',
         to: '/administration/campagnes',
-      },
-      {
-        label: 'Établissements AEIM',
-        to: '/administration/etablissements',
       },
       {
         label: 'Paramètres généraux',
@@ -283,18 +261,17 @@ const sections: SidebarSection[] = [
   },
 ]
 
-/* =========================================================
-   STOCKAGE DU MODE OUVERT / FERMÉ
-   ========================================================= */
+const PIN_STORAGE_KEY =
+  'ob-sidebar-pinned-v1'
 
-const SIDEBAR_STORAGE_KEY =
-  'ob-sidebar-desktop-open-v1'
+const FLOATING_OPEN_STORAGE_KEY =
+  'ob-sidebar-floating-open-v1'
 
-function loadDesktopOpen(): boolean {
+function loadPinned() {
   try {
     return (
       localStorage.getItem(
-        SIDEBAR_STORAGE_KEY,
+        PIN_STORAGE_KEY,
       ) !== 'false'
     )
   } catch {
@@ -302,22 +279,28 @@ function loadDesktopOpen(): boolean {
   }
 }
 
-/* =========================================================
-   DÉTECTION DU GROUPE ACTIF
-   ========================================================= */
+function loadFloatingOpen() {
+  try {
+    return (
+      localStorage.getItem(
+        FLOATING_OPEN_STORAGE_KEY,
+      ) === 'true'
+    )
+  } catch {
+    return false
+  }
+}
 
 function getActiveSection(
   pathname: string,
 ): string | null {
   for (const section of sections) {
-    const active = section.items.some(
-      (item) => {
+    const active =
+      section.items.some((item) => {
         if (!item.to) {
           return false
         }
 
-        // Les vues d'ensemble correspondent
-        // uniquement à leur route exacte.
         if (
           item.to === '/administration' ||
           item.to === '/communication' ||
@@ -333,8 +316,7 @@ function getActiveSection(
             `${item.to}/`,
           )
         )
-      },
-    )
+      })
 
     if (active) {
       return section.id
@@ -344,27 +326,20 @@ function getActiveSection(
   return null
 }
 
-/* =========================================================
-   COMPOSANT
-   ========================================================= */
-
-function Sidebar() {
+export default function Sidebar() {
   const location = useLocation()
-
-  const {
-    settings,
-  } = useGeneralSettings()
-
-  /* =======================================================
-     ÉTATS
-     ======================================================= */
+  const { settings } =
+    useGeneralSettings()
 
   const [
-    desktopOpen,
-    setDesktopOpen,
-  ] = useState<boolean>(
-    loadDesktopOpen,
-  )
+    pinned,
+    setPinned,
+  ] = useState(loadPinned)
+
+  const [
+    floatingOpen,
+    setFloatingOpen,
+  ] = useState(loadFloatingOpen)
 
   const [
     mobileOpen,
@@ -374,15 +349,48 @@ function Sidebar() {
   const [
     expandedSections,
     setExpandedSections,
-  ] = useState<Record<string, boolean>>(
-    {
-      gestion: true,
-    },
-  )
+  ] = useState<Record<string, boolean>>({
+    gestion: true,
+  })
 
-  /* =======================================================
-     IDENTITÉ
-     ======================================================= */
+  const floatingCloseTimer =
+    useRef<number | null>(null)
+
+  const navRef =
+    useRef<HTMLElement | null>(null)
+
+  function cancelFloatingClose() {
+    if (floatingCloseTimer.current !== null) {
+      window.clearTimeout(
+        floatingCloseTimer.current,
+      )
+
+      floatingCloseTimer.current = null
+    }
+  }
+
+  function openFloatingSidebar() {
+    if (pinned) {
+      return
+    }
+
+    cancelFloatingClose()
+    setFloatingOpen(true)
+  }
+
+  function scheduleFloatingClose() {
+    if (pinned) {
+      return
+    }
+
+    cancelFloatingClose()
+
+    floatingCloseTimer.current =
+      window.setTimeout(() => {
+        setFloatingOpen(false)
+        floatingCloseTimer.current = null
+      }, 240)
+  }
 
   const applicationName =
     settings.applicationName.trim() ||
@@ -392,37 +400,52 @@ function Sidebar() {
     settings.organizationName.trim() ||
     'AEIM'
 
-  /* =======================================================
-     PAGE ACTIVE
-     ======================================================= */
+  const activeSection =
+    getActiveSection(
+      location.pathname,
+    )
 
-  const activeSection = getActiveSection(
-    location.pathname,
-  )
-
-  /* =======================================================
-     SAUVEGARDER LA PRÉFÉRENCE ORDINATEUR
-     ======================================================= */
+  const desktopOpen =
+    pinned || floatingOpen
 
   useEffect(() => {
     try {
       localStorage.setItem(
-        SIDEBAR_STORAGE_KEY,
-        String(desktopOpen),
+        PIN_STORAGE_KEY,
+        String(pinned),
+      )
+
+      localStorage.setItem(
+        FLOATING_OPEN_STORAGE_KEY,
+        String(floatingOpen),
       )
     } catch {
-      // La navigation reste utilisable même
-      // si le stockage est indisponible.
+      // Le menu reste fonctionnel.
     }
-  }, [desktopOpen])
 
-  /* =======================================================
-     CHANGEMENT DE PAGE
-     ======================================================= */
+    document.documentElement.style.setProperty(
+      '--ob-sidebar-reserved',
+      pinned
+        ? 'var(--ob-sidebar-width)'
+        : '0px',
+    )
+
+    document.documentElement.dataset.sidebarPinned =
+      pinned ? 'true' : 'false'
+
+    return () => {
+      document.documentElement.style.removeProperty(
+        '--ob-sidebar-reserved',
+      )
+
+      delete document.documentElement.dataset.sidebarPinned
+    }
+  }, [
+    pinned,
+    floatingOpen,
+  ])
 
   useEffect(() => {
-    // Ouvrir automatiquement le groupe
-    // correspondant à la nouvelle page.
     if (activeSection) {
       setExpandedSections(
         (current) => ({
@@ -432,19 +455,26 @@ function Sidebar() {
       )
     }
 
-    // Fermer le tiroir mobile après navigation.
     setMobileOpen(false)
+
+    /*
+      En mode flottant, la navigation se referme
+      automatiquement après avoir choisi une page.
+    */
+    if (!pinned) {
+      setFloatingOpen(false)
+    }
   }, [
     activeSection,
     location.pathname,
+    pinned,
   ])
 
-  /* =======================================================
-     ÉCHAP : FERMETURE MOBILE
-     ======================================================= */
-
   useEffect(() => {
-    if (!mobileOpen) {
+    if (
+      !mobileOpen &&
+      !floatingOpen
+    ) {
       return
     }
 
@@ -453,6 +483,10 @@ function Sidebar() {
     ) {
       if (event.key === 'Escape') {
         setMobileOpen(false)
+
+        if (!pinned) {
+          setFloatingOpen(false)
+        }
       }
     }
 
@@ -461,33 +495,76 @@ function Sidebar() {
       handleEscape,
     )
 
-    return () => {
+    return () =>
       window.removeEventListener(
         'keydown',
         handleEscape,
       )
+  }, [
+    mobileOpen,
+    floatingOpen,
+    pinned,
+  ])
+
+  useEffect(() => {
+    return () => {
+      cancelFloatingClose()
     }
-  }, [mobileOpen])
+  }, [])
 
-  /* =======================================================
-     BURGER
-     ======================================================= */
+  useEffect(() => {
+    const nav = navRef.current
 
-  function toggleDesktop() {
-    setDesktopOpen(
-      (current) => !current,
-    )
+    if (!nav) {
+      return
+    }
+
+    const frame =
+      window.requestAnimationFrame(() => {
+        if (
+          location.pathname === '/'
+        ) {
+          nav.scrollTo({
+            top: 0,
+            behavior: 'smooth',
+          })
+
+          return
+        }
+
+        const active =
+          nav.querySelector<HTMLElement>(
+            '.ob-sidebar-link.is-active, .ob-sidebar-home.is-active',
+          )
+
+        active?.scrollIntoView({
+          block: 'nearest',
+          behavior: 'smooth',
+        })
+      })
+
+    return () =>
+      window.cancelAnimationFrame(
+        frame,
+      )
+  }, [
+    location.pathname,
+    floatingOpen,
+    pinned,
+  ])
+
+  function pinSidebarFromBurger() {
+    cancelFloatingClose()
+    setFloatingOpen(false)
+    setPinned(true)
   }
 
-  function toggleMobile() {
-    setMobileOpen(
-      (current) => !current,
-    )
+  function closeSidebar() {
+    cancelFloatingClose()
+    setMobileOpen(false)
+    setFloatingOpen(false)
+    setPinned(false)
   }
-
-  /* =======================================================
-     ACCORDÉONS
-     ======================================================= */
 
   function toggleSection(
     id: string,
@@ -500,71 +577,65 @@ function Sidebar() {
     )
   }
 
-  /* =======================================================
-     FERMER APRÈS NAVIGATION
-     ======================================================= */
-
-  function closeMobile() {
-    setMobileOpen(false)
-  }
-
-  /* =======================================================
-     AFFICHAGE
-     ======================================================= */
+  const sidebarClasses = [
+    'ob-sidebar',
+    !pinned
+      ? 'ob-sidebar--floating'
+      : '',
+    !desktopOpen
+      ? 'is-closed'
+      : '',
+    mobileOpen
+      ? 'ob-sidebar--mobile-open'
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <>
-
-      {/* ================================================
-          CONTENEUR DE LA SIDEBAR
-
-          C'est lui qui passe de 276px à 0px.
-          ================================================= */}
-
       <div
-        className={`ob-sidebar-shell ${
-          desktopOpen
-            ? 'ob-sidebar-shell--open'
-            : 'ob-sidebar-shell--closed'
-        }`}
+        className={[
+          'ob-sidebar-shell',
+          pinned
+            ? 'ob-sidebar-shell--pinned'
+            : 'ob-sidebar-shell--floating',
+        ].join(' ')}
       >
-
-        {/* ==============================================
-            SIDEBAR
-            ============================================== */}
-
         <aside
           id="ob-main-sidebar"
-          className={`ob-sidebar ${
-            mobileOpen
-              ? 'ob-sidebar--mobile-open'
-              : ''
-          } ${
-            desktopOpen
-              ? ''
-              : 'ob-sidebar--desktop-closed'
-          }`}
+          className={sidebarClasses}
           aria-label="Menu principal"
+          onMouseEnter={
+            openFloatingSidebar
+          }
+          onMouseLeave={
+            scheduleFloatingClose
+          }
         >
-
-          {/* ============================================
-              EN-TÊTE
-              ============================================ */}
-
           <div className="ob-sidebar-header">
-
             <NavLink
               to="/"
               className="ob-sidebar-brand"
-              onClick={closeMobile}
-            >
+              onClick={() => {
+                setMobileOpen(false)
 
-              <div className="ob-sidebar-logo">
-                OB
+                if (!pinned) {
+                  setFloatingOpen(false)
+                }
+              }}
+            >
+              <div
+                className="ob-sidebar-logo"
+                aria-hidden="true"
+              >
+                <img
+                  src="/brioche-favicon.svg"
+                  alt=""
+                />
               </div>
 
               <div className="ob-sidebar-brand-info">
-
                 <strong>
                   {applicationName}
                 </strong>
@@ -572,24 +643,25 @@ function Sidebar() {
                 <span>
                   {organizationName}
                 </span>
-
               </div>
-
             </NavLink>
 
+            <button
+              type="button"
+              className="ob-sidebar-close"
+              onClick={closeSidebar}
+              title="Fermer la navigation"
+              aria-label="Fermer la navigation"
+            >
+              <X size={18} />
+            </button>
           </div>
 
-          {/* ============================================
-              NAVIGATION
-              ============================================ */}
-
           <nav
+            ref={navRef}
             className="ob-sidebar-nav"
             aria-label="Rubriques Opération Brioches"
           >
-
-            {/* ACCUEIL */}
-
             <NavLink
               to="/"
               end
@@ -600,24 +672,23 @@ function Sidebar() {
                     : ''
                 }`
               }
-              onClick={closeMobile}
+              onClick={() => {
+                setMobileOpen(false)
+
+                if (!pinned) {
+                  setFloatingOpen(false)
+                }
+              }}
             >
-
-              <House size={19} />
-
-              <span>
-                Accueil
-              </span>
-
+              <House size={20} />
+              <span>Accueil</span>
             </NavLink>
 
             <div className="ob-sidebar-separator" />
 
-            {/* SECTIONS */}
-
             {sections.map(
               (section) => {
-                const SectionIcon =
+                const Icon =
                   section.icon
 
                 const expanded =
@@ -627,76 +698,35 @@ function Sidebar() {
                     ],
                   )
 
-                const active =
+                const current =
                   activeSection ===
                   section.id
 
-                /* ======================================
-                   SECTION SANS PAGE
-                   ====================================== */
-
-                if (
-                  section.items.length === 0
-                ) {
-                  return (
-
-                    <div
-                      key={section.id}
-                      className="ob-sidebar-section"
-                    >
-
-                      <div
-                        className="ob-sidebar-group ob-sidebar-group--disabled"
-                        aria-disabled="true"
-                      >
-
-                        <SectionIcon size={19} />
-
-                        <span className="ob-sidebar-group-label">
-                          {section.label}
-                        </span>
-
-                        <span className="ob-sidebar-badge">
-                          À venir
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                  )
-                }
-
-                /* ======================================
-                   SECTION AVEC SOUS-MENU
-                   ====================================== */
-
                 return (
-
                   <div
                     key={section.id}
                     className="ob-sidebar-section"
                   >
-
                     <button
                       type="button"
                       className={`ob-sidebar-group ${
-                        active
+                        current
                           ? 'is-current'
                           : ''
                       }`}
-                      onClick={() =>
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
                         toggleSection(
                           section.id,
                         )
-                      }
+                      }}
                       aria-expanded={
                         expanded
                       }
-                      aria-controls={`ob-sidebar-panel-${section.id}`}
+                      aria-controls={`ob-sidebar-section-${section.id}`}
                     >
-
-                      <SectionIcon size={19} />
+                      <Icon size={20} />
 
                       <span className="ob-sidebar-group-label">
                         {section.label}
@@ -710,34 +740,64 @@ function Sidebar() {
                             : ''
                         }`}
                       />
-
                     </button>
 
-                    {/* SOUS-MENU */}
+                    {expanded && (
+                      <div
+                        id={`ob-sidebar-section-${section.id}`}
+                        className="ob-sidebar-submenu"
+                      >
+                        {section.items.map(
+                          (item) =>
+                            item.to ? (
+                              <NavLink
+                                key={
+                                  item.label
+                                }
+                                to={item.to}
+                                end
+                                className={({
+                                  isActive,
+                                }) =>
+                                  `ob-sidebar-link ${
+                                    isActive
+                                      ? 'is-active'
+                                      : ''
+                                  }`
+                                }
+                                onClick={() => {
+                                  setMobileOpen(
+                                    false,
+                                  )
 
-                    <div
-                      id={`ob-sidebar-panel-${section.id}`}
-                      className="ob-sidebar-submenu"
-                      hidden={!expanded}
-                    >
-
-                      {section.items.map(
-                        (item) => {
-
-                          /* ============================
-                             RUBRIQUE À VENIR
-                             ============================ */
-
-                          if (!item.to) {
-                            return (
-
-                              <div
-                                key={item.label}
-                                className="ob-sidebar-link ob-sidebar-link--disabled"
-                                aria-disabled="true"
-                                title="Rubrique à développer"
+                                  if (!pinned) {
+                                    setFloatingOpen(
+                                      false,
+                                    )
+                                  }
+                                }}
                               >
+                                <span className="ob-sidebar-dot" />
 
+                                <span className="ob-sidebar-link-label">
+                                  {item.label}
+                                </span>
+
+                                {item.badge && (
+                                  <span className="ob-sidebar-badge ob-sidebar-badge--special">
+                                    {
+                                      item.badge
+                                    }
+                                  </span>
+                                )}
+                              </NavLink>
+                            ) : (
+                              <div
+                                key={
+                                  item.label
+                                }
+                                className="ob-sidebar-link ob-sidebar-link--disabled"
+                              >
                                 <span className="ob-sidebar-dot" />
 
                                 <span className="ob-sidebar-link-label">
@@ -747,174 +807,96 @@ function Sidebar() {
                                 <span className="ob-sidebar-badge">
                                   À venir
                                 </span>
-
                               </div>
-
-                            )
-                          }
-
-                          /* ============================
-                             LIEN EXISTANT
-                             ============================ */
-
-                          return (
-
-                            <NavLink
-                              key={item.label}
-                              to={item.to}
-                              end
-                              className={({ isActive }) =>
-                                `ob-sidebar-link ${
-                                  isActive
-                                    ? 'is-active'
-                                    : ''
-                                }`
-                              }
-                              onClick={closeMobile}
-                            >
-
-                              <span className="ob-sidebar-dot" />
-
-                              <span className="ob-sidebar-link-label">
-                                {item.label}
-                              </span>
-
-                              {item.badge && (
-
-                                <span className="ob-sidebar-badge ob-sidebar-badge--special">
-
-                                  {item.badge}
-
-                                </span>
-
-                              )}
-
-                            </NavLink>
-
-                          )
-                        },
-                      )}
-
-                    </div>
-
+                            ),
+                        )}
+                      </div>
+                    )}
                   </div>
-
                 )
               },
             )}
-
           </nav>
 
-          {/* ============================================
-              PIED DE PAGE
-              ============================================ */}
-
-          <footer className="ob-sidebar-footer">
-
-            <div className="ob-sidebar-footer-icon">
-              <Settings size={18} />
-            </div>
-
-            <div>
-
-              <strong>
-                {applicationName}
-              </strong>
-
-              <span>
-                Application en développement
-              </span>
-
-            </div>
-
-          </footer>
-
+          <div
+            className="ob-sidebar-community"
+            aria-hidden="true"
+          >
+            <img
+              src="/ob/ob-sidebar-community.png"
+              alt=""
+            />
+          </div>
         </aside>
-
       </div>
 
-      {/* ================================================
-          BURGER ORDINATEUR
+      {!pinned && !floatingOpen && (
+        <div
+          className="ob-sidebar-edge-trigger"
+          onMouseEnter={
+            openFloatingSidebar
+          }
+          aria-hidden="true"
+        />
+      )}
 
-          Toujours visible, même menu fermé.
-          ================================================= */}
-
-      <button
-        type="button"
-        className={`ob-sidebar-burger ob-sidebar-burger--desktop ${
-          desktopOpen
-            ? 'is-open'
-            : 'is-closed'
-        }`}
-        onClick={toggleDesktop}
-        aria-label={
-          desktopOpen
-            ? 'Fermer le menu latéral'
-            : 'Ouvrir le menu latéral'
-        }
-        aria-controls="ob-main-sidebar"
-        aria-expanded={desktopOpen}
-        title={
-          desktopOpen
-            ? 'Masquer le menu'
-            : 'Afficher le menu'
-        }
-      >
-
-        {desktopOpen ? (
-          <X size={21} />
-        ) : (
+      {!pinned && !floatingOpen && (
+        <button
+          type="button"
+          className={`ob-sidebar-burger ob-sidebar-burger--desktop ${
+            floatingOpen
+              ? 'with-panel'
+              : ''
+          }`}
+          onClick={
+            pinSidebarFromBurger
+          }
+          aria-label="Ouvrir et épingler le menu latéral"
+          aria-expanded={false}
+          aria-controls="ob-main-sidebar"
+          title="Ouvrir et épingler le menu"
+        >
           <Menu size={21} />
-        )}
-
-      </button>
-
-      {/* ================================================
-          BURGER MOBILE
-          ================================================= */}
+        </button>
+      )}
 
       <button
         type="button"
-        className={`ob-sidebar-burger ob-sidebar-burger--mobile ${
-          mobileOpen
-            ? 'is-mobile-open'
-            : ''
-        }`}
-        onClick={toggleMobile}
+        className="ob-sidebar-burger ob-sidebar-burger--mobile"
+        onClick={() =>
+          setMobileOpen(
+            (current) => !current,
+          )
+        }
         aria-label={
           mobileOpen
             ? 'Fermer le menu'
             : 'Ouvrir le menu'
         }
-        aria-controls="ob-main-sidebar"
         aria-expanded={mobileOpen}
+        aria-controls="ob-main-sidebar"
       >
-
         {mobileOpen ? (
           <X size={21} />
         ) : (
           <Menu size={21} />
         )}
-
       </button>
 
-      {/* ================================================
-          FOND MOBILE
-          ================================================= */}
-
       {mobileOpen && (
-
         <button
           type="button"
           className="ob-sidebar-overlay"
           aria-label="Fermer le menu"
-          onClick={closeMobile}
+          onClick={() => {
+            setMobileOpen(false)
+
+            if (!pinned) {
+              setFloatingOpen(false)
+            }
+          }}
         />
-
       )}
-
     </>
   )
 }
-
-export default Sidebar
