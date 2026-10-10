@@ -1,7 +1,8 @@
+import { chatStore, conversationsForUser, CHAT_STORAGE_PREFIX } from '../services/chatStore'
 import {
   useEffect,
   useMemo,
-  useRef,
+  useSyncExternalStore,
   useState,
 } from 'react'
 
@@ -24,13 +25,6 @@ import './Chat.css'
 /* =========================================================
    TYPES
    ========================================================= */
-
-type ChatMessage = {
-  id: number
-  senderId: string
-  text: string
-  read: boolean
-}
 
 type ChatProps = {
   isOpen: boolean
@@ -70,13 +64,31 @@ function Chat({
   const [search, setSearch] = useState('')
   const [message, setMessage] = useState('')
 
-  // Messages locaux classés par identifiant utilisateur.
-  // Les identifiants ne dépendent plus des noms.
-  const [messages, setMessages] = useState<
-    Record<string, ChatMessage[]>
-  >({})
+  const storedMessages = useSyncExternalStore(chatStore.subscribe, chatStore.getSnapshot, chatStore.getServerSnapshot)
+  const messages = useMemo(() => conversationsForUser(storedMessages, currentUserId), [storedMessages, currentUserId])
+  const [chatError, setChatError] = useState('')
 
-  const nextMessageId = useRef(1)
+  useEffect(() => {
+    const synchronize = (event: StorageEvent) => {
+      if (event.key === null || event.key.startsWith(CHAT_STORAGE_PREFIX)) chatStore.refresh()
+    }
+    window.addEventListener('storage', synchronize)
+    chatStore.refresh()
+    return () => window.removeEventListener('storage', synchronize)
+  }, [])
+
+  // Incoming messages are read only when this conversation is visibly open.
+  useEffect(() => {
+    if (!isOpen || !activeConversationId || !users.some(user => user.id === activeConversationId && user.status === 'actif')) return
+    const markRead = () => {
+      if (document.visibilityState !== 'visible') return
+      try { chatStore.markRead(currentUserId, activeConversationId) }
+      catch { setChatError('Impossible d’enregistrer la lecture du message dans ce navigateur.') }
+    }
+    markRead()
+    document.addEventListener('visibilitychange', markRead)
+    return () => document.removeEventListener('visibilitychange', markRead)
+  }, [isOpen, activeConversationId, currentUserId, storedMessages, users])
 
   /* =======================================================
      LISTE DES PERSONNES DISPONIBLES
@@ -165,7 +177,7 @@ function Chat({
         user.poste,
         ROLE_LABELS[user.role],
         user.perimetre,
-        getLastMessage(user.id),
+        messages[user.id]?.at(-1)?.text ?? 'Aucun message pour le moment',
       ]
         .join(' ')
         .toLowerCase()
@@ -198,30 +210,7 @@ function Chat({
     setActiveConversationId(userId)
     setMessage('')
 
-    // Marquer les éventuels messages reçus comme lus.
-    setMessages((current) => {
-      const conversationMessages =
-        current[userId] ?? []
-
-      const hasUnread = conversationMessages.some(
-        (item) =>
-          item.senderId !== currentUserId &&
-          !item.read,
-      )
-
-      if (!hasUnread) {
-        return current
-      }
-
-      return {
-        ...current,
-
-        [userId]: conversationMessages.map((item) => ({
-          ...item,
-          read: true,
-        })),
-      }
-    })
+    setChatError('')
   }
 
   /* =======================================================
@@ -254,23 +243,13 @@ function Chat({
       return
     }
 
-    const userId = activeConversation.id
-
-    const newMessage: ChatMessage = {
-      id: nextMessageId.current++,
-      senderId: currentUserId,
-      text,
-      read: true,
+    try {
+      if (!chatStore.send(currentUserId, activeConversation.id, text)) return
+      setChatError('')
+    } catch {
+      setChatError('Message non envoyé : le stockage du navigateur est indisponible ou plein. Ton texte est conservé.')
+      return
     }
-
-    setMessages((current) => ({
-      ...current,
-
-      [userId]: [
-        ...(current[userId] ?? []),
-        newMessage,
-      ],
-    }))
 
     setMessage('')
   }
@@ -281,6 +260,7 @@ function Chat({
 
   return (
     <>
+      {chatError && <div className="chat-storage-error" role="alert">{chatError}<button type="button" onClick={() => setChatError('')} aria-label="Fermer le message d’erreur">×</button></div>}
 
       {/* =================================================
           BOUTON FLOTTANT

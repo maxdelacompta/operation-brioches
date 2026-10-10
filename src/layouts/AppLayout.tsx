@@ -1,6 +1,5 @@
 import { useUsers } from '../contexts/UsersContext'
 import UserTestPanel from '../components/UserTestPanel'
-import PermissionGate from '../components/PermissionGate'
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 
@@ -34,10 +33,8 @@ function AppLayout() {
           onVisibilityChange={setTopbarVisible}
         />
 
+        <Outlet key={currentUserId} />
         <UserTestPanel placement="status" />
-        <PermissionGate>
-          <Outlet key={currentUserId} />
-        </PermissionGate>
 
       </main>
 

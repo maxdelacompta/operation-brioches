@@ -287,8 +287,14 @@
   transition: transform var(--ob-transition-fast);
 }
 
+.ob-sidebar-chevron.is-expanded {
+  transform: rotate(180deg);
+}
+
 .ob-sidebar-submenu {
   position: relative;
+
+  display: grid;
   gap: 3px;
 
   margin: 3px 0 8px 25px;
@@ -409,6 +415,8 @@
 
 .ob-sidebar-community img {
   display: block;
+
+  width: 100%;
   height: 150px;
 
   padding: 7px 8px 0;
@@ -838,4 +846,39 @@
   grid-template-columns:
     minmax(0, 1fr)
     auto !important;
+}
+
+/* Actions épingler / fermer, côte à côte dans l'en-tête. */
+.ob-sidebar-header {
+  padding-right: 15px !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+}
+.ob-sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+.ob-sidebar-header-actions .ob-sidebar-pin {
+  position: static;
+  z-index: auto;
+  inset: auto;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid #ffd5b5;
+  background: #fff8f1;
+  color: var(--ob-orange-600);
+  cursor: pointer;
+}
+.ob-sidebar-header-actions .ob-sidebar-close {
+  width: 38px;
+  height: 38px;
+}
+.ob-sidebar-header-actions button:focus-visible {
+  outline: 3px solid rgba(255, 134, 20, 0.45);
+  outline-offset: 2px;
 }

@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react'
@@ -30,12 +31,13 @@ export type AppUser = {
   poste: string
   role: UserRole
   perimetre: string
+  etablissementId?: string
   status: UserStatus
 }
 
 export type UserInput = Pick<
   AppUser,
-  'name' | 'email' | 'poste' | 'role' | 'perimetre'
+  'name' | 'email' | 'poste' | 'role' | 'perimetre' | 'etablissementId'
 >
 
 /* =========================================================
@@ -113,7 +115,9 @@ function loadUsers(): AppUser[] {
       return [demoAdmin, ...validUsers]
     }
 
-    return validUsers
+    // Le compte système reste toujours actif et administrateur, même si
+    // une ancienne sauvegarde locale contient une version modifiée.
+    return [demoAdmin, ...validUsers.filter(user => user.id !== DEMO_CURRENT_USER_ID)]
   } catch {
     return [demoAdmin]
   }
@@ -126,11 +130,8 @@ function loadUsers(): AppUser[] {
 type UsersContextValue = {
   users: AppUser[]
   currentUserId: string
+  setCurrentUserId: (id: string) => void
   currentUser: AppUser | null
-  isTestingUser: boolean
-  canTestUsers: boolean
-  testUser: (id: string) => boolean
-  stopTestingUser: () => void
   addUser: (input: UserInput) => void
   updateUser: (id: string, input: UserInput) => void
   toggleUserStatus: (id: string) => void
@@ -150,6 +151,19 @@ export function UsersProvider({
   children: ReactNode
 }) {
   const [users, setUsers] = useState<AppUser[]>(loadUsers)
+  const [selectedUserId, setSelectedUserId] = useState<string>(() => {
+    try { return sessionStorage.getItem('ob-test-current-user-v1') || DEMO_CURRENT_USER_ID }
+    catch { return DEMO_CURRENT_USER_ID }
+  })
+  const currentUserId = users.some(user => user.id === selectedUserId && user.status === 'actif')
+    ? selectedUserId
+    : DEMO_CURRENT_USER_ID
+
+  function setCurrentUserId(id: string) {
+    if (!users.some(user => user.id === id && user.status === 'actif')) return
+    setSelectedUserId(id)
+    try { sessionStorage.setItem('ob-test-current-user-v1', id) } catch { /* Navigation de démonstration */ }
+  }
 
   /* SAUVEGARDE */
 
@@ -166,27 +180,12 @@ export function UsersProvider({
     }
   }, [users])
 
-  // Simulation locale : le compte de départ reste l’administrateur de démonstration.
-  // Aucun identifiant de connexion réel n’est remplacé.
-  const [testUserId, setTestUserId] = useState<string | null>(null)
-  const administrator = users.find(user => user.id === DEMO_CURRENT_USER_ID) ?? null
-  const canTestUsers = administrator?.role === 'administrateur' && administrator.status === 'actif'
-  const testedUser = canTestUsers
-    ? users.find(user => user.id === testUserId && user.status === 'actif')
-    : undefined
-  const isTestingUser = Boolean(testedUser)
-
-  function testUser(id: string) {
-    if (!canTestUsers || !users.some(user => user.id === id && user.status === 'actif')) return false
-    setTestUserId(id === DEMO_CURRENT_USER_ID ? null : id)
-    return true
-  }
-
-  function stopTestingUser() { setTestUserId(null) }
-
   /* UTILISATEUR ACTUEL */
 
-  const currentUser = testedUser ?? administrator
+  const currentUser =
+    users.find(
+      (user) => user.id === currentUserId,
+    ) ?? null
 
   /* AJOUT */
 
@@ -212,7 +211,6 @@ export function UsersProvider({
           ? {
               ...user,
               ...input,
-              role: id === DEMO_CURRENT_USER_ID ? 'administrateur' : input.role,
             }
           : user,
       ),
@@ -245,18 +243,18 @@ export function UsersProvider({
 
   /* VALEUR PARTAGÉE */
 
-  const value: UsersContextValue = {
-    users,
-    currentUserId: currentUser?.id ?? DEMO_CURRENT_USER_ID,
-    currentUser,
-    isTestingUser,
-    canTestUsers,
-    testUser,
-    stopTestingUser,
-    addUser,
-    updateUser,
-    toggleUserStatus,
-  }
+  const value = useMemo<UsersContextValue>(
+    () => ({
+      users,
+      currentUserId,
+      setCurrentUserId,
+      currentUser,
+      addUser,
+      updateUser,
+      toggleUserStatus,
+    }),
+    [users, currentUser, currentUserId],
+  )
 
   return (
     <UsersContext.Provider value={value}>

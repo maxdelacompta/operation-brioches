@@ -20,6 +20,7 @@ import {
   Map,
   Menu,
   Package,
+  Pin,
   ShieldCheck,
   ShoppingCart,
   Wallet,
@@ -27,6 +28,8 @@ import {
 } from 'lucide-react'
 
 import { useUsers } from '../contexts/UsersContext'
+
+import { useAccess } from '../lib/useAccess'
 
 import {
   useGeneralSettings,
@@ -225,7 +228,10 @@ const sections: SidebarSection[] = [
         label: "Vue d'ensemble",
         to: '/administration',
       },
-      { label: 'Liste des établissements', to: '/administration/etablissements' },
+      {
+        label: 'Liste des établissements',
+        to: '/administration/etablissements',
+      },
       {
         label: 'Utilisateurs',
         to: '/administration/utilisateurs',
@@ -317,6 +323,11 @@ function getActiveSection(
 
 export default function Sidebar() {
   const location = useLocation()
+  const { canVisit } = useAccess()
+  const visibleSections = sections.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => Boolean(item.to && canVisit(item.to))),
+  })).filter((section) => section.items.length > 0)
   const { currentUser } = useUsers()
   const { settings } =
     useGeneralSettings()
@@ -348,6 +359,8 @@ export default function Sidebar() {
 
   const navRef =
     useRef<HTMLElement | null>(null)
+
+  const previousPathRef = useRef(location.pathname)
 
   function cancelFloatingClose() {
     if (floatingCloseTimer.current !== null) {
@@ -451,9 +464,12 @@ export default function Sidebar() {
       En mode flottant, la navigation se referme
       automatiquement après avoir choisi une page.
     */
-    if (!pinned) {
+    // Ne ferme le volet flottant qu'en cas de navigation,
+    // pas quand l'utilisateur désépingle avec la punaise.
+    if (previousPathRef.current !== location.pathname && !pinned) {
       setFloatingOpen(false)
     }
+    previousPathRef.current = location.pathname
   }, [
     activeSection,
     location.pathname,
@@ -636,15 +652,38 @@ export default function Sidebar() {
               </div>
             </NavLink>
 
-            <button
-              type="button"
-              className="ob-sidebar-close"
-              onClick={closeSidebar}
-              title="Fermer la navigation"
-              aria-label="Fermer la navigation"
-            >
-              <X size={18} />
-            </button>
+            <div className="ob-sidebar-header-actions">
+              <button
+                type="button"
+                className={`ob-sidebar-pin ${pinned ? 'is-pinned' : ''}`}
+                onClick={() => {
+                  cancelFloatingClose()
+                  // Désépingler ne ferme jamais immédiatement le menu.
+                  // Il reste visible tant que la souris est dessus.
+                  if (pinned) {
+                    setFloatingOpen(true)
+                    setPinned(false)
+                  } else {
+                    setPinned(true)
+                    setFloatingOpen(false)
+                  }
+                }}
+                aria-label={pinned ? 'Désépingler le menu' : 'Épingler le menu'}
+                aria-pressed={pinned}
+                title={pinned ? 'Désépingler le menu' : 'Épingler le menu'}
+              >
+                <Pin size={18} />
+              </button>
+              <button
+                type="button"
+                className="ob-sidebar-close"
+                onClick={closeSidebar}
+                title="Fermer la navigation"
+                aria-label="Fermer la navigation"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
           <nav
@@ -652,6 +691,7 @@ export default function Sidebar() {
             className="ob-sidebar-nav"
             aria-label="Rubriques Opération Brioches"
           >
+            {canVisit('/') && (
             <NavLink
               to="/"
               end
@@ -673,10 +713,11 @@ export default function Sidebar() {
               <House size={20} />
               <span>Accueil</span>
             </NavLink>
+            )}
 
             <div className="ob-sidebar-separator" />
 
-            {sections.map(
+            {visibleSections.map(
               (section) => {
                 const Icon =
                   section.icon

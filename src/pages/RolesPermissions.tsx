@@ -113,10 +113,7 @@ const roleIcons: Record<
    ICÔNES DES MODULES
    ========================================================= */
 
-const moduleIcons: Record<
-  PermissionModule,
-  LucideIcon
-> = {
+const moduleIcons: Partial<Record<PermissionModule, LucideIcon>> = {
   accueil: Home,
   dashboard: BarChart3,
   commandes: ShoppingCart,
@@ -676,6 +673,25 @@ function RolesPermissions() {
   /* =======================================================
      MODIFICATION D'UNE PERMISSION
      ======================================================= */
+
+  function handleAllModulePermissions(moduleKey: PermissionModule) {
+    if (!canEditSelectedRole) return
+    const definition = PERMISSION_MODULES.find((item) => item.key === moduleKey)
+    if (!definition) return
+    const granted = permissions[selectedRole][moduleKey]
+    const allGranted = definition.actions.every((action) => granted.includes(action))
+    if (allGranted) {
+      // Désactiver "Voir" retire toutes les autorisations du module.
+      if (granted.includes('consulter')) togglePermission(selectedRole, moduleKey, 'consulter')
+    } else {
+      // Le hook emploie une mise à jour fonctionnelle, sans écrasement des changements.
+      definition.actions.forEach((action) => {
+        if (!granted.includes(action)) togglePermission(selectedRole, moduleKey, action)
+      })
+    }
+    setNotice('Autorisations du module mises à jour.')
+    setError('')
+  }
 
   function handlePermissionToggle(
     moduleKey: PermissionModule,
@@ -1569,6 +1585,8 @@ function RolesPermissions() {
                       ),
                     )}
 
+                    <th scope="col">Tous les droits</th>
+
                   </tr>
 
                 </thead>
@@ -1578,9 +1596,7 @@ function RolesPermissions() {
                   {PERMISSION_MODULES.map(
                     (module) => {
                       const ModuleIcon =
-                        moduleIcons[
-                          module.key
-                        ]
+                        moduleIcons[module.key] ?? ShieldCheck
 
                       const granted =
                         permissions[
@@ -1670,6 +1686,17 @@ function RolesPermissions() {
                               )
                             },
                           )}
+
+                          <td>
+                            <input
+                              type="checkbox"
+                              className="rp-checkbox"
+                              checked={module.actions.every((action) => granted.includes(action))}
+                              disabled={!canEditSelectedRole}
+                              aria-label={`Tous les droits — ${module.label} — ${ROLE_LABELS[selectedRole]}`}
+                              onChange={() => handleAllModulePermissions(module.key)}
+                            />
+                          </td>
 
                         </tr>
 

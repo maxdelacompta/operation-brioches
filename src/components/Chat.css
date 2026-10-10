@@ -939,3 +939,17 @@
     font-size: 11px;
   }
 }
+.chat-storage-error {
+  position: fixed;
+  z-index: 1000;
+  right: 16px;
+  bottom: 16px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid #b42318;
+  border-radius: 12px;
+  background: #fff4f2;
+  color: #912018;
+  box-shadow: 0 4px 18px #0002;
+}
+.chat-storage-error button { margin-left: 10px; border: 0; background: transparent; color: inherit; font-size: 20px; }

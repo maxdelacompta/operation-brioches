@@ -23,3 +23,6 @@
 
 /* Le sélecteur est intégré à la grille de la page Rôles et permissions. */
 .ob-user-test--permissions { margin: 0; }
+.ob-user-test h2 { margin: 0 0 8px; font-size: 18px; }
+.ob-user-test__controls { margin-top: 12px; }
+.ob-user-test button:disabled, .ob-user-test select:disabled { opacity: .55; cursor: not-allowed; }

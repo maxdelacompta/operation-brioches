@@ -1,4 +1,3 @@
-import { usePermissions } from '../contexts/PermissionsContext'
 import {
   useMemo,
   useState,
@@ -28,6 +27,8 @@ import {
   type UserStatus,
 } from '../contexts/UsersContext'
 
+import { useEtablissements } from '../contexts/EtablissementsContext'
+
 import './Utilisateurs.css'
 
 /* =========================================================
@@ -40,6 +41,7 @@ const emptyForm: UserInput = {
   poste: '',
   role: 'etablissement',
   perimetre: '',
+  etablissementId: '',
 }
 
 const roleOptions = Object.keys(
@@ -64,18 +66,15 @@ function initials(name: string) {
    ========================================================= */
 
 function Utilisateurs() {
+  const { etablissements } = useEtablissements()
+  const etablissementById = new Map(etablissements.map((e) => [e.id, e.nom]))
   const {
     users,
     currentUserId,
-    currentUser,
     addUser,
     updateUser,
     toggleUserStatus,
   } = useUsers()
-
-  const { hasPermission } = usePermissions()
-  const canCreate = Boolean(currentUser && hasPermission(currentUser.role, 'utilisateurs', 'creer'))
-  const canEdit = Boolean(currentUser && hasPermission(currentUser.role, 'utilisateurs', 'modifier'))
 
   const [search, setSearch] = useState('')
 
@@ -148,7 +147,6 @@ function Utilisateurs() {
      ======================================================= */
 
   function openCreate() {
-    if (!canCreate) return
     setEditingId(null)
     setForm({ ...emptyForm })
     setError('')
@@ -157,7 +155,6 @@ function Utilisateurs() {
   }
 
   function openEdit(user: AppUser) {
-    if (!canEdit) return
     setEditingId(user.id)
 
     setForm({
@@ -166,6 +163,7 @@ function Utilisateurs() {
       poste: user.poste,
       role: user.role,
       perimetre: user.perimetre,
+      etablissementId: user.etablissementId || '',
     })
 
     setError('')
@@ -185,10 +183,6 @@ function Utilisateurs() {
 
   function saveUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (editingId ? !canEdit : !canCreate) {
-      setError('Votre rôle ne permet pas cette action.')
-      return
-    }
     setError('')
 
     const input: UserInput = {
@@ -197,6 +191,7 @@ function Utilisateurs() {
       poste: form.poste.trim(),
       role: form.role,
       perimetre: form.perimetre.trim(),
+      etablissementId: form.etablissementId || '',
     }
 
     if (!input.name) {
@@ -274,7 +269,6 @@ function Utilisateurs() {
         <button
           type="button"
           className="users-primary-button"
-          disabled={!canCreate}
           onClick={openCreate}
         >
           <Plus size={18} />
@@ -425,6 +419,21 @@ function Utilisateurs() {
               </label>
 
               <label className="users-form-wide">
+                Établissement affecté
+                <select
+                  value={form.etablissementId || ''}
+                  onChange={(event) => setForm((current) => ({ ...current, etablissementId: event.target.value }))}
+                >
+                  <option value="">Aucun établissement affecté</option>
+                  {etablissements.map((etablissement) => (
+                    <option key={etablissement.id} value={etablissement.id}>
+                      {etablissement.nom}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="users-form-wide">
                 Établissement / périmètre
                 <input
                   value={form.perimetre}
@@ -541,6 +550,7 @@ function Utilisateurs() {
                 <th>Utilisateur</th>
                 <th>Poste</th>
                 <th>Rôle</th>
+                <th>Établissement</th>
                 <th>Périmètre</th>
                 <th>Statut</th>
                 <th>Actions</th>
@@ -583,6 +593,8 @@ function Utilisateurs() {
                     </span>
                   </td>
 
+                  <td>{user.etablissementId ? (etablissementById.get(user.etablissementId) || 'Établissement supprimé') : '—'}</td>
+
                   <td>
                     {user.perimetre || '—'}
                   </td>
@@ -606,7 +618,6 @@ function Utilisateurs() {
                         type="button"
                         title={`Modifier ${user.name}`}
                         aria-label={`Modifier ${user.name}`}
-                        disabled={!canEdit}
                         onClick={() => openEdit(user)}
                       >
                         <Pencil size={17} />
@@ -615,7 +626,7 @@ function Utilisateurs() {
                       <button
                         type="button"
                         disabled={
-                          !canEdit || user.id === currentUserId || user.id === 'demo-admin'
+                          user.id === currentUserId
                         }
                         title={
                           user.id === currentUserId
@@ -630,7 +641,6 @@ function Utilisateurs() {
                             : 'Activer'
                         } ${user.name}`}
                         onClick={() => {
-                          if (!canEdit) return
                           toggleUserStatus(user.id)
 
                           setNotice(

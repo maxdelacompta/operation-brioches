@@ -1,50 +1,86 @@
-import { useLocation, useNavigate } from 'react-router-dom'
-import { DEMO_CURRENT_USER_ID, ROLE_LABELS, useUsers } from '../contexts/UsersContext'
-import { usePermissions } from '../contexts/PermissionsContext'
-import { PERMISSION_ACTIONS, PERMISSION_MODULES } from '../security/permissionCatalog'
-import { permissionModuleForPath } from '../security/accessPolicy'
-import './UserTestPanel.css'
+import { useState, type CSSProperties } from 'react'
+import { useUsers, ROLE_LABELS, DEMO_CURRENT_USER_ID } from '../contexts/UsersContext'
 
-export default function UserTestPanel({ placement = 'permissions' }: { placement?: 'permissions' | 'status' }) {
-  const { users, currentUser, currentUserId, canTestUsers, isTestingUser, testUser, stopTestingUser } = useUsers()
-  const { hasPermission } = usePermissions()
-  const location = useLocation()
-  const navigate = useNavigate()
-  if (!canTestUsers || (placement === 'status' && !isTestingUser) || (placement === 'permissions' && isTestingUser)) return null
-  const moduleKey = permissionModuleForPath(location.pathname)
-  const module = PERMISSION_MODULES.find(item => item.key === moduleKey)
-  const candidates = users.filter(user => user.status === 'actif')
+type Props = { placement?: 'status' }
+
+/** Panneau de simulation : ouverture au survol des 15 derniers pixels de l'écran. */
+export default function UserTestPanel({ placement }: Props) {
+  const { users, currentUser, currentUserId, setCurrentUserId } = useUsers()
+  const [open, setOpen] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
+  const activeUsers = users.filter(user => user.status === 'actif')
+
+  if (placement !== 'status') {
+    return <div style={{ padding: '10px 14px', borderRadius: 12, background: '#FFF9F3', border: '1px solid #E8DCCF', color: '#263B60', fontSize: 13 }}>
+      🧪 Le mode test des permissions s'ouvre en approchant la souris du bas de l'écran (15 px).
+    </div>
+  }
+
+  const button: CSSProperties = {
+    border: '1px solid #F2B17F', background: '#FFF1E4', color: '#AA5416',
+    borderRadius: 9, padding: '8px 12px', cursor: 'pointer', fontWeight: 700,
+  }
+
   return (
-    <aside className={`ob-user-test ${placement === 'permissions' ? 'ob-user-test--permissions' : ''} ${isTestingUser ? 'ob-user-test--active' : ''}`} aria-label="Test des utilisateurs">
-      <div className="ob-user-test__controls">
-        {placement === 'permissions' && <>
-        <label htmlFor="ob-test-user">{isTestingUser ? 'Test en cours' : 'Tester un utilisateur'}</label>
-        <select id="ob-test-user" value={currentUserId} onChange={event => {
-          const selected = candidates.find(user => user.id === event.target.value)
-          if (!selected || !testUser(selected.id)) return
-          const firstPage = PERMISSION_MODULES.find(item => hasPermission(selected.role, item.key, 'consulter'))
-          navigate(firstPage?.path ?? '/')
-        }}>
-          {candidates.map(user => <option key={user.id} value={user.id}>{user.name} — {ROLE_LABELS[user.role]}{user.id === DEMO_CURRENT_USER_ID ? ' (compte de départ)' : ''}</option>)}
-        </select>
-        </>}
-        {isTestingUser && <button type="button" onClick={() => { stopTestingUser(); navigate('/administration/roles') }}>Revenir à l’administrateur</button>}
-        {!isTestingUser && <button type="button" onClick={() => navigate('/administration/utilisateurs')}>Gérer les utilisateurs</button>}
-      </div>
-      {candidates.length === 1 && <p>Crée un utilisateur actif, attribue-lui un rôle et configure ses droits pour commencer le test.</p>}
-      {isTestingUser && <>
-        <p role="status">Tu testes <strong>{currentUser?.name}</strong> · {currentUser && ROLE_LABELS[currentUser.role]}. Les menus et l’accès aux pages suivent ce rôle.</p>
-        <p>Simulation locale, sans connexion réelle. Les modifications éventuelles utilisent les données de ce navigateur. Actualiser la page termine le test.</p>
-      </>}
-      <details>
-        <summary>Droits de cette page et limites du test</summary>
-        <p><strong>{module?.label ?? 'Page non répertoriée'}</strong> — l’accès « Voir » est contrôlé, y compris par adresse directe.</p>
-        {moduleKey && currentUser && <ul className="ob-user-test__rights">{PERMISSION_ACTIONS.map(action => {
-          const supported = module?.actions.some(available => available === action.key)
-          return <li key={action.key}>{action.label} : <strong>{supported ? (hasPermission(currentUser.role, moduleKey, action.key) ? 'accordé' : 'non accordé') : 'non configuré'}</strong></li>
-        })}</ul>}
-        <p>Les autres droits affichés correspondent à la configuration. Les boutons de création, modification, validation, suppression et export ne les appliquent pas encore partout. Le périmètre de données n’est pas filtré. Ce mode ne valide donc pas encore ces restrictions.</p>
-      </details>
+    <aside
+      aria-label="Mode test des permissions"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+        height: open ? 'auto' : 15,
+        minHeight: open ? 64 : 15,
+        background: open ? '#FFF9F3' : 'transparent',
+        borderTop: open ? '1px solid #E8DCCF' : 'none',
+        boxShadow: open ? '0 -4px 22px rgba(38,59,96,.12)' : 'none',
+        boxSizing: 'border-box', color: '#263B60', fontSize: 13,
+      }}
+    >
+      {!open && (
+        <button
+          type="button"
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
+          aria-label="Ouvrir le mode test des permissions"
+          title="Ouvrir le mode test des permissions"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: 15, border: 'none',
+            padding: 0, background: 'transparent', cursor: 'pointer' }}
+        />
+      )}
+      {open && (
+        <div style={{ padding: '12px 18px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+          <strong style={{ whiteSpace: 'nowrap' }}>🧪 Mode test des permissions</strong>
+          <label htmlFor="ob-user-test-footer">Utilisateur :</label>
+          <select
+            id="ob-user-test-footer"
+            value={currentUserId}
+            onChange={event => setCurrentUserId(event.target.value)}
+            style={{ minWidth: 180, maxWidth: '100%', padding: '7px 10px',
+              background: '#fff', color: '#263B60', border: '1px solid #C9D4E0', borderRadius: 8 }}
+          >
+            {activeUsers.map(user => (
+              <option key={user.id} value={user.id}>{user.name} — {ROLE_LABELS[user.role]}</option>
+            ))}
+          </select>
+          <span style={{ opacity: .8 }}>Profil : <strong>{currentUser ? ROLE_LABELS[currentUser.role] : 'Aucun'}</strong></span>
+          {currentUserId !== DEMO_CURRENT_USER_ID && (
+            <button type="button" onClick={() => setCurrentUserId(DEMO_CURRENT_USER_ID)} style={button}>
+              ↩ Retour administrateur
+            </button>
+          )}
+          <button type="button" onClick={() => setShowInfo(value => !value)}
+            aria-expanded={showInfo} style={{ ...button, marginLeft: 'auto' }}>
+            {showInfo ? 'Masquer les infos −' : 'Infos +'}
+          </button>
+          <button type="button" onClick={() => setOpen(false)} style={button} aria-label="Fermer le panneau de test">
+            ✕
+          </button>
+          {showInfo && <p style={{ flexBasis: '100%', margin: 0, fontSize: 12, opacity: .8 }}>
+            Simulation locale seulement : aucune authentification réelle.
+            {activeUsers.length < 2 ? ' Crée un autre utilisateur actif pour tester ses droits.' : ''}
+          </p>}
+        </div>
+      )}
     </aside>
   )
 }
