@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom'
 import {
   useEffect,
   useMemo,
@@ -268,6 +269,7 @@ const PIECES: {
    ========================================================= */
 
 function FichesCaisse() {
+  const [globalSearchParams] = useSearchParams()
   const {
     fichesCaisse,
     setFichesCaisse,
@@ -364,6 +366,14 @@ function FichesCaisse() {
     useState<FicheCaisse | null>(
       null,
     )
+
+  // Ouverture directe depuis la recherche globale, sans contourner les permissions.
+  const ficheRecherche = globalSearchParams.get('fiche')
+  useEffect(() => {
+    if (!ficheRecherche) return
+    const match = fichesCaisse.find(f => String(f.id) === ficheRecherche || f.numero === ficheRecherche)
+    if (match) setDetailFiche(match)
+  }, [ficheRecherche, fichesCaisse])
 
   const [
     exportMenuOpen,

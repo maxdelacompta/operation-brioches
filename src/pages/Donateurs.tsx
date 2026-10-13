@@ -47,6 +47,7 @@ import {
 
 import type {
   Commande,
+  FicheCaisse,
   Donateur,
   StatutCommande,
 } from '../types/ob'
@@ -153,6 +154,7 @@ function Donateurs() {
     donateurs,
     setDonateurs,
     commandes,
+    fichesCaisse,
   } = useObData()
 
   /* =======================================================
@@ -1110,6 +1112,7 @@ function Donateurs() {
                 selectedDonateur.id,
             )
           }
+          fichesCaisse={fichesCaisse.filter(fiche => fiche.donateurId === selectedDonateur.id || commandes.some(commande => commande.donateurId === selectedDonateur.id && commande.id === fiche.commandeId))}
           onBack={() =>
             setSelectedDonateurId(
               null,
@@ -1969,6 +1972,7 @@ function Donateurs() {
 function DonateurDetail({
   donateur,
   commandes,
+  fichesCaisse,
   onBack,
   onEdit,
   onCreateCommande,
@@ -1979,6 +1983,9 @@ function DonateurDetail({
 
   commandes:
     Commande[]
+
+  fichesCaisse:
+    FicheCaisse[]
 
   onBack:
     () => void
@@ -2016,6 +2023,28 @@ function DonateurDetail({
     }, [
       commandes,
     ])
+
+  const historique = useMemo(() => {
+    const events = [
+      ...commandes.map(commande => ({
+        id: `commande-${commande.id}`,
+        date: commande.dateCommande,
+        titre: `Commande ${commande.numero}`,
+        detail: `${commande.quantite} brioche(s) · ${commande.statut} · ${(commande.quantite * commande.prixUnitaire).toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}`,
+        destination: 'commande' as const,
+        commandeId: commande.id,
+      })),
+      ...fichesCaisse.map(fiche => ({
+        id: `caisse-${fiche.id}`,
+        date: fiche.date,
+        titre: `Fiche de caisse ${fiche.numero}`,
+        detail: `${fiche.libelle} · ${fiche.campagne}`,
+        destination: 'caisse' as const,
+        commandeId: null,
+      })),
+    ]
+    return events.sort((a,b) => b.date.localeCompare(a.date))
+  }, [commandes, fichesCaisse])
 
   const totalQuantite =
     commandes.reduce(
@@ -2848,10 +2877,31 @@ function DonateurDetail({
 
       {tab ===
         'historique' && (
-        <EmptySection
-          title="Historique"
-          text="L'historique du donateur sera affiché ici."
-        />
+        <section className="donateur-detail-card donateur-history-card">
+          <h2>Historique du donateur</h2>
+          <p className="donateur-history-help">Commandes et fiches de caisse liées à cette fiche, issues des données existantes.</p>
+          {historique.length === 0 ? (
+            <p>Aucune opération liée à ce donateur pour le moment.</p>
+          ) : (
+            <div className="donateur-history-list">
+              {historique.map(event => (
+                <div className="donateur-history-item" key={event.id}>
+                  <div>
+                    <small>{event.date || 'Date non renseignée'}</small>
+                    <strong>{event.titre}</strong>
+                    <span>{event.detail}</span>
+                  </div>
+                  {event.destination === 'commande' && event.commandeId !== null && (
+                    <button type="button" className="donateurs-secondary-button" onClick={() => onOpenCommande(event.commandeId!)}>
+                      Ouvrir la commande
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="donateur-history-help">Les justificatifs, mouvements de coffre et reçus fiscaux ne seront affichés qu'une fois leurs liens métier établis.</p>
+        </section>
       )}
 
     </div>

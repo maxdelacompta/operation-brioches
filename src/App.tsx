@@ -31,9 +31,12 @@ import SuiviBrioches from './pages/SuiviBrioches'
 import StockBrioches from './pages/StockBrioches'
 import RecapBrioches from './pages/RecapBrioches'
 
+import Recherche from './pages/Recherche'
 import Bdd from './pages/Bdd'
+import StandsBrioches from './pages/StandsBrioches'
 import Donateurs from './pages/Donateurs'
 import Mairies from './pages/Mairies'
+import Benevoles from './pages/Benevoles'
 
 import Commandes from './pages/Commandes'
 import LivraisonsRetraits from './pages/LivraisonsRetraits'
@@ -74,6 +77,7 @@ function App() {
                   <Route element={<AppLayout />}>
                     <Route path="/" element={<Accueil />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/recherche" element={<Recherche />} />
                     <Route
                       path="/gestion/suivi-caisse-tpe"
                       element={<SuiviCaisseTpe />}
@@ -85,9 +89,11 @@ function App() {
                     <Route path="/etablissements/stock-brioches" element={<StockBrioches />} />
                     <Route path="/etablissements/recap-global" element={<RecapBrioches />} />
 
+                    <Route path="/gestion/stands-brioches" element={<StandsBrioches />} />
                     <Route path="/bdd" element={<Bdd />} />
                     <Route path="/bdd/donateurs" element={<Donateurs />} />
                     <Route path="/bdd/mairies" element={<Mairies />} />
+                     <Route path="/bdd/benevoles" element={<Benevoles />} />
 
                     <Route path="/commandes" element={<Commandes />} />
                     <Route

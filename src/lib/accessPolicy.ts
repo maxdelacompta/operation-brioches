@@ -9,21 +9,13 @@ export function permissionModuleForPath(pathname: string): PermissionModule | nu
   return PERMISSION_MODULES.find(module => module.path === path)?.key ?? null
 }
 
-// La même règle est utilisée dans les menus et pour la navigation directe.
 export function canAccessPath(
   user: Pick<AppUser, 'role' | 'status'> | null,
   pathname: string,
   hasPermission: (role: AppUser['role'], module: PermissionModule, action: PermissionAction) => boolean,
 ): boolean {
-  if (!user || user.status !== 'actif') return false
-
-  const path = pathname.replace(/\/+$/, '') || '/'
-
-  const module = permissionModuleForPath(path)
-  if (!module) return false
-
-  // Le compte administrateur a accès à tous les modules déclarés.
-  if (user.role === 'administrateur' || String(user.role) === 'admin') return true
-
-  return hasPermission(user.role, module, 'consulter')
+  // La recherche est accessible à tout compte actif ; ses résultats filtrent les droits.
+  if (pathname.replace(/\/+$/, '') === '/recherche') return Boolean(user && user.status === 'actif')
+  const module = permissionModuleForPath(pathname)
+  return Boolean(user && user.status === 'actif' && module && hasPermission(user.role, module, 'consulter'))
 }

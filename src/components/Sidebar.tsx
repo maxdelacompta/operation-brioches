@@ -12,11 +12,11 @@ import {
 
 import {
   Building2,
+  Database,
   ChevronDown,
   HandCoins,
   House,
   LayoutGrid,
-  Mail,
   Map,
   Menu,
   Package,
@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 
 import { useUsers } from '../contexts/UsersContext'
+import './SidebarBdd.css'
 
 import { useAccess } from '../lib/useAccess'
 
@@ -46,6 +47,7 @@ type SidebarItem = {
   label: string
   to?: string
   badge?: string
+  children?: SidebarItem[]
 }
 
 type SidebarSection = {
@@ -70,13 +72,19 @@ const sections: SidebarSection[] = [
         to: '/gestion/suivi-caisse-tpe',
       },
       {
-        label: 'BDD Donateurs',
-        to: '/bdd/donateurs',
+        label: 'Stands Brioches',
+        to: '/gestion/stands-brioches',
       },
-      {
-        label: 'BDD Mairies',
-        to: '/bdd/mairies',
-      },
+    ],
+  },
+  {
+    id: 'bdd',
+    label: 'BDD',
+    icon: Database,
+    items: [
+      { label: 'Donateurs', to: '/bdd/donateurs' },
+      { label: 'Mairies', to: '/bdd/mairies' },
+      { label: 'Bénévoles', to: '/bdd/benevoles' },
     ],
   },
   {
@@ -160,7 +168,7 @@ const sections: SidebarSection[] = [
   },
   {
     id: 'finance',
-    label: 'Finance',
+    label: 'Documents',
     icon: Wallet,
     items: [
       {
@@ -199,23 +207,6 @@ const sections: SidebarSection[] = [
       {
         label: 'Secteurs et établissements',
         to: '/geographie/couverture',
-      },
-    ],
-  },
-  {
-    id: 'communication',
-    label: 'Communication',
-    icon: Mail,
-    items: [
-      {
-        label: "Vue d'ensemble",
-        to: '/communication',
-      },
-      {
-        label: 'Mails automatiques',
-      },
-      {
-        label: 'Relances',
       },
     ],
   },
@@ -292,6 +283,7 @@ function getActiveSection(
   for (const section of sections) {
     const active =
       section.items.some((item) => {
+        if (item.children?.some(child => child.to === pathname)) return true
         if (!item.to) {
           return false
         }
@@ -326,7 +318,10 @@ export default function Sidebar() {
   const { canVisit } = useAccess()
   const visibleSections = sections.map((section) => ({
     ...section,
-    items: section.items.filter((item) => Boolean(item.to && canVisit(item.to))),
+    items: section.items.map((item) => ({
+      ...item,
+      children: item.children?.filter(child => Boolean(child.to && canVisit(child.to))),
+    })).filter(item => Boolean((item.to && canVisit(item.to)) || item.children?.length)),
   })).filter((section) => section.items.length > 0)
   const { currentUser } = useUsers()
   const { settings } =
@@ -342,6 +337,10 @@ export default function Sidebar() {
     setFloatingOpen,
   ] = useState(loadFloatingOpen)
 
+  const [bddOpen, setBddOpen] = useState(() =>
+    window.location.pathname.startsWith('/bdd'),
+  )
+
   const [
     mobileOpen,
     setMobileOpen,
@@ -352,6 +351,7 @@ export default function Sidebar() {
     setExpandedSections,
   ] = useState<Record<string, boolean>>({
     gestion: true,
+    bdd: window.location.pathname.startsWith('/bdd'),
   })
 
   const floatingCloseTimer =
@@ -449,6 +449,7 @@ export default function Sidebar() {
   ])
 
   useEffect(() => {
+    if (location.pathname.startsWith('/bdd')) setBddOpen(true)
     if (activeSection) {
       setExpandedSections(
         (current) => ({
@@ -780,7 +781,30 @@ export default function Sidebar() {
                       >
                         {section.items.filter(item => item.to !== '/etablissements/recap-global' || ['administrateur','comptabilite','communication'].includes(currentUser?.role ?? '')).map(
                           (item) =>
-                            item.to ? (
+                            item.children?.length ? (
+                              <div key={item.label} className="ob-sidebar-bdd-group">
+                                <button type="button" className="ob-sidebar-link ob-sidebar-bdd-toggle"
+                                  onClick={() => setBddOpen(open => !open)}
+                                  aria-expanded={bddOpen}
+                                  aria-controls="ob-sidebar-bdd-items">
+                                  <Database size={16} />
+                                  <span className="ob-sidebar-link-label">BDD</span>
+                                  <ChevronDown size={15} className={`ob-sidebar-chevron ${bddOpen ? 'is-expanded' : ''}`} />
+                                </button>
+                                {bddOpen && (
+                                  <div id="ob-sidebar-bdd-items" className="ob-sidebar-bdd-children">
+                                    {item.children.map(child => (
+                                      <NavLink key={child.to} to={child.to!} end
+                                        className={({ isActive }) => `ob-sidebar-link ob-sidebar-bdd-child ${isActive ? 'is-active' : ''}`}
+                                        onClick={() => { setMobileOpen(false); if (!pinned) setFloatingOpen(false) }}>
+                                        <span className="ob-sidebar-dot" />
+                                        <span className="ob-sidebar-link-label">{child.label}</span>
+                                      </NavLink>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : item.to ? (
                               <NavLink
                                 key={
                                   item.label

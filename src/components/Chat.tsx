@@ -8,6 +8,10 @@ import {
 
 import {
   MessageCircle,
+  Plus,
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
   Search,
   Send,
   X,
@@ -62,6 +66,9 @@ function Chat({
     useState<string | null>(null)
 
   const [search, setSearch] = useState('')
+  const [isComposing, setIsComposing] = useState(false)
+  const [recipientId, setRecipientId] = useState<string | null>(null)
+  const [recipientDropdownOpen, setRecipientDropdownOpen] = useState(false)
   const [message, setMessage] = useState('')
 
   const storedMessages = useSyncExternalStore(chatStore.subscribe, chatStore.getSnapshot, chatStore.getServerSnapshot)
@@ -163,14 +170,18 @@ function Chat({
      RECHERCHE
      ======================================================= */
 
+  const existingChatUsers = useMemo(() => chatUsers
+    .filter(user => (messages[user.id]?.length ?? 0) > 0)
+    .sort((a, b) => (messages[b.id]?.at(-1)?.createdAt ?? 0) - (messages[a.id]?.at(-1)?.createdAt ?? 0)), [chatUsers, messages])
+
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase()
 
     if (!query) {
-      return chatUsers
+      return isComposing ? chatUsers : existingChatUsers
     }
 
-    return chatUsers.filter((user) => {
+    return (isComposing ? chatUsers : existingChatUsers).filter((user) => {
       const searchableText = [
         user.name,
         user.email,
@@ -186,6 +197,8 @@ function Chat({
     })
   }, [
     chatUsers,
+    existingChatUsers,
+    isComposing,
     search,
     messages,
   ])
@@ -208,6 +221,10 @@ function Chat({
 
   function openConversation(userId: string) {
     setActiveConversationId(userId)
+    setIsComposing(false)
+    setRecipientId(null)
+    setRecipientDropdownOpen(false)
+    setSearch('')
     setMessage('')
 
     setChatError('')
@@ -219,6 +236,10 @@ function Chat({
 
   function closeChat() {
     setActiveConversationId(null)
+    setIsComposing(false)
+    setRecipientId(null)
+    setRecipientDropdownOpen(false)
+    setSearch('')
     setMessage('')
     onClose()
   }
@@ -252,6 +273,24 @@ function Chat({
     }
 
     setMessage('')
+  }
+
+  function sendNewMessage() {
+    const text = message.trim()
+    if (!text || !recipientId || !chatUsers.some(user => user.id === recipientId)) return
+    try {
+      if (!chatStore.send(currentUserId, recipientId, text)) return
+      setChatError('')
+    } catch {
+      setChatError('Message non envoyé : le stockage du navigateur est indisponible ou plein. Ton texte est conservé.')
+      return
+    }
+    setMessage('')
+    setSearch('')
+    setIsComposing(false)
+    setActiveConversationId(recipientId)
+    setRecipientId(null)
+    setRecipientDropdownOpen(false)
   }
 
   /* =======================================================
@@ -323,19 +362,23 @@ function Chat({
             <div className="chat-panel-title-row">
 
               <strong>
-                Discussions
+                {isComposing ? 'Nouveau message' : 'Discussions'}
               </strong>
 
-              <span className="chat-panel-status">
+              {!isComposing && <span className="chat-panel-status">
                 {totalUnread > 0
                   ? `${totalUnread} message${
                       totalUnread > 1 ? 's' : ''
                     } non lu${totalUnread > 1 ? 's' : ''}`
                   : 'Tous les messages sont lus'}
-              </span>
+              </span>}
 
             </div>
 
+            <div className="chat-header-actions">
+              <button type="button" className="chat-new-message" aria-label={isComposing ? 'Revenir aux discussions' : 'Nouveau message'} title={isComposing ? 'Revenir aux discussions' : 'Nouveau message'} onClick={() => { setIsComposing(value => !value); setRecipientId(null); setRecipientDropdownOpen(false); setActiveConversationId(null); setSearch(''); setMessage('') }}>
+                {isComposing ? <ArrowLeft size={20} /> : <Plus size={22} />}
+              </button>
             <button
               type="button"
               aria-label="Fermer les discussions"
@@ -344,9 +387,73 @@ function Chat({
             >
               <X size={19} />
             </button>
+            </div>
 
           </div>
 
+          {isComposing ? (
+            <form className="chat-compose" onSubmit={(event) => { event.preventDefault(); sendNewMessage() }}>
+              <label className="chat-compose-label" htmlFor="chat-recipient-search">À :</label>
+              <div className="chat-compose-search">
+                <Search size={18} />
+                <input
+                  id="chat-recipient-search"
+                  type="search"
+                  value={search}
+                  placeholder="Rechercher une personne..."
+                  onFocus={() => { if (!recipientId) setRecipientDropdownOpen(true) }}
+                  onChange={event => { setSearch(event.target.value); setRecipientId(null); setRecipientDropdownOpen(true) }}
+                  autoComplete="off"
+                  role="combobox"
+                  aria-expanded={recipientDropdownOpen}
+                  aria-controls="chat-recipient-options"
+                  aria-autocomplete="list"
+                />
+                <button
+                  type="button"
+                  className="chat-compose-dropdown-toggle"
+                  onClick={() => setRecipientDropdownOpen(open => !open)}
+                  aria-label={recipientDropdownOpen ? 'Fermer la liste des destinataires' : 'Afficher les destinataires'}
+                  aria-expanded={recipientDropdownOpen}
+                >
+                  {recipientDropdownOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+              </div>
+              {recipientDropdownOpen && (
+                <div id="chat-recipient-options" className="chat-compose-recipients" role="listbox" aria-label="Choisir un destinataire">
+                  {filteredUsers.length === 0 ? (
+                    <p className="chat-compose-empty">Aucun utilisateur trouvé.</p>
+                  ) : filteredUsers.map(user => (
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={recipientId === user.id}
+                      key={user.id}
+                      className={`chat-compose-recipient ${recipientId === user.id ? 'selected' : ''}`}
+                      onClick={() => { setRecipientId(user.id); setSearch(user.name); setRecipientDropdownOpen(false) }}
+                    >
+                      <span className="chat-avatar">{user.name.charAt(0).toUpperCase()}</span>
+                      <span><strong>{user.name}</strong><small>{user.poste.trim() || ROLE_LABELS[user.role]}</small></span>
+                      {recipientId === user.id && <span className="chat-compose-selected">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <label className="chat-compose-label" htmlFor="chat-new-message-text">Message :</label>
+              <textarea
+                id="chat-new-message-text"
+                className="chat-compose-textarea"
+                value={message}
+                onChange={event => setMessage(event.target.value)}
+                placeholder="Écrire votre message..."
+                rows={5}
+              />
+              <button type="submit" className="chat-compose-send" disabled={!recipientId || !message.trim()}>
+                <Send size={17} /> Envoyer le message
+              </button>
+            </form>
+          ) : (
+            <>
           {/* =================================================
               RECHERCHE
           ================================================= */}
@@ -358,7 +465,7 @@ function Chat({
             <input
               type="search"
               value={search}
-              placeholder="Rechercher une personne..."
+              placeholder={isComposing ? "Rechercher une personne..." : "Rechercher une conversation..."}
               aria-label="Rechercher une conversation"
               onChange={(event) =>
                 setSearch(event.target.value)
@@ -397,7 +504,7 @@ function Chat({
             {chatUsers.length > 0 &&
               filteredUsers.length === 0 && (
                 <div className="chat-empty">
-                  Aucune conversation trouvée.
+                  {isComposing ? 'Aucun utilisateur trouvé.' : search ? 'Aucune conversation trouvée.' : 'Aucune discussion pour le moment. Cliquez sur + pour écrire un message.'}
                 </div>
               )}
 
@@ -451,7 +558,7 @@ function Chat({
                     </div>
 
                     <span className="chat-conversation-preview">
-                      {getLastMessage(user.id)}
+                      {isComposing && !(messages[user.id]?.length) ? 'Commencer une conversation' : getLastMessage(user.id)}
                     </span>
 
                   </div>
@@ -469,6 +576,8 @@ function Chat({
             })}
 
           </div>
+            </>
+          )}
 
         </div>
       )}

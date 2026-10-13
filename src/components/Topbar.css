@@ -498,3 +498,48 @@
     max-width: none;
   }
 }
+/* Recherche globale saisissable au centre du header */
+.ob-topbar-global-search {
+  display: flex; align-items: center; gap: 8px; flex: 1 1 400px;
+  width: 100%; max-width: 460px; min-width: 90px;
+  padding: 5px 6px 5px 14px; margin: 0 auto;
+  border: 1px solid #dce6f1; border-radius: 12px;
+  background: #fbfcff; color: #263b60;
+  transition: border-color .15s, box-shadow .15s;
+}
+.ob-topbar-global-search:focus-within {
+  border-color: #ffae72; box-shadow: 0 0 0 3px rgba(255,134,20,.09);
+}
+.ob-topbar-global-search input {
+  background: transparent; border: 0; outline: 0; min-width: 0;
+  width: 100%; flex: 1; color: #263b60; font: inherit; font-size: 13px;
+}
+.ob-topbar-global-search input::placeholder {color: #7890ae; opacity: 1;}
+.ob-topbar-global-search kbd {
+  flex-shrink: 0; background: white; border: 1px solid #e1e9f2;
+  border-radius: 6px; padding: 3px 6px; font: inherit; font-size: 10px; color: #647ea2;
+}
+.ob-topbar-global-search-submit {
+  border: 0; border-radius: 8px; padding: 8px; display: inline-flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+  background: transparent; color: #f47718; cursor: pointer;
+}
+.ob-topbar-global-search-submit:hover { background: #fff0e3; }
+.ob-topbar-global-search-submit:focus-visible { outline: 2px solid #f47718; outline-offset: 2px; }
+@media (max-width: 1000px) {
+  .ob-topbar-global-search { max-width: 340px; }
+  .ob-topbar-global-search kbd { display: none; }
+}
+@media (max-width: 750px) {
+  .ob-topbar-global-search {
+    flex: 0 0 42px; width: 42px; min-width: 42px;
+    height: 42px; padding: 2px; justify-content: center;
+  }
+  .ob-topbar-global-search input {position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;}
+  .ob-topbar-global-search-submit { width: 38px; height: 38px; }
+}
+
+/* Espace supplémentaire à droite du burger, sur ordinateur. */
+@media (min-width: 751px) {
+  .ob-topbar-brand { margin-left: 30px; }
+}

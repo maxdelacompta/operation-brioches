@@ -20,6 +20,8 @@ import {
   Zap,
 } from 'lucide-react'
 
+import { useUsers } from '../contexts/UsersContext'
+
 import './Accueil.css'
 
 type WidgetId =
@@ -109,6 +111,8 @@ const WIDGETS: WidgetDefinition[] = [
 ]
 
 function Accueil() {
+  const { currentUser } = useUsers()
+  const firstName = currentUser?.name?.trim().split(/\s+/)[0] || 'Utilisateur'
   const [
     customizing,
     setCustomizing,
@@ -222,7 +226,7 @@ function Accueil() {
           </span>
 
           <h1>
-            Bonjour Maxime 👋
+            Bonjour {firstName} 👋
           </h1>
 
           <p>

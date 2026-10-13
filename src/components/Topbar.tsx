@@ -2,16 +2,20 @@ import {
   useEffect,
   useRef,
   useState,
+  type FormEvent,
 } from 'react'
 
 import {
   Bell,
   MessageCircle,
+  Search,
   X,
 } from 'lucide-react'
 
 import {
   Link,
+  useLocation,
+  useNavigate,
 } from 'react-router-dom'
 
 import {
@@ -22,6 +26,8 @@ import {
 import {
   useGeneralSettings,
 } from '../contexts/GeneralSettingsContext'
+
+import { useObData } from '../contexts/ObDataContext'
 
 import './Topbar.css'
 
@@ -76,9 +82,29 @@ function Topbar({
     currentUser,
   } = useUsers()
 
+  const navigate = useNavigate()
+  const location = useLocation()
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const [headerQuery, setHeaderQuery] = useState('')
+
+  // Synchronise la barre lorsque la recherche est modifiée sur sa page.
+  useEffect(() => {
+    if (location.pathname === '/recherche') {
+      setHeaderQuery(new URLSearchParams(location.search).get('q') ?? '')
+    }
+  }, [location.pathname, location.search])
+
+  function submitHeaderSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const term = headerQuery.trim()
+    navigate(term ? `/recherche?q=${encodeURIComponent(term)}` : '/recherche')
+  }
+
   const {
     settings,
   } = useGeneralSettings()
+
+  const { activeCampagne } = useObData()
 
   /* =======================================================
      RÉFÉRENCES
@@ -120,6 +146,7 @@ function Topbar({
      ======================================================= */
 
   const applicationName =
+    activeCampagne?.nom?.trim() ||
     settings.applicationName.trim() ||
     'Opération Brioches'
 
@@ -233,6 +260,23 @@ function Topbar({
     }
   }, [notificationsOpen])
 
+  // Raccourci de recherche globale (Ctrl+K / Cmd+K).
+  useEffect(() => {
+    function onSearchKey(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        if (window.matchMedia('(max-width: 750px)').matches) {
+          navigate('/recherche')
+        } else {
+          searchInputRef.current?.focus()
+          searchInputRef.current?.select()
+        }
+      }
+    }
+    window.addEventListener('keydown', onSearchKey)
+    return () => window.removeEventListener('keydown', onSearchKey)
+  }, [navigate])
+
   /* =======================================================
      OUVERTURE DU CHAT
      ======================================================= */
@@ -279,6 +323,21 @@ function Topbar({
         </div>
 
       </Link>
+
+      <form className="ob-topbar-global-search" role="search" onSubmit={submitHeaderSearch}>
+        <input
+          ref={searchInputRef}
+          type="search"
+          value={headerQuery}
+          onChange={(event) => setHeaderQuery(event.target.value)}
+          placeholder="Rechercher dans OB2026..."
+          aria-label="Rechercher dans OB2026"
+        />
+        <kbd aria-hidden="true">Ctrl K</kbd>
+        <button type="submit" className="ob-topbar-global-search-submit" aria-label="Lancer la recherche" title="Lancer la recherche">
+          <Search size={19} aria-hidden="true" />
+        </button>
+      </form>
 
       {/* ===================================================
           PARTIE DROITE

@@ -1,0 +1,7 @@
+/* Navigation imbriquée BDD (Gestion) */
+.ob-sidebar-bdd-group { width: 100%; }
+.ob-sidebar-bdd-toggle { width: 100%; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 11px; font: inherit; text-align: left; }
+.ob-sidebar-bdd-toggle .ob-sidebar-chevron { margin-left: auto; transition: transform .2s ease; }
+.ob-sidebar-bdd-toggle .ob-sidebar-chevron.is-expanded { transform: rotate(180deg); }
+.ob-sidebar-bdd-children { border-left: 1px solid #dce6f2; margin-left: 17px; padding-left: 12px; }
+.ob-sidebar-bdd-child { padding-left: 15px; }

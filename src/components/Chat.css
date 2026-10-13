@@ -953,3 +953,31 @@
   box-shadow: 0 4px 18px #0002;
 }
 .chat-storage-error button { margin-left: 10px; border: 0; background: transparent; color: inherit; font-size: 20px; }
+
+/* Actions du panneau : nouvelle conversation et fermeture */
+.chat-header-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.chat-panel-header .chat-header-actions > button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #fff; cursor: pointer; }
+.chat-panel-header .chat-header-actions > button:hover { background: rgba(255,255,255,.13); }
+.chat-panel-header .chat-header-actions > .chat-new-message { color: #ff901a; }
+.chat-panel-header .chat-header-actions > button:focus-visible { outline: 2px solid #ff901a; outline-offset: 2px; }
+
+/* Vue Nouveau message */
+.chat-compose { display:flex; flex-direction:column; gap:10px; padding:18px; min-height:0; overflow-y:auto; }
+.chat-compose-label { font-size:13px; font-weight:700; color:#243750; }
+.chat-compose-search { display:flex; align-items:center; gap:8px; border:1px solid #d6dfe8; border-radius:10px; padding:0 12px; background:#fff; color:#66788c; }
+.chat-compose-search input { width:100%; padding:12px 0; border:0; outline:none; background:transparent; color:#243750; font:inherit; }
+.chat-compose-recipients { max-height:170px; min-height:55px; overflow-y:auto; border:1px solid #e3e8ef; border-radius:10px; }
+.chat-compose-recipient { display:flex; width:100%; align-items:center; gap:10px; padding:8px 10px; text-align:left; border:0; border-bottom:1px solid #edf0f4; background:#fff; cursor:pointer; color:#243750; }
+.chat-compose-recipient:hover, .chat-compose-recipient.selected { background:#f0f5fb; }
+.chat-compose-recipient > span:nth-child(2) { display:flex; flex-direction:column; min-width:0; }
+.chat-compose-recipient small { color:#69798b; margin-top:2px; }
+.chat-compose-selected { margin-left:auto; color:#d87514; font-weight:700; }
+.chat-compose-empty { padding:8px 12px; color:#66788c; font-size:13px; }
+.chat-compose-textarea { box-sizing:border-box; width:100%; min-height:120px; resize:vertical; padding:12px; border:1px solid #d6dfe8; border-radius:10px; outline-color:#d87514; font:inherit; color:#243750; background:#fff; }
+.chat-compose-send { display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; background:#1e344e; color:#fff; border:0; border-radius:10px; cursor:pointer; font-weight:600; }
+.chat-compose-send:disabled { opacity:.45; cursor:not-allowed; }
+
+/* Nouveau message : liste déroulante fermée par défaut */
+.chat-compose-dropdown-toggle { display:flex; align-items:center; justify-content:center; flex:0 0 34px; height:38px; padding:0; border:0; background:transparent; color:#66788c; cursor:pointer; border-radius:8px; }
+.chat-compose-dropdown-toggle:hover, .chat-compose-dropdown-toggle:focus-visible { background:#f0f5fb; color:#1e344e; }
+.chat-compose-search input { min-width:0; flex:1; }

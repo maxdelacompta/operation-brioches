@@ -3502,3 +3502,11 @@
   font-size: 11px;
   font-weight: 700;
 }
+/* Historique partagé de la fiche donateur */
+.donateur-history-card .donateur-history-help{font-size:13px;color:#64748b;margin:8px 0 16px}
+.donateur-history-list{display:flex;flex-direction:column;gap:10px}
+.donateur-history-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid #e2e8f0;border-radius:12px}
+.donateur-history-item>div{display:flex;flex-direction:column;gap:4px}
+.donateur-history-item small{color:#64748b}
+.donateur-history-item span{font-size:13px;color:#475569}
+@media(max-width:640px){.donateur-history-item{align-items:stretch;flex-direction:column}}
