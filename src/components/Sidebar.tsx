@@ -115,22 +115,11 @@ const sections: SidebarSection[] = [
     label: 'Commandes achats',
     icon: Package,
     items: [
-      {
-        label: 'Artisans',
-        to: '/commandes-achats/artisans',
-      },
-      {
-        label: 'Fournisseurs',
-        to: '/commandes-achats/fournisseurs',
-      },
-      {
-        label: 'Suivi des livraisons',
-        to: '/commandes-achats/artisans/planning',
-      },
-      {
-        label: 'GMS',
-        to: '/commandes-achats/gms',
-      },
+      { label: 'Fournisseurs', to: '/commandes-achats/fournisseurs' },
+      { label: 'Artisans', to: '/commandes-achats/artisans' },
+      { label: 'GMS', to: '/commandes-achats/gms' },
+      { label: 'Industriels', to: '/commandes-achats/industriels' },
+      { label: 'Suivi des livraisons', to: '/commandes-achats/artisans/planning' },
     ],
   },
   {

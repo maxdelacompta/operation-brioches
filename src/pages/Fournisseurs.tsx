@@ -5,6 +5,8 @@ import {
   MoreVertical, Pencil, Plus, RotateCcw, Search, Store, X,
 } from 'lucide-react'
 import { useArtisans } from '../contexts/ArtisansContext'
+import { useUsers } from '../contexts/UsersContext'
+import ImportFournisseursExcel from './ImportFournisseursExcel'
 import type { Fournisseur, StatutArtisan, TypeFournisseur } from '../types/artisans'
 import { argent, categoriesFournisseur } from '../types/artisans'
 import './Fournisseurs.css'
@@ -119,6 +121,8 @@ function ChampDetail({ titre, valeur }: { titre: string; valeur?: string | numbe
 
 export default function Fournisseurs() {
   const { fournisseurs, setFournisseurs, commandesArtisans } = useArtisans()
+  const { currentUser } = useUsers()
+  const [importOpen, setImportOpen] = useState(false)
   const [recherche, setRecherche] = useState('')
   const [typeFiltre, setTypeFiltre] = useState<FiltreType>('TOUS')
   const [secteurFiltre, setSecteurFiltre] = useState('TOUS')
@@ -400,6 +404,7 @@ export default function Fournisseurs() {
           <p>Base commune des fournisseurs utilisés pour les achats GMS, artisans et industriels.</p>
         </div>
         <div className="fp-header-actions">
+          {currentUser?.role === 'administrateur' && <button type="button" className="fp-secondary" onClick={() => setImportOpen(true)}><Download size={17}/> Import Excel</button>}
           <button type="button" className="fp-secondary" onClick={() => exporterCsv(resultats)} disabled={!resultats.length}>
             <Download size={17} /> Exporter
           </button>
@@ -409,6 +414,7 @@ export default function Fournisseurs() {
         </div>
       </header>
 
+      {importOpen && currentUser?.role === 'administrateur' && <ImportFournisseursExcel fournisseurs={fournisseurs} onCommit={setFournisseurs} onClose={() => setImportOpen(false)} />}
       <section className="fp-card" aria-label="Base fournisseurs">
         <div className="fp-toolbar">
           <label className="fp-search"><Search size={19} />

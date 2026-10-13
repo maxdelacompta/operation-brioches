@@ -1,8 +1,10 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Boxes, ClipboardList, Plus, Search, Trash2, AlertTriangle } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { useEtablissements } from '../contexts/EtablissementsContext'
+import { useUsers } from '../contexts/UsersContext'
 import './StockBrioches.css'
+import { STOCK_CHANGED, DONS_KEY, loadStockDons, donBrioches, stockFor, publishBriochesChange } from '../lib/briochesStock'
 
 type TypeMouvement = 'reception' | 'sortie' | 'retour' | 'ajustement' | 'transfert'
 type Mouvement = { id: string; date: string; type: TypeMouvement; etablissementId: string; destinationId?: string; quantite: number; commentaire: string }
@@ -16,14 +18,26 @@ function read(): Mouvement[] {
     return raw.filter((x): x is Mouvement => Boolean(x && typeof x.id === 'string' && typeof x.date === 'string' && typeof x.etablissementId === 'string' && typeof x.quantite === 'number' && Number.isInteger(x.quantite) && typeof x.type === 'string' && ['reception','sortie','retour','ajustement','transfert'].includes(x.type) && typeof x.commentaire === 'string'))
   } catch { return [] }
 }
-function effect(m: Mouvement, id: string) {
-  if (m.type === 'transfert') return m.etablissementId === id ? -m.quantite : m.destinationId === id ? m.quantite : 0
-  if (m.etablissementId !== id) return 0
-  return m.type === 'sortie' ? -m.quantite : m.quantite
-}
 export default function StockBrioches() {
   const { etablissements } = useEtablissements()
+  const { currentUser } = useUsers()
+  // Les droits d'accès au module sont conservés par la navigation existante.
+  // Ici, on limite la visibilité et les actions au périmètre des établissements.
+  const tousEtablissements = currentUser?.role === 'administrateur' || currentUser?.tousEtablissements === true
+  const idsAutorises = useMemo(() => new Set(currentUser?.etablissementIds?.length
+    ? currentUser.etablissementIds
+    : currentUser?.etablissementId ? [currentUser.etablissementId] : []), [currentUser])
+  const estAutorise = (id: string) => Boolean(currentUser?.status === 'actif' && (tousEtablissements || idsAutorises.has(id)))
+  const etablissementsVisibles = useMemo(() => etablissements.filter(e => estAutorise(e.id)), [etablissements, currentUser])
   const [mouvements, setMouvements] = useState<Mouvement[]>(read)
+  const [dons, setDons] = useState(loadStockDons)
+  useEffect(() => {
+    const refresh = () => { setMouvements(read()); setDons(loadStockDons()) }
+    const storageRefresh = (e: StorageEvent) => { if (e.key === STORAGE || e.key === DONS_KEY) refresh() }
+    window.addEventListener(STOCK_CHANGED, refresh)
+    window.addEventListener('storage', storageRefresh)
+    return () => { window.removeEventListener(STOCK_CHANGED, refresh); window.removeEventListener('storage', storageRefresh) }
+  }, [])
   const [etablissementId, setEtablissementId] = useState('')
   const [destinationId, setDestinationId] = useState('')
   const [type, setType] = useState<TypeMouvement>('reception')
@@ -33,21 +47,22 @@ export default function StockBrioches() {
   const [recherche, setRecherche] = useState('')
   const [erreur, setErreur] = useState('')
   const [confirmation, setConfirmation] = useState('')
-  const etablissementsActifs = useMemo(() => etablissements.filter(e => e.statut === 'ACTIF'), [etablissements])
+  const etablissementsActifs = useMemo(() => etablissementsVisibles.filter(e => e.statut === 'ACTIF'), [etablissements])
   const noms = useMemo(() => new Map(etablissements.map(e => [e.id, e.nom])), [etablissements])
-  const stocks = useMemo(() => new Map(etablissements.map(e => [e.id, mouvements.reduce((s,m) => s + effect(m,e.id),0)])), [etablissements, mouvements])
+  const stocks = useMemo(() => new Map(etablissementsVisibles.map(e => [e.id, stockFor(e.id, mouvements, dons)])), [etablissementsVisibles, mouvements, dons])
   const total = [...stocks.values()].reduce((a,b) => a+b,0)
-  const reception = mouvements.filter(m => m.type === 'reception').reduce((a,m) => a+m.quantite,0)
-  const sorties = mouvements.filter(m => m.type === 'sortie').reduce((a,m) => a+m.quantite,0)
+  const reception = mouvements.filter(m => m.type === 'reception' && estAutorise(m.etablissementId)).reduce((a,m) => a+m.quantite,0)
+  const sorties = mouvements.filter(m => m.type === 'sortie' && estAutorise(m.etablissementId)).reduce((a,m) => a+m.quantite,0) + etablissementsVisibles.reduce((a,e) => a+donBrioches(e.id,dons),0)
   const stockNegatif = [...stocks.values()].filter(n => n < 0).length
-  const visibles = mouvements.filter(m => (!filtre || m.etablissementId === filtre || m.destinationId === filtre) && `${TYPES[m.type]} ${noms.get(m.etablissementId) ?? ''} ${noms.get(m.destinationId ?? '') ?? ''} ${m.commentaire}`.toLocaleLowerCase('fr').includes(recherche.toLocaleLowerCase('fr')))
+  const visibles = mouvements.filter(m => estAutorise(m.etablissementId) && (!m.destinationId || estAutorise(m.destinationId)) && (!filtre || m.etablissementId === filtre || m.destinationId === filtre) && `${TYPES[m.type]} ${noms.get(m.etablissementId) ?? ''} ${noms.get(m.destinationId ?? '') ?? ''} ${m.commentaire}`.toLocaleLowerCase('fr').includes(recherche.toLocaleLowerCase('fr')))
   function sauvegarder(next: Mouvement[]) {
-    try { localStorage.setItem(STORAGE,JSON.stringify(next)); setMouvements(next); setErreur(''); return true }
+    try { localStorage.setItem(STORAGE,JSON.stringify(next)); setMouvements(next); publishBriochesChange(); setErreur(''); return true }
     catch { setErreur('Impossible de sauvegarder dans ce navigateur.'); return false }
   }
   function enregistrer(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setConfirmation('')
     const q = Number(quantite)
+    if (!estAutorise(etablissementId) || (type === 'transfert' && !estAutorise(destinationId))) return setErreur('Vous ne pouvez enregistrer un mouvement que pour vos établissements autorisés.')
     if (!etablissementsActifs.some(e => e.id === etablissementId)) return setErreur('Choisissez un établissement actif.')
     if (!Number.isInteger(q) || (type === 'ajustement' ? q === 0 : q <= 0)) return setErreur('Indiquez une quantité entière valide (positive ou négative uniquement pour un ajustement).')
     if (type === 'transfert' && (!destinationId || destinationId === etablissementId || !etablissementsActifs.some(e => e.id === destinationId))) return setErreur('Choisissez un établissement destinataire différent.')
@@ -56,20 +71,22 @@ export default function StockBrioches() {
     if (sauvegarder([item,...mouvements])) { setQuantite('1'); setCommentaire(''); setConfirmation('Mouvement enregistré dans ce navigateur.') }
   }
   function supprimer(item: Mouvement) {
+    if (!estAutorise(item.etablissementId) || (item.destinationId && !estAutorise(item.destinationId))) return setErreur('Mouvement hors de votre périmètre.')
     if (!window.confirm('Supprimer ce mouvement de démonstration ?')) return
     const next = mouvements.filter(m => m.id !== item.id)
-    const newStocks = etablissements.map(e => next.reduce((s,m) => s+effect(m,e.id),0))
+    const newStocks = etablissements.map(e => stockFor(e.id, next, dons))
     if (newStocks.some(v => v < 0)) return setErreur('Suppression impossible : elle rendrait un stock négatif. Supprimez d’abord les mouvements dépendants.')
     if (sauvegarder(next)) setConfirmation('Mouvement supprimé.')
   }
   return <main className="stk-page">
     <PageHeader eyebrow="ÉTABLISSEMENTS / STOCK BRIOCHES" title="Stock Brioches" description="Réceptions, sorties, transferts et stocks disponibles par établissement" illustration />
-    <div className="stk-demo-note"><AlertTriangle size={17}/> Mode démonstration : les mouvements sont enregistrés uniquement dans ce navigateur. Le suivi des dons n’est pas encore synchronisé avec le stock.</div>
+    {!tousEtablissements && <div className="stk-demo-note">Périmètre limité : seuls vos établissements affectés sont visibles ({etablissementsVisibles.length}).</div>}
+    <div className="stk-demo-note"><AlertTriangle size={17}/> Mode démonstration : les mouvements sont enregistrés uniquement dans ce navigateur. Les dons avec contrepartie sont automatiquement déduits du stock de leur établissement.</div>
     <section className="stk-kpis" aria-label="Indicateurs de stock">
       <article className="stk-kpi"><span className="stk-kpi-icon stk-blue"><Boxes size={23}/></span><div><span>Stock disponible</span><strong>{number(total)}</strong></div></article>
       <article className="stk-kpi"><span className="stk-kpi-icon stk-green"><ArrowDownToLine size={23}/></span><div><span>Brioches réceptionnées</span><strong>{number(reception)}</strong></div></article>
       <article className="stk-kpi"><span className="stk-kpi-icon stk-orange"><ArrowUpFromLine size={23}/></span><div><span>Brioches sorties</span><strong>{number(sorties)}</strong></div></article>
-      <article className="stk-kpi"><span className="stk-kpi-icon stk-blue"><ArrowLeftRight size={23}/></span><div><span>Établissements suivis</span><strong>{etablissements.length}</strong></div></article>
+      <article className="stk-kpi"><span className="stk-kpi-icon stk-blue"><ArrowLeftRight size={23}/></span><div><span>Établissements suivis</span><strong>{etablissementsVisibles.length}</strong></div></article>
     </section>
     {stockNegatif > 0 && <p className="stk-error">{stockNegatif} établissement(s) ont un stock négatif dans les données enregistrées.</p>}
     <div className="stk-columns">
@@ -88,10 +105,10 @@ export default function StockBrioches() {
         </form>
       </section>
       <section className="stk-panel"><h2><Boxes size={20}/> Stock par établissement</h2>
-        <div className="stk-table-wrap"><table><thead><tr><th>Établissement</th><th>Stock actuel</th><th>État</th></tr></thead><tbody>{etablissements.map(e => { const q = stocks.get(e.id) ?? 0; return <tr key={e.id}><td>{e.nom}</td><td><strong>{number(q)}</strong></td><td><span className={`stk-pill ${q > 0 ? 'stk-pill--ok' : q < 0 ? 'stk-pill--alert' : 'stk-pill--neutral'}`}>{q > 0 ? 'Disponible' : q < 0 ? 'Anomalie' : 'Épuisé'}</span></td></tr> })}</tbody></table>{!etablissements.length && <p className="stk-empty">Aucun établissement enregistré dans Administration.</p>}</div>
+        <div className="stk-table-wrap"><table><thead><tr><th>Établissement</th><th>Stock actuel</th><th>État</th></tr></thead><tbody>{etablissementsVisibles.map(e => { const q = stocks.get(e.id) ?? 0; return <tr key={e.id}><td>{e.nom}</td><td><strong>{number(q)}</strong></td><td><span className={`stk-pill ${q > 0 ? 'stk-pill--ok' : q < 0 ? 'stk-pill--alert' : 'stk-pill--neutral'}`}>{q > 0 ? 'Disponible' : q < 0 ? 'Anomalie' : 'Épuisé'}</span></td></tr> })}</tbody></table>{!etablissementsVisibles.length && <p className="stk-empty">Aucun établissement enregistré dans Administration.</p>}</div>
       </section>
     </div>
-    <section className="stk-panel stk-history"><div className="stk-history-head"><h2><ClipboardList size={20}/> Historique des mouvements</h2><div className="stk-filters"><select aria-label="Filtrer par établissement" value={filtre} onChange={e => setFiltre(e.target.value)}><option value="">Tous les établissements</option>{etablissements.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}</select><label className="stk-search"><Search size={17}/><input value={recherche} onChange={e => setRecherche(e.target.value)} aria-label="Rechercher un mouvement" placeholder="Rechercher…"/></label></div></div>
+    <section className="stk-panel stk-history"><div className="stk-history-head"><h2><ClipboardList size={20}/> Historique des mouvements</h2><div className="stk-filters"><select aria-label="Filtrer par établissement" value={filtre} onChange={e => setFiltre(e.target.value)}><option value="">Tous les établissements</option>{etablissementsVisibles.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}</select><label className="stk-search"><Search size={17}/><input value={recherche} onChange={e => setRecherche(e.target.value)} aria-label="Rechercher un mouvement" placeholder="Rechercher…"/></label></div></div>
       <div className="stk-table-wrap"><table><thead><tr><th>Date / Heure</th><th>Type</th><th>Établissement</th><th>Destination</th><th>Quantité</th><th>Commentaire</th><th></th></tr></thead><tbody>{visibles.map(m => <tr key={m.id}><td>{new Date(m.date).toLocaleString('fr-FR')}</td><td>{TYPES[m.type]}</td><td>{noms.get(m.etablissementId) ?? 'Établissement supprimé'}</td><td>{m.destinationId ? noms.get(m.destinationId) ?? 'Établissement supprimé' : '—'}</td><td><strong>{m.type === 'sortie' || m.type === 'transfert' ? '−' : m.quantite > 0 ? '+' : ''}{number(m.quantite)}</strong></td><td>{m.commentaire || '—'}</td><td><button className="stk-delete" type="button" aria-label="Supprimer le mouvement" title="Supprimer" onClick={() => supprimer(m)}><Trash2 size={16}/></button></td></tr>)}</tbody></table>{!visibles.length && <p className="stk-empty">Aucun mouvement à afficher.</p>}</div>
     </section>
   </main>

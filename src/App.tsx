@@ -45,6 +45,7 @@ import CommandesMairiesRs from './pages/CommandesMairiesRs'
 import CommandesArtisans from './pages/CommandesArtisans'
 import Fournisseurs from './pages/Fournisseurs'
 import CommandesGms from './pages/CommandesGms'
+import CommandesIndustriels from './pages/CommandesIndustriels'
 import Geographie from './pages/Geographie'
 
 import FichesCaisse from './pages/FichesCaisse'
@@ -120,6 +121,10 @@ function App() {
                     <Route
                       path="/commandes-achats/gms"
                       element={<CommandesGms />}
+                    />
+                    <Route
+                      path="/commandes-achats/industriels"
+                      element={<CommandesIndustriels />}
                     />
                     <Route
                       path="/commandes-achats/artisans/fournisseurs"

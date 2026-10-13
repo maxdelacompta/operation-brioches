@@ -157,6 +157,7 @@ export const PERMISSION_MODULES = [
   { key: 'artisans', label: 'Commandes artisans', path: '/commandes-achats/artisans', actions: ['consulter'] },
   { key: 'fournisseurs', label: 'Fournisseurs', path: '/commandes-achats/fournisseurs', actions: ['consulter'] },
   { key: 'gms', label: 'Commandes GMS', path: '/commandes-achats/gms', actions: ['consulter'] },
+  { key: 'industriels', label: 'Commandes industriels', path: '/commandes-achats/industriels', actions: ['consulter'] },
   { key: 'coffre', label: 'Coffre', path: '/encaissements/coffre', actions: ['consulter'] },
   { key: 'suivi_banque', label: 'Suivi banque', path: '/encaissements/suivi-banque', actions: ['consulter'] },
   { key: 'recapitulatif', label: 'Récapitulatif global', path: '/encaissements/recapitulatif-global', actions: ['consulter'] },

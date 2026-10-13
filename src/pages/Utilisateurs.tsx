@@ -1,5 +1,7 @@
 import {
   useMemo,
+  useEffect,
+  useRef,
   useState,
   type FormEvent,
 } from 'react'
@@ -16,6 +18,9 @@ import {
   Users,
   UserX,
   X,
+  ChevronDown,
+  Check,
+  Building2,
 } from 'lucide-react'
 
 import {
@@ -30,6 +35,7 @@ import {
 import { useEtablissements } from '../contexts/EtablissementsContext'
 
 import './Utilisateurs.css'
+import './UtilisateursEtablissements.css'
 
 /* =========================================================
    FORMULAIRE VIDE
@@ -42,6 +48,8 @@ const emptyForm: UserInput = {
   role: 'etablissement',
   perimetre: '',
   etablissementId: '',
+  etablissementIds: [],
+  tousEtablissements: false,
 }
 
 const roleOptions = Object.keys(
@@ -77,6 +85,26 @@ function Utilisateurs() {
   } = useUsers()
 
   const [search, setSearch] = useState('')
+  const [establishmentSearch, setEstablishmentSearch] = useState('')
+  const [establishmentDropdownOpen, setEstablishmentDropdownOpen] = useState(false)
+  const establishmentDropdownRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!establishmentDropdownOpen) return
+    const handleOutside = (event: PointerEvent) => {
+      if (!establishmentDropdownRef.current?.contains(event.target as Node)) {
+        setEstablishmentDropdownOpen(false)
+      }
+    }
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setEstablishmentDropdownOpen(false)
+    }
+    document.addEventListener('pointerdown', handleOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('pointerdown', handleOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [establishmentDropdownOpen])
 
   const [roleFilter, setRoleFilter] = useState<
     UserRole | 'tous'
@@ -123,6 +151,9 @@ function Utilisateurs() {
         user.poste,
         user.perimetre,
         ROLE_LABELS[user.role],
+        ...(user.etablissementIds ?? (user.etablissementId ? [user.etablissementId] : []))
+          .map((id) => etablissementById.get(id) ?? ''),
+        user.tousEtablissements ? 'Tous les établissements' : '',
       ]
         .join(' ')
         .toLowerCase()
@@ -140,6 +171,7 @@ function Utilisateurs() {
     search,
     roleFilter,
     statusFilter,
+    etablissements,
   ])
 
   /* =======================================================
@@ -148,14 +180,18 @@ function Utilisateurs() {
 
   function openCreate() {
     setEditingId(null)
-    setForm({ ...emptyForm })
+    setEstablishmentSearch('')
+    setForm({ ...emptyForm, etablissementIds: [] })
     setError('')
     setNotice('')
     setFormOpen(true)
   }
 
   function openEdit(user: AppUser) {
+    setEstablishmentDropdownOpen(false)
+    setEstablishmentSearch('')
     setEditingId(user.id)
+    setEstablishmentSearch('')
 
     setForm({
       name: user.name,
@@ -164,6 +200,8 @@ function Utilisateurs() {
       role: user.role,
       perimetre: user.perimetre,
       etablissementId: user.etablissementId || '',
+      etablissementIds: [...(user.etablissementIds ?? (user.etablissementId ? [user.etablissementId] : []))],
+      tousEtablissements: user.tousEtablissements === true,
     })
 
     setError('')
@@ -191,7 +229,9 @@ function Utilisateurs() {
       poste: form.poste.trim(),
       role: form.role,
       perimetre: form.perimetre.trim(),
-      etablissementId: form.etablissementId || '',
+      etablissementId: form.tousEtablissements ? '' : (form.etablissementIds?.[0] ?? ''),
+      etablissementIds: form.tousEtablissements ? [] : [...new Set(form.etablissementIds ?? [])],
+      tousEtablissements: form.tousEtablissements === true,
     }
 
     if (!input.name) {
@@ -418,20 +458,82 @@ function Utilisateurs() {
                 </select>
               </label>
 
-              <label className="users-form-wide">
-                Établissement affecté
-                <select
-                  value={form.etablissementId || ''}
-                  onChange={(event) => setForm((current) => ({ ...current, etablissementId: event.target.value }))}
+              <div className="users-form-wide uet-field" ref={establishmentDropdownRef}>
+                <label className="uet-title">Établissements autorisés</label>
+                <button
+                  className={`uet-trigger ${establishmentDropdownOpen ? 'uet-trigger--open' : ''}`}
+                  type="button"
+                  aria-expanded={establishmentDropdownOpen}
+                  aria-haspopup="listbox"
+                  onClick={() => setEstablishmentDropdownOpen((value) => !value)}
                 >
-                  <option value="">Aucun établissement affecté</option>
-                  {etablissements.map((etablissement) => (
-                    <option key={etablissement.id} value={etablissement.id}>
-                      {etablissement.nom}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <Building2 size={18} aria-hidden="true" />
+                  <span className="uet-trigger-text">
+                    {form.tousEtablissements
+                      ? 'Tous les établissements'
+                      : (form.etablissementIds ?? []).length === 0
+                        ? 'Sélectionner les établissements...'
+                        : `${(form.etablissementIds ?? []).length} établissement(s) sélectionné(s)`}
+                  </span>
+                  <ChevronDown size={18} className={establishmentDropdownOpen ? 'uet-chevron--open' : ''} aria-hidden="true" />
+                </button>
+                {!form.tousEtablissements && (form.etablissementIds ?? []).length > 0 && (
+                  <div className="uet-chips">
+                    {(form.etablissementIds ?? []).map((id) => (
+                      <span className="uet-chip" key={id}>
+                        {etablissementById.get(id) ?? 'Établissement inconnu'}
+                        <button type="button" aria-label={`Retirer ${etablissementById.get(id) ?? 'cet établissement'}`}
+                          onClick={() => setForm((current) => ({ ...current, etablissementIds: (current.etablissementIds ?? []).filter((value) => value !== id) }))}>
+                          <X size={13} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {establishmentDropdownOpen && (
+                  <div className="uet-dropdown" role="group" aria-label="Choix des établissements">
+                    <label className="uet-search-wrap">
+                      <Search size={16} aria-hidden="true" />
+                      <input type="search" value={establishmentSearch}
+                        placeholder="Rechercher un établissement..."
+                        aria-label="Rechercher un établissement"
+                        onChange={(event) => setEstablishmentSearch(event.target.value)} />
+                    </label>
+                    <label className="uet-option uet-global">
+                      <input className="uet-checkbox" type="checkbox" checked={form.tousEtablissements === true}
+                        onChange={(event) => setForm((current) => ({ ...current, tousEtablissements: event.target.checked }))} />
+                      <span className="uet-check-visual"><Check size={14} /></span>
+                      <span className="uet-option-copy"><strong>Tous les établissements</strong><small>Y compris les futurs établissements</small></span>
+                    </label>
+                    {!form.tousEtablissements && (
+                      <div className="uet-options">
+                        {etablissements
+                          .filter((e) => e.nom.toLocaleLowerCase('fr').includes(establishmentSearch.trim().toLocaleLowerCase('fr')))
+                          .map((e) => (
+                            <label className="uet-option" key={e.id}>
+                              <input className="uet-checkbox" type="checkbox"
+                                checked={(form.etablissementIds ?? []).includes(e.id)}
+                                onChange={(event) => setForm((current) => ({
+                                  ...current,
+                                  etablissementIds: event.target.checked
+                                    ? [...new Set([...(current.etablissementIds ?? []), e.id])]
+                                    : (current.etablissementIds ?? []).filter((id) => id !== e.id),
+                                }))} />
+                              <span className="uet-check-visual"><Check size={14} /></span>
+                              <span className="uet-option-copy">{e.nom}</span>
+                            </label>
+                          ))}
+                        {etablissements.filter((e) => e.nom.toLocaleLowerCase('fr').includes(establishmentSearch.trim().toLocaleLowerCase('fr'))).length === 0 &&
+                          <p className="uet-empty">Aucun établissement trouvé.</p>}
+                      </div>
+                    )}
+                    <div className="uet-footer">
+                      <span>{form.tousEtablissements ? 'Accès global' : `${(form.etablissementIds ?? []).length} sélectionné(s)`}</span>
+                      <button type="button" onClick={() => setEstablishmentDropdownOpen(false)}>Terminer</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <label className="users-form-wide">
                 Établissement / périmètre
@@ -593,7 +695,21 @@ function Utilisateurs() {
                     </span>
                   </td>
 
-                  <td>{user.etablissementId ? (etablissementById.get(user.etablissementId) || 'Établissement supprimé') : '—'}</td>
+                  <td>
+                    {user.tousEtablissements ? (
+                      <strong>Tous les établissements</strong>
+                    ) : (() => {
+                      const ids = user.etablissementIds ?? (user.etablissementId ? [user.etablissementId] : [])
+                      if (!ids.length) return '—'
+                      return (
+                        <span title={ids.map((id) => etablissementById.get(id) ?? 'Établissement supprimé').join(' • ')}>
+                          {ids.length === 1
+                            ? (etablissementById.get(ids[0]) ?? 'Établissement supprimé')
+                            : `${ids.length} établissements`}
+                        </span>
+                      )
+                    })()}
+                  </td>
 
                   <td>
                     {user.perimetre || '—'}
@@ -666,7 +782,7 @@ function Utilisateurs() {
               {filteredUsers.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="users-empty"
                   >
                     Aucun utilisateur trouvé.

@@ -31,13 +31,15 @@ export type AppUser = {
   poste: string
   role: UserRole
   perimetre: string
-  etablissementId?: string
+  etablissementId?: string // Compatibilité avec les anciens modules
+  etablissementIds?: string[]
+  tousEtablissements?: boolean
   status: UserStatus
 }
 
 export type UserInput = Pick<
   AppUser,
-  'name' | 'email' | 'poste' | 'role' | 'perimetre' | 'etablissementId'
+  'name' | 'email' | 'poste' | 'role' | 'perimetre' | 'etablissementId' | 'etablissementIds' | 'tousEtablissements'
 >
 
 /* =========================================================
@@ -59,6 +61,8 @@ const demoAdmin: AppUser = {
   role: 'administrateur',
   perimetre: '',
   status: 'actif',
+  etablissementIds: [],
+  tousEtablissements: true,
 }
 
 /* =========================================================
@@ -85,6 +89,21 @@ function isAppUser(value: unknown): value is AppUser {
   )
 }
 
+/** Harmonise les comptes anciens (un seul établissement) avec le modèle multi-sites. */
+function normalizeUser(user: AppUser): AppUser {
+  const ids = Array.isArray(user.etablissementIds)
+    ? user.etablissementIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    : (user.etablissementId ? [user.etablissementId] : [])
+  const etablissementIds = [...new Set(ids)]
+  const tousEtablissements = user.tousEtablissements === true
+  return {
+    ...user,
+    etablissementIds: tousEtablissements ? [] : etablissementIds,
+    etablissementId: tousEtablissements ? '' : (etablissementIds[0] ?? ''),
+    tousEtablissements,
+  }
+}
+
 /* =========================================================
    CHARGEMENT
    ========================================================= */
@@ -103,7 +122,7 @@ function loadUsers(): AppUser[] {
       return [demoAdmin]
     }
 
-    const validUsers = parsed.filter(isAppUser)
+    const validUsers = parsed.filter(isAppUser).map(normalizeUser)
 
     // Conserver le profil de démonstration tant que
     // l'authentification n'est pas développée.
@@ -191,8 +210,7 @@ export function UsersProvider({
 
   function addUser(input: UserInput) {
     const newUser: AppUser = {
-      id: crypto.randomUUID(),
-      ...input,
+      ...normalizeUser({ ...input, id: crypto.randomUUID(), status: 'actif' }),
       status: 'actif',
     }
 
@@ -209,8 +227,7 @@ export function UsersProvider({
       current.map((user) =>
         user.id === id
           ? {
-              ...user,
-              ...input,
+              ...normalizeUser({ ...user, ...input }),
             }
           : user,
       ),

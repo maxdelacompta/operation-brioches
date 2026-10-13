@@ -1,0 +1,121 @@
+.uet-field{position:relative;min-width:0;display:block;align-self:start;font-family:inherit}
+.uet-title{display:block;font-size:13px;font-weight:750;color:#123b79;margin-bottom:9px}
+.uet-trigger{width:100%;height:48px;display:flex;align-items:center;gap:12px;padding:0 15px;border:1px solid #d4e0ef;border-radius:12px;background:#fff;color:#123b79;text-align:left;cursor:pointer;font-family:inherit;font-size:14px;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
+.uet-trigger:hover,.uet-trigger--open{border-color:#ff891e;box-shadow:0 0 0 3px #ff891e1a}
+.uet-trigger-text{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:650}
+.uet-chevron--open{transform:rotate(180deg)}
+.uet-chips{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0}
+.uet-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;border-radius:20px;padding:5px 9px;background:#fff1e6;color:#a9500d;font-size:12px;font-weight:700;overflow-wrap:anywhere}
+.uet-chip button{border:0;background:transparent;color:inherit;display:inline-grid;place-items:center;padding:2px;cursor:pointer;flex-shrink:0}
+.uet-dropdown{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:100;background:#fff;border:1px solid #dce4f0;border-radius:14px;box-shadow:0 16px 36px #14345c28;padding:9px;box-sizing:border-box}
+.uet-search-wrap{height:39px;display:flex;align-items:center;gap:8px;border:1px solid #dce4f0;border-radius:9px;padding:0 11px;color:#75869c}
+.uet-search-wrap input{width:100%;min-width:0;border:0!important;outline:0!important;box-shadow:none!important;height:36px!important;padding:0!important;background:transparent!important;color:#173f77;font-size:13px}
+.uet-option{display:flex!important;align-items:center!important;flex-direction:row!important;justify-content:flex-start!important;gap:12px!important;cursor:pointer;border-radius:8px;padding:10px 9px;margin:0!important;color:#173b73;font-size:13px;font-weight:600;position:relative;line-height:1.35;text-align:left}
+.uet-option:hover{background:#f5f8fc}
+.uet-global{margin-top:7px!important;background:#fff7ef;color:#174375}
+.uet-option .uet-checkbox{position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;margin:0!important;pointer-events:none}
+.uet-check-visual{display:flex;flex:none;align-items:center;justify-content:center;width:19px;height:19px;border:1.5px solid #b2c2d4;border-radius:5px;color:transparent;background:white;box-sizing:border-box}
+.uet-checkbox:checked+.uet-check-visual{background:#ff8218;color:white;border-color:#ff8218}
+.uet-checkbox:focus-visible+.uet-check-visual{outline:3px solid #ffbe85;outline-offset:2px}
+.uet-option-copy{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.uet-option-copy small{color:#72859c;font-size:11px;font-weight:400}
+.uet-options{max-height:226px;overflow:auto;margin:4px 0;scrollbar-width:thin}
+.uet-empty{font-size:13px;color:#7a899c;padding:12px;margin:0}
+.uet-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #ecf0f6;margin-top:7px;padding:10px 4px 2px;color:#6b7d93;font-size:12px}
+.uet-footer button{border:0;border-radius:8px;background:#ff8218;color:#fff;font-weight:700;padding:8px 14px;cursor:pointer}
+@media(max-width:650px){.uet-dropdown{position:relative;top:5px;box-shadow:0 6px 18px #14345c20}}
+
+/* Correctif lisibilité : neutralise les styles génériques du formulaire.
+   Le panneau se déploie dans le flux, sans être coupé par la carte parente. */
+.users-form-grid .uet-field { min-width:0; }
+.users-form-grid .uet-field .uet-dropdown {
+  position:relative;
+  top:auto;
+  left:auto;
+  right:auto;
+  z-index:auto;
+  margin-top:12px;
+  padding:16px;
+  width:100%;
+  border-radius:14px;
+  box-shadow:0 6px 24px rgba(18,59,122,.09);
+}
+.users-form-grid .uet-field .uet-options {
+  max-height:360px;
+  min-height:120px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  margin:10px 0;
+  padding:4px;
+}
+.users-form-grid .uet-field label.uet-option {
+  display:flex !important;
+  flex-direction:row !important;
+  justify-content:flex-start !important;
+  align-items:center !important;
+  gap:14px !important;
+  min-height:56px;
+  padding:12px 14px;
+  box-sizing:border-box;
+  width:100%;
+  text-align:left;
+  font-size:15px;
+  line-height:1.5;
+  font-weight:600;
+}
+.users-form-grid .uet-field .uet-option-copy {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:3px;
+  flex:1;
+  min-width:0;
+  font-size:15px;
+  line-height:1.45;
+  text-align:left;
+}
+.users-form-grid .uet-field .uet-option-copy strong {font-size:15px;}
+.users-form-grid .uet-field .uet-option-copy small {font-size:13px;line-height:1.35;}
+.users-form-grid .uet-field .uet-option .uet-check-visual {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:24px;
+  height:24px;
+  min-width:24px;
+  border-radius:6px;
+  padding:0;
+}
+.users-form-grid .uet-field input.uet-checkbox {
+  position:absolute !important;
+  opacity:0 !important;
+  width:1px !important;
+  min-height:0 !important;
+  height:1px !important;
+  padding:0 !important;
+  margin:0 !important;
+  pointer-events:none;
+}
+.users-form-grid .uet-field label.uet-search-wrap {
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  height:48px;
+  padding:0 14px;
+  box-sizing:border-box;
+}
+.users-form-grid .uet-field .uet-search-wrap input {
+  flex:1;
+  width:100%;
+  min-height:0;
+  height:42px !important;
+  padding:0 !important;
+  font-size:15px;
+}
+.users-form-grid .uet-field .uet-trigger {min-height:52px;font-size:15px;}
+.users-form-grid .uet-field .uet-chip {font-size:13px;padding:7px 11px;}
+.users-form-grid .uet-field .uet-footer {font-size:14px;padding:14px 4px 2px;}
+.users-form-grid .uet-field .uet-footer button {font-size:14px;padding:10px 18px;}
+@media(max-width:650px){.users-form-grid .uet-field .uet-dropdown{padding:12px}.users-form-grid .uet-field .uet-options{max-height:300px}}

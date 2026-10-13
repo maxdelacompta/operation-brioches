@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  FileUp,
   Search,
   Truck,
   UsersRound,
@@ -32,6 +33,7 @@ import type {
 } from '../types/etablissements'
 
 import './AdminEtablissements.css'
+import ImportEtablissementsExcel from './ImportEtablissementsExcel'
 
 type DetailTab =
   | 'GENERAL'
@@ -120,6 +122,8 @@ export default function AdminEtablissements() {
     updateEtablissement,
     toggleEtablissementActif,
   } = useEtablissements()
+
+  const [importOpen, setImportOpen] = useState(false)
 
   const [search, setSearch] =
     useState('')
@@ -358,6 +362,7 @@ export default function AdminEtablissements() {
 
   return (
     <main className="ea-page">
+      {importOpen && <ImportEtablissementsExcel onClose={() => setImportOpen(false)} />}
       <header className="ea-header">
         <div>
           <span className="ea-eyebrow">
@@ -371,6 +376,7 @@ export default function AdminEtablissements() {
           </p>
         </div>
 
+        <div style={{display:'flex', gap:10, flexWrap:'wrap'}}><button type="button" className="ea-primary" onClick={() => setImportOpen(true)}><FileUp size={18}/> Importer Excel</button>
         <button
           type="button"
           className="ea-primary"
@@ -378,7 +384,7 @@ export default function AdminEtablissements() {
         >
           <Plus size={18} />
           Nouvel établissement
-        </button>
+        </button></div>
       </header>
 
       <section className="ea-kpis">
