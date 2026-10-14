@@ -1,0 +1,12 @@
+.ob-reset-page{max-width:1000px;margin:auto;padding:30px 22px;color:#073a7b}
+.ob-reset-page header{padding:24px 30px;background:linear-gradient(110deg,#fff,#fff0e1);border-radius:18px;margin-bottom:22px}
+.ob-reset-page header span{font-size:12px;font-weight:850;letter-spacing:.07em;color:#f47718}
+.ob-reset-page h1{font-size:34px;margin:8px 0}.ob-reset-page header p{color:#6b819f}
+.ob-reset-card{background:#fff;border:1px solid #dfe7ef;box-shadow:0 7px 25px #133f8310;border-radius:16px;padding:24px;margin:18px 0}
+.ob-reset-card h2{margin:0 0 12px;font-size:21px}.ob-reset-card p{line-height:1.55;color:#4f6580}
+.ob-reset-page button{padding:13px 20px;font-weight:800;border-radius:10px;cursor:pointer}
+.ob-reset-backup{background:#0c4488;color:white;border:0}.ob-reset-danger{background:#b72c27;color:white;border:0;margin-top:14px}
+.ob-reset-danger:disabled{opacity:.45;cursor:not-allowed}.ob-reset-check{display:flex;align-items:flex-start;gap:10px;margin:18px 0;font-weight:600}
+.ob-reset-check input{width:20px;height:20px;accent-color:#f47718}.ob-reset-label{display:grid;gap:9px;font-weight:650}.ob-reset-label input{padding:12px;border:1px solid #cbd9e7;border-radius:9px;width:min(100%,420px);font:inherit}
+.ob-reset-card .ob-reset-warning{padding:13px 16px;background:#fff4e8;border:1px solid #ffcc9e;border-radius:10px;color:#934b17}
+.ob-reset-error{color:#a52722!important}.ob-reset-note{color:#157144!important}

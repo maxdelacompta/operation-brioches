@@ -29,6 +29,8 @@ import {
 } from 'lucide-react'
 
 import { useMairies } from '../contexts/MairiesContext'
+import { useUsers } from '../contexts/UsersContext'
+import ImportMairiesExcel from './ImportMairiesExcel'
 import type {
   Mairie,
   NouvelleMairie,
@@ -112,7 +114,10 @@ export default function Mairies() {
     updateMairie,
     archiveMairie,
     restoreMairie,
+    importMairies,
   } = useMairies()
+  const { currentUser } = useUsers()
+  const [importOpen, setImportOpen] = useState(false)
 
   const [search, setSearch] = useState('')
   const [secteurFilter, setSecteurFilter] = useState('TOUS')
@@ -331,10 +336,13 @@ export default function Mairies() {
           <p>Base de données des communes et mairies liées à l'Opération Brioches.</p>
         </div>
 
+        <div className="mairies-header-buttons">
+          {currentUser?.role === 'administrateur' && <button type="button" className="mairies-secondary-button" onClick={() => setImportOpen(true)}><Download size={17}/> Import Excel</button>}
         <button type="button" className="mairies-primary-button" onClick={openCreate}>
           <Plus size={18} />
           Nouvelle mairie
         </button>
+        </div>
       </header>
 
       <section className="mairies-kpis">
@@ -473,6 +481,7 @@ export default function Mairies() {
         </div>
       </section>
 
+      {importOpen && currentUser?.role === 'administrateur' && <ImportMairiesExcel mairies={mairies} onCommit={importMairies} onClose={() => setImportOpen(false)} />}
       {modalOpen && (
         <MairieFormModal
           mode={formMode}

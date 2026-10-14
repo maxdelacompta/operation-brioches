@@ -201,6 +201,7 @@ type MairiesContextValue = {
   updateMairie: (id: string, patch: Partial<NouvelleMairie>) => void
   archiveMairie: (id: string) => void
   restoreMairie: (id: string) => void
+  importMairies: (rows: { value: NouvelleMairie; existingId?: string }[]) => void
 }
 
 const MairiesContext = createContext<MairiesContextValue | null>(null)
@@ -256,6 +257,30 @@ export function MairiesProvider({ children }: { children: ReactNode }) {
             }
           : item,
       ))
+    },
+    importMairies(rows) {
+      const now = new Date().toISOString()
+      setMairies(current => {
+        const result = [...current]
+        for (const row of rows) {
+          const index = row.existingId ? result.findIndex(m => m.id === row.existingId) : -1
+          if (index >= 0) {
+            const previous = result[index]
+            result[index] = {
+              ...previous, ...row.value,
+              // Preserve historical records and attached documents.
+              participations: previous.participations,
+              documents: previous.documents,
+              updatedAt: now,
+              historique: [{ id: createId(), date: now.slice(0, 10), libelle: 'Fiche mise à jour par import Excel' }, ...previous.historique],
+            }
+          } else {
+            result.push({ ...row.value, id: createId(), createdAt: now, updatedAt: now,
+              historique: [{ id: createId(), date: now.slice(0, 10), libelle: 'Fiche créée par import Excel' }] })
+          }
+        }
+        return result
+      })
     },
     archiveMairie(id) {
       setMairies((current) => current.map((item) =>

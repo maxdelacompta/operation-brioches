@@ -18,6 +18,7 @@ import { MairiesProvider } from './contexts/MairiesContext'
 import { CommandesMairiesRsProvider } from './contexts/CommandesMairiesRsContext'
 
 import AppLayout from './layouts/AppLayout'
+import ResetOB2026 from './pages/ResetOB2026'
 
 import ThemeShowcase from './pages/ThemeShowcase'
 
@@ -46,6 +47,7 @@ import CommandesArtisans from './pages/CommandesArtisans'
 import Fournisseurs from './pages/Fournisseurs'
 import CommandesGms from './pages/CommandesGms'
 import CommandesIndustriels from './pages/CommandesIndustriels'
+import SuiviCommandesAchats from './pages/SuiviCommandesAchats'
 import Geographie from './pages/Geographie'
 
 import FichesCaisse from './pages/FichesCaisse'
@@ -54,6 +56,7 @@ import SuiviBanque from './pages/Suivibanque'
 import RecapitulatifGlobal from './pages/RecapitulatifGlobal'
 
 import JustificatifsDons from './pages/JustificatifsDons'
+import FacturesPaiements from './pages/FacturesPaiements'
 
 import Administration from './pages/Administration'
 import Utilisateurs from './pages/Utilisateurs'
@@ -110,6 +113,7 @@ function App() {
                       element={<CommandesMairiesRs />}
                     />
 
+                    <Route path="/commandes-achats/suivi-global" element={<SuiviCommandesAchats />} />
                     <Route
                       path="/commandes-achats/artisans"
                       element={<CommandesArtisans />}
@@ -158,6 +162,7 @@ function App() {
                       element={<RecapitulatifGlobal />}
                     />
 
+                    <Route path="/finance/factures-paiements" element={<FacturesPaiements />} />
                     <Route
                       path="/finance/justificatifs-dons"
                       element={<JustificatifsDons />}
@@ -189,6 +194,7 @@ function App() {
                       element={<Geographie />}
                     />
 
+                    <Route path="/administration/reset-ob2026" element={<ResetOB2026 />} />
                     <Route
                       path="/administration"
                       element={<Administration />}

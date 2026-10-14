@@ -115,6 +115,7 @@ const sections: SidebarSection[] = [
     label: 'Commandes achats',
     icon: Package,
     items: [
+      { label: 'Suivi global achats', to: '/commandes-achats/suivi-global' },
       { label: 'Fournisseurs', to: '/commandes-achats/fournisseurs' },
       { label: 'Artisans', to: '/commandes-achats/artisans' },
       { label: 'GMS', to: '/commandes-achats/gms' },
@@ -164,6 +165,7 @@ const sections: SidebarSection[] = [
         label: "Vue d'ensemble",
         to: '/comptabilite',
       },
+      { label: 'Factures & Paiements', to: '/finance/factures-paiements' },
       {
         label: 'Justificatifs de dons',
         to: '/finance/justificatifs-dons',

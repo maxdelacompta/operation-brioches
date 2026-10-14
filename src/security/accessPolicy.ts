@@ -25,6 +25,7 @@ export function canAccessPath(
   if (!user || user.status !== 'actif') return false
 
   const path = pathname.replace(/\/+$/, '') || '/'
+  if (path === '/administration/reset-ob2026') return user.role === 'administrateur'
   if (PUBLIC_ESTABLISHMENT_PATHS.has(path)) return true
 
   const module = permissionModuleForPath(path)

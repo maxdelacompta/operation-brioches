@@ -489,3 +489,5 @@
   .mairies-overlay { padding: 0; }
   .mairies-modal { width: 100%; min-height: 100vh; max-height: 100vh; border-radius: 0; }
 }
+
+.mairies-header-buttons{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
