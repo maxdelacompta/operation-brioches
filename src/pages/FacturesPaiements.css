@@ -10,3 +10,5 @@
 .fpai-sort:hover{color:#ef7c16}.fpai-category{display:inline-block;white-space:nowrap}
 .fpai-row-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.fpai-card th{white-space:nowrap}.fpai-card td{vertical-align:middle}
 @media(max-width:700px){.fpai-filterbar{align-items:stretch}.fpai-search{flex-basis:100%}.fpai-filterbar select{flex:1}}
+
+.fpai-anomaly{display:inline-block;color:#a34c08;font-weight:750;background:#fff1db;border-radius:6px;padding:5px 7px;white-space:normal}.fpai-orders-link{display:grid;gap:9px;max-height:260px;overflow:auto}.fpai-orders-link label{display:flex;align-items:center;gap:10px;font-size:13px;padding:8px;border:1px solid #e3eaf2;border-radius:8px}.fpai-orders-link small{display:block;color:#a34c08}.fpai-link-totals{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px}.fpai-link-notice{background:#e9f8ee;color:#176b3a;padding:10px;border-radius:8px;margin:0}

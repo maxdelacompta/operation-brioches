@@ -25,6 +25,8 @@ import {
   numeroCommandeSuivant,
 } from '../types/artisans'
 
+import { paiementRapprocheVerrouille, MESSAGE_PAIEMENT_VERROUILLE } from '../lib/paiementCommandeLock'
+
 import './CommandesIndustriels.css'
 
 type StatutFiltre = 'TOUS' | 'CREES' | 'CONFIRMES' | 'LIVRES' | 'PAYES'
@@ -117,6 +119,12 @@ export default function CommandesIndustriels() {
   function enregistrer(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!edition) return
+    if (editionId && paiementRapprocheVerrouille(editionId)) {
+      const origine = commandesArtisans.find(c => c.id === editionId)
+      if (!origine || !edition.paye || edition.statut !== origine.statut || edition.artisanId !== origine.artisanId || edition.quantiteCommandee !== origine.quantiteCommandee || Math.abs(Number(totalTtc.replace(',', '.')) - montantCommande(origine)) > .01) {
+        setErreur(MESSAGE_PAIEMENT_VERROUILLE); return
+      }
+    }
     if (!fournisseurs.filter(estIndustriel).some(f => f.id === edition.artisanId)) {
       setErreur('Sélectionne un fournisseur industriel existant.')
       return
@@ -143,6 +151,7 @@ export default function CommandesIndustriels() {
 
   function modifierCellule(c: CommandeArtisan, cle: string, val: string) {
     setEditionCellule(null)
+    if (paiementRapprocheVerrouille(c.id)) { setMessage(MESSAGE_PAIEMENT_VERROUILLE); return }
     const suivant: CommandeIndustrie = { ...(c as CommandeIndustrie) }
     if (cle === 'quantiteCommandee') {
       const q = Number(val); if (!Number.isInteger(q) || q <= 0) return setMessage('Quantité invalide.')
@@ -174,6 +183,7 @@ export default function CommandesIndustriels() {
   }
 
   function cellule(c: CommandeArtisan, cle: string, affichage: string, type: 'text'|'number'|'date'|'select' = 'text') {
+    if (cle === 'statut' && paiementRapprocheVerrouille(c.id)) return <span className="ind-status-locked" title="Paiement rapproché et validé dans Factures & Paiements">🔒 Payé</span>
     const active = editionCellule?.id === c.id && editionCellule.cle === cle
     const options = cle === 'livre' ? [['false','À livrer'],['true','Livré']] : cle === 'paye' ? [['false','À payer'],['true','Payé']] : cle === 'statut' ? [['BROUILLON','Bon créé'],['CONFIRMEE','Bon confirmé'],['LIVRE','Livré'],['PAYE','Payé']]
       : cle === 'artisanId' ? fournisseurs.filter(estIndustriel).map(f => [f.id, f.nom])
@@ -587,7 +597,7 @@ export default function CommandesIndustriels() {
               <label>Lieu de livraison<select value={(edition as CommandeIndustrie).etablissementId ?? ''} onChange={e => setEdition(prev => prev ? {...prev,etablissementId:e.target.value} : null)}><option value="">À affecter</option>{etablissementsDisponibles.map(e => <option value={e.id} key={e.id}>{e.nom}{e.peutRecevoirStock ? '' : ' — stock non autorisé'}</option>)}</select></label>
               {!etablissementsDisponibles.length && <p className="ind-form-error ind-wide">Aucun établissement actif. Crée-en un dans Administration → Établissements.</p>}
               <label>Secteur<input value={edition.secteur} onChange={e => modifier('secteur', e.target.value)} /></label>
-              <label>Statut<select value={(edition as CommandeIndustrie).paye ? 'PAYE' : (edition as CommandeIndustrie).livre ? 'LIVRE' : estConfirmee(edition) ? 'CONFIRMEE' : 'BROUILLON'} onChange={e => { const v = e.target.value; setEdition(p => p ? {...p, statut:(v === 'BROUILLON' ? 'BROUILLON' : 'CONFIRMEE') as StatutCommandeArtisan, livre:v === 'LIVRE' || v === 'PAYE', paye:v === 'PAYE'} : null) }}><option value="BROUILLON">Bon créé</option><option value="CONFIRMEE">Bon confirmé — réception stock</option><option value="LIVRE">Livré</option><option value="PAYE">Payé</option></select></label>
+              <label>Statut<select disabled={Boolean(editionId && paiementRapprocheVerrouille(editionId))} title={editionId && paiementRapprocheVerrouille(editionId) ? MESSAGE_PAIEMENT_VERROUILLE : undefined} value={(edition as CommandeIndustrie).paye ? 'PAYE' : (edition as CommandeIndustrie).livre ? 'LIVRE' : estConfirmee(edition) ? 'CONFIRMEE' : 'BROUILLON'} onChange={e => { const v = e.target.value; setEdition(p => p ? {...p, statut:(v === 'BROUILLON' ? 'BROUILLON' : 'CONFIRMEE') as StatutCommandeArtisan, livre:v === 'LIVRE' || v === 'PAYE', paye:v === 'PAYE'} : null) }}><option value="BROUILLON">Bon créé</option><option value="CONFIRMEE">Bon confirmé — réception stock</option><option value="LIVRE">Livré</option><option value="PAYE">Payé</option></select></label>
 
               <label className="ind-wide">Remarques<textarea rows={3} value={edition.remarque} onChange={e => modifier('remarque', e.target.value)} /></label>
               <div className="ind-form-total ind-wide">Prix TTC calculé par brioche <strong>{edition.quantiteCommandee > 0 && totalTtc.trim() !== '' && Number.isFinite(Number(totalTtc.replace(',', '.'))) ? argent(Number(totalTtc.replace(',', '.')) / edition.quantiteCommandee) : '—'}</strong></div>

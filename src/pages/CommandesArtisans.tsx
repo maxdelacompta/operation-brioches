@@ -26,6 +26,8 @@ import {
   numeroCommandeSuivant,
 } from '../types/artisans'
 
+import { paiementRapprocheVerrouille, MESSAGE_PAIEMENT_VERROUILLE } from '../lib/paiementCommandeLock'
+
 import './CommandesArtisans.css'
 
 type StatutFiltre = 'TOUS' | 'CREES' | 'CONFIRMES' | 'LIVRES' | 'PAYES'
@@ -130,6 +132,12 @@ export default function CommandesArtisans() {
   function enregistrer(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!edition) return
+    if (editionId && paiementRapprocheVerrouille(editionId)) {
+      const origine = commandesArtisans.find(c => c.id === editionId)
+      if (!origine || !edition.paye || edition.statut !== origine.statut || edition.artisanId !== origine.artisanId || edition.quantiteCommandee !== origine.quantiteCommandee || Math.abs(Number(totalTtc.replace(',', '.')) - montantCommande(origine)) > .01) {
+        setErreur(MESSAGE_PAIEMENT_VERROUILLE); return
+      }
+    }
     if (!fournisseurs.filter(estArtisan).some(f => f.id === edition.artisanId)) {
       setErreur('Sélectionne un fournisseur Artisans existant.')
       return
@@ -164,6 +172,7 @@ export default function CommandesArtisans() {
 
   function modifierCellule(c: CommandeArtisan, cle: string, val: string) {
     setEditionCellule(null)
+    if (paiementRapprocheVerrouille(c.id)) { setMessage(MESSAGE_PAIEMENT_VERROUILLE); return }
     const suivant: CommandeArtisansSuivi = { ...(c as CommandeArtisansSuivi) }
     if (cle === 'quantiteCommandee') {
       const q = Number(val); if (!Number.isInteger(q) || q <= 0) return setMessage('Quantité invalide.')
@@ -196,6 +205,7 @@ export default function CommandesArtisans() {
   }
 
   function cellule(c: CommandeArtisan, cle: string, affichage: string, type: 'text'|'number'|'date'|'select' = 'text') {
+    if (cle === 'statut' && paiementRapprocheVerrouille(c.id)) return <span className="ind-status-locked" title="Paiement rapproché et validé dans Factures & Paiements">🔒 Payé</span>
     const active = editionCellule?.id === c.id && editionCellule.cle === cle
     const options = cle === 'livre' ? [['false','À livrer'],['true','Livré']] : cle === 'paye' ? [['false','À payer'],['true','Payé']] : cle === 'statut' ? [['BROUILLON','Bon créé'],['CONFIRMEE','Bon confirmé'],['LIVRE','Livré'],['PAYE','Payé']]
       : cle === 'artisanId' ? fournisseurs.filter(estArtisan).map(f => [f.id, f.nom])
@@ -644,7 +654,7 @@ export default function CommandesArtisans() {
                 <p className="art-dest-help">Le stock AEIM est alimenté uniquement pour les établissements marqués « Livré ». Les mairies et stands restent suivis sans stock d'établissement fictif.</p>
               </section>
               <label>Secteur<input value={edition.secteur} onChange={e => modifier('secteur', e.target.value)} /></label>
-              <label>Statut<select value={(edition as CommandeArtisansSuivi).paye ? 'PAYE' : livraisonsTerminees(edition) ? 'LIVRE' : estConfirmee(edition) ? 'CONFIRMEE' : 'BROUILLON'} onChange={e => { const v = e.target.value; setEdition(p => p ? {...p, statut:(v === 'BROUILLON' ? 'BROUILLON' : 'CONFIRMEE') as StatutCommandeArtisan, livre:livraisonsTerminees(p), paye:v === 'PAYE'} : null) }}><option value="BROUILLON">Bon créé</option><option value="CONFIRMEE">Bon confirmé</option><option value="LIVRE">Livré</option><option value="PAYE">Payé</option></select></label>
+              <label>Statut<select disabled={Boolean(editionId && paiementRapprocheVerrouille(editionId))} title={editionId && paiementRapprocheVerrouille(editionId) ? MESSAGE_PAIEMENT_VERROUILLE : undefined} value={(edition as CommandeArtisansSuivi).paye ? 'PAYE' : livraisonsTerminees(edition) ? 'LIVRE' : estConfirmee(edition) ? 'CONFIRMEE' : 'BROUILLON'} onChange={e => { const v = e.target.value; setEdition(p => p ? {...p, statut:(v === 'BROUILLON' ? 'BROUILLON' : 'CONFIRMEE') as StatutCommandeArtisan, livre:livraisonsTerminees(p), paye:v === 'PAYE'} : null) }}><option value="BROUILLON">Bon créé</option><option value="CONFIRMEE">Bon confirmé</option><option value="LIVRE">Livré</option><option value="PAYE">Payé</option></select></label>
 
               <label className="ind-wide">Remarques<textarea rows={3} value={edition.remarque} onChange={e => modifier('remarque', e.target.value)} /></label>
               <div className="ind-form-total ind-wide">Prix TTC calculé par brioche <strong>{edition.quantiteCommandee > 0 && totalTtc.trim() !== '' && Number.isFinite(Number(totalTtc.replace(',', '.'))) ? argent(Number(totalTtc.replace(',', '.')) / edition.quantiteCommandee) : '—'}</strong></div>
