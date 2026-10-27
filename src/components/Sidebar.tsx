@@ -29,6 +29,7 @@ import {
 
 import { useUsers } from '../contexts/UsersContext'
 import './SidebarBdd.css'
+import './SidebarAuth.css'
 
 import { useAccess } from '../lib/useAccess'
 
@@ -120,7 +121,7 @@ const sections: SidebarSection[] = [
       { label: 'Artisans', to: '/commandes-achats/artisans' },
       { label: 'GMS', to: '/commandes-achats/gms' },
       { label: 'Industriels', to: '/commandes-achats/industriels' },
-      { label: 'Suivi des livraisons', to: '/commandes-achats/artisans/planning' },
+      { label: 'Suivi des livraisons' },
     ],
   },
   {
@@ -146,10 +147,17 @@ const sections: SidebarSection[] = [
         label: 'Coffre',
         to: '/encaissements/coffre',
       },
+      
+      {
+        label: 'Gestion des chèques',
+        to: '/encaissements/gestion-cheques',
+      },
+
       {
         label: 'Suivi banque',
         to: '/encaissements/suivi-banque',
       },
+      
       {
         label: 'Récapitulatif global',
         to: '/encaissements/recapitulatif-global',
@@ -214,6 +222,7 @@ const sections: SidebarSection[] = [
         label: 'Liste des établissements',
         to: '/administration/etablissements',
       },
+      { label: 'Accès de connexion', to: '/administration/acces-connexion' },
       {
         label: 'Utilisateurs',
         to: '/administration/utilisateurs',
@@ -312,7 +321,7 @@ export default function Sidebar() {
     items: section.items.map((item) => ({
       ...item,
       children: item.children?.filter(child => Boolean(child.to && canVisit(child.to))),
-    })).filter(item => Boolean((item.to && canVisit(item.to)) || item.children?.length)),
+    })).filter(item => Boolean((item.to && canVisit(item.to)) || item.children?.length || !item.to)),
   })).filter((section) => section.items.length > 0)
   const { currentUser } = useUsers()
   const { settings } =

@@ -1,0 +1,339 @@
+/* OB2026 — Connexion : version affinée avec illustration immersive */
+.ob-login-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 2.1vw, 28px);
+  background: radial-gradient(circle at 8% 0%, #fff0dd, #f8f2e8 56%, #efe6d9);
+  color: #0c3265;
+}
+.ob-login-page * { box-sizing: border-box; }
+
+.ob-login-shell {
+  position: relative;
+  isolation: isolate;
+  width: min(1550px, 100%);
+  height: min(840px, calc(100dvh - 48px));
+  min-height: 710px;
+  display: grid;
+  grid-template-columns: minmax(365px, 36.5%) minmax(0, 63.5%);
+  border-radius: 26px;
+  box-shadow: 0 24px 64px rgba(20, 43, 68, .12);
+  background: #fbf5ec;
+  overflow: hidden;
+}
+
+.ob-login-form-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 22px clamp(27px, 3.8vw, 72px) 26px;
+  background: linear-gradient(160deg, #fffdf8, #f9f1e6);
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* Ornement bas gauche : rotation 180° pour un rendu plus symétrique */
+.ob-login-form-panel::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  bottom: -22px;
+  left: -18px;
+  width: 154px;
+  height: 154px;
+  background: url('/ob/ornements-brioches.svg') center / contain no-repeat;
+  transform: rotate(0deg);
+  opacity: .82;
+  z-index: -1;
+}
+
+/* On allège fortement l’ornement haut droit */
+.ob-login-form-panel::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 108px;
+  height: 108px;
+  background: url('/ob/ornements-brioches.svg') center / contain no-repeat;
+  opacity: .10;
+  transform: rotate(180deg);
+}
+
+.ob-login-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+.ob-login-logo img {
+  display: block;
+  width: 170px;
+  height: 173px;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+.ob-login-logo-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #6f8197;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ob-login-logo-tag::before,
+.ob-login-logo-tag::after {
+  content: '';
+  width: 20px;
+  height: 1px;
+  background: #bdc8d4;
+}
+
+.ob-login-heading {
+  text-align: center;
+  margin: 0 0 20px;
+}
+.ob-login-eyebrow {
+  color: #f37713;
+  letter-spacing: .12em;
+  font-size: 10px;
+  font-weight: 900;
+}
+.ob-login-heading h1 {
+  font-size: clamp(29px, 2.6vw, 41px);
+  font-weight: 900;
+  letter-spacing: -.035em;
+  line-height: 1.08;
+  margin: 12px auto;
+  max-width: 370px;
+  color: #0b3269;
+}
+.ob-login-heading p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #647895;
+  max-width: 405px;
+  margin: 0 auto;
+}
+
+.ob-login-form-panel form {
+  width: 100%;
+  display: grid;
+  gap: 13px;
+}
+.ob-login-form-panel label {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #0b3269;
+}
+.ob-login-form-panel input {
+  height: 45px;
+  width: 100%;
+  border: 1px solid #d6e2f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #eef4fd;
+  outline: none;
+  color: #12366b;
+  font: inherit;
+  font-size: 13px;
+}
+.ob-login-form-panel input:focus {
+  background: white;
+  border-color: #f47c17;
+  box-shadow: 0 0 0 3px rgba(244, 124, 23, .13);
+}
+.ob-login-password { position: relative; }
+.ob-login-password input { padding-right: 52px; }
+.ob-login-password button {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: #768ca8;
+  border: 0;
+  padding: 9px;
+  cursor: pointer;
+}
+
+.ob-login-submit {
+  margin-top: 2px;
+  min-height: 48px;
+  background: #fa7e18;
+  color: white;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(233, 106, 10, .2);
+}
+.ob-login-submit:hover:not(:disabled) { background: #e97110; }
+.ob-login-submit:disabled { opacity: .6; cursor: wait; }
+
+.ob-login-error {
+  padding: 10px;
+  border: 1px solid #f8b9a9;
+  background: #fff0ec;
+  border-radius: 8px;
+  color: #ac2927;
+  font-size: 12px;
+}
+
+.ob-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 12px;
+  color: #72869f;
+  font-size: 11px;
+  font-weight: 700;
+}
+.ob-login-divider::before,
+.ob-login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #dce3eb;
+}
+
+.ob-login-future {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid #d8e4f0;
+  background: #fff;
+  border-radius: 10px;
+  color: #71849d;
+}
+.ob-login-future > div { min-width: 0; flex: 1; }
+.ob-login-future strong { display: block; font-size: 12px; color: #0e376a; }
+.ob-login-future p { font-size: 10px; line-height: 1.4; margin: 3px 0 0; }
+.ob-login-ms-logo {
+  width: 25px;
+  height: 25px;
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+}
+.ob-login-ms-logo i:nth-child(1) { background: #f25022; }
+.ob-login-ms-logo i:nth-child(2) { background: #7fba00; }
+.ob-login-ms-logo i:nth-child(3) { background: #00a4ef; }
+.ob-login-ms-logo i:nth-child(4) { background: #ffb900; }
+
+.ob-login-warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  font-size: 9px;
+  line-height: 1.4;
+  color: #8998aa;
+  margin: 13px 0 0;
+}
+.ob-login-warning svg { flex: none; }
+
+/* Panneau droit avec image intégrée et coins arrondis également côté gauche */
+.ob-login-brand--complete {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  background: #fbf5ec;
+  border-top-left-radius: 28px;
+  border-bottom-left-radius: 28px;
+  border-top-right-radius: 26px;
+  border-bottom-right-radius: 26px;
+  overflow: hidden;
+}
+.ob-login-brand--complete::before,
+.ob-login-brand--complete::after {
+  content: none !important;
+}
+.ob-login-hero-full {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: inherit;
+}
+
+@media (max-height: 830px) and (min-width: 771px) {
+  .ob-login-shell { min-height: 0; height: calc(100dvh - 28px); }
+  .ob-login-logo { margin-bottom: 11px; }
+  .ob-login-logo img { width: 132px; height: 133px; }
+  .ob-login-heading { margin-bottom: 12px; }
+  .ob-login-heading h1 { font-size: 32px; margin: 8px auto; }
+  .ob-login-form-panel form { gap: 10px; }
+  .ob-login-form-panel input { height: 41px; }
+  .ob-login-submit { min-height: 43px; }
+  .ob-login-divider { margin: 10px 0; }
+}
+
+@media (max-width: 1130px) and (min-width: 771px) {
+  .ob-login-shell { grid-template-columns: minmax(320px, 40%) minmax(0, 60%); }
+  .ob-login-form-panel { padding-left: 26px; padding-right: 26px; }
+}
+
+@media (max-width: 770px) {
+  .ob-login-page { display: block; padding: 0; }
+  .ob-login-shell {
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .ob-login-form-panel { padding: 28px clamp(22px, 6vw, 48px); }
+  .ob-login-brand--complete {
+    min-height: 420px;
+    border-radius: 0;
+  }
+  .ob-login-hero-full {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1012 / 858;
+    object-fit: cover;
+  }
+  .ob-login-logo img { height: 148px; width: 148px; }
+}
+
+@media (max-width: 430px) {
+  .ob-login-logo-tag { font-size: 8px; }
+  .ob-login-logo-tag::before,
+  .ob-login-logo-tag::after { width: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-login-page * { transition: none !important; }
+}

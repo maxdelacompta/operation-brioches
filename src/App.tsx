@@ -18,6 +18,9 @@ import { MairiesProvider } from './contexts/MairiesContext'
 import { CommandesMairiesRsProvider } from './contexts/CommandesMairiesRsContext'
 
 import AppLayout from './layouts/AppLayout'
+import { AuthProvider } from './contexts/AuthContext'
+import Connexion from './pages/Connexion'
+import AccesConnexion from './pages/AccesConnexion'
 import ResetOB2026 from './pages/ResetOB2026'
 
 import ThemeShowcase from './pages/ThemeShowcase'
@@ -53,6 +56,7 @@ import Geographie from './pages/Geographie'
 import FichesCaisse from './pages/FichesCaisse'
 import Coffre from './pages/Coffre'
 import SuiviBanque from './pages/Suivibanque'
+import GestionCheques from './pages/GestionCheques'
 import RecapitulatifGlobal from './pages/RecapitulatifGlobal'
 
 import JustificatifsDons from './pages/JustificatifsDons'
@@ -69,6 +73,7 @@ import AdminEtablissements from './pages/AdminEtablissements'
 function App() {
   return (
     <UsersProvider>
+      <AuthProvider>
       <PermissionsProvider>
         <GeneralSettingsProvider>
           <ArtisansProvider>
@@ -78,7 +83,9 @@ function App() {
                 <JustificatifsProvider>
                 <BrowserRouter>
                 <Routes>
+                  <Route path="/connexion" element={<Connexion />} />
                   <Route element={<AppLayout />}>
+                    <Route path="/administration/acces-connexion" element={<AccesConnexion />} />
                     <Route path="/" element={<Accueil />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/recherche" element={<Recherche />} />
@@ -156,6 +163,10 @@ function App() {
                     <Route
                       path="/encaissements/suivi-banque"
                       element={<SuiviBanque />}
+                    />
+                    <Route
+                      path="/encaissements/gestion-cheques"
+                      element={<GestionCheques />}
                     />
                     <Route
                       path="/encaissements/recapitulatif-global"
@@ -237,6 +248,7 @@ function App() {
           </ArtisansProvider>
         </GeneralSettingsProvider>
       </PermissionsProvider>
+      </AuthProvider>
     </UsersProvider>
   )
 }

@@ -45,6 +45,13 @@ export type CampagneJustificatifsSettings = {
     banque: string
   }
 
+  comptabilite: {
+    compteBanque: string
+    compteDons: string
+    analytique: string
+    journal: string
+  }
+
   fields: {
     JDI: PdfFieldPositions
     JDP: PdfFieldPositions
@@ -109,6 +116,8 @@ export function createDefaultCampagneJustificatifsSettings(
       bic: 'AGRIFRPP861',
       banque: 'Crédit Agricole Lorraine',
     },
+
+    comptabilite: { compteBanque: '', compteDons: '', analytique: '', journal: '112' },
 
     fields: {
       JDI: cloneFields(),
@@ -175,6 +184,7 @@ export function getCampagneJustificatifsSettings(
       ...defaults.virement,
       ...saved.virement,
     },
+    comptabilite: { ...defaults.comptabilite, ...saved.comptabilite },
     fields: {
       JDI: {
         ...defaults.fields.JDI,

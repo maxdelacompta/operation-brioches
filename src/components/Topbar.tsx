@@ -2,19 +2,18 @@ import {
   useEffect,
   useRef,
   useState,
-  type FormEvent,
 } from 'react'
 
 import {
   Bell,
   MessageCircle,
+  LogOut,
   Search,
   X,
 } from 'lucide-react'
 
 import {
   Link,
-  useLocation,
   useNavigate,
 } from 'react-router-dom'
 
@@ -27,7 +26,7 @@ import {
   useGeneralSettings,
 } from '../contexts/GeneralSettingsContext'
 
-import { useObData } from '../contexts/ObDataContext'
+import { useAuth } from '../contexts/AuthContext'
 
 import './Topbar.css'
 
@@ -83,28 +82,11 @@ function Topbar({
   } = useUsers()
 
   const navigate = useNavigate()
-  const location = useLocation()
-  const searchInputRef = useRef<HTMLInputElement | null>(null)
-  const [headerQuery, setHeaderQuery] = useState('')
-
-  // Synchronise la barre lorsque la recherche est modifiée sur sa page.
-  useEffect(() => {
-    if (location.pathname === '/recherche') {
-      setHeaderQuery(new URLSearchParams(location.search).get('q') ?? '')
-    }
-  }, [location.pathname, location.search])
-
-  function submitHeaderSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const term = headerQuery.trim()
-    navigate(term ? `/recherche?q=${encodeURIComponent(term)}` : '/recherche')
-  }
+  const { signOut } = useAuth()
 
   const {
     settings,
   } = useGeneralSettings()
-
-  const { activeCampagne } = useObData()
 
   /* =======================================================
      RÉFÉRENCES
@@ -146,7 +128,6 @@ function Topbar({
      ======================================================= */
 
   const applicationName =
-    activeCampagne?.nom?.trim() ||
     settings.applicationName.trim() ||
     'Opération Brioches'
 
@@ -265,12 +246,7 @@ function Topbar({
     function onSearchKey(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
-        if (window.matchMedia('(max-width: 750px)').matches) {
-          navigate('/recherche')
-        } else {
-          searchInputRef.current?.focus()
-          searchInputRef.current?.select()
-        }
+        navigate('/recherche')
       }
     }
     window.addEventListener('keydown', onSearchKey)
@@ -324,20 +300,17 @@ function Topbar({
 
       </Link>
 
-      <form className="ob-topbar-global-search" role="search" onSubmit={submitHeaderSearch}>
-        <input
-          ref={searchInputRef}
-          type="search"
-          value={headerQuery}
-          onChange={(event) => setHeaderQuery(event.target.value)}
-          placeholder="Rechercher dans OB2026..."
-          aria-label="Rechercher dans OB2026"
-        />
-        <kbd aria-hidden="true">Ctrl K</kbd>
-        <button type="submit" className="ob-topbar-global-search-submit" aria-label="Lancer la recherche" title="Lancer la recherche">
-          <Search size={19} aria-hidden="true" />
-        </button>
-      </form>
+      <button
+        type="button"
+        className="ob-topbar-global-search"
+        onClick={() => navigate('/recherche')}
+        aria-label="Ouvrir la recherche globale"
+        title="Rechercher dans OB2026 (Ctrl + K)"
+      >
+        <Search size={19} aria-hidden="true" />
+        <span>Rechercher dans OB2026...</span>
+        <kbd>Ctrl K</kbd>
+      </button>
 
       {/* ===================================================
           PARTIE DROITE
@@ -507,6 +480,17 @@ function Topbar({
           </div>
 
         </div>
+
+        <button
+          type="button"
+          className="ob-topbar-logout"
+          onClick={() => { signOut(); navigate('/connexion', { replace: true }) }}
+          aria-label="Se déconnecter"
+          title="Se déconnecter"
+        >
+          <LogOut size={18} />
+          <span>Déconnexion</span>
+        </button>
 
       </div>
 

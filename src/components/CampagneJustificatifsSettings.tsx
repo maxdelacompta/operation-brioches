@@ -88,6 +88,10 @@ function CampagneJustificatifsSettings({
     }))
   }
 
+  function updateComptabilite(key: keyof Settings['comptabilite'], value: string) {
+    setSettings(current => ({ ...current, comptabilite: { ...current.comptabilite, [key]: value } }))
+  }
+
   function updatePosition(
     type: JustificatifTemplateType,
     field: keyof Settings['fields']['JDI'],
@@ -380,6 +384,16 @@ function CampagneJustificatifsSettings({
           </div>
         </section>
       </div>
+
+      <section className="campaign-jd-payment-card" style={{marginTop:20}}>
+        <div className="campaign-jd-payment-title"><div className="campaign-jd-icon virement"><CreditCard size={20}/></div><div><h4>Paramètres comptables — remises de chèques</h4><p>Ces comptes servent aux exports Excel et TXT des bordereaux de cette campagne. À vérifier avec la comptabilité avant import.</p></div></div>
+        <div className="campaign-jd-fields">
+          <label><span>Compte comptable banque</span><input value={settings.comptabilite.compteBanque} disabled={!canManage} placeholder="512…" onChange={e=>updateComptabilite('compteBanque',e.target.value)}/></label>
+          <label><span>Compte de dons</span><input value={settings.comptabilite.compteDons} disabled={!canManage} placeholder="754…" onChange={e=>updateComptabilite('compteDons',e.target.value)}/></label>
+          <label><span>Analytique comptable</span><input value={settings.comptabilite.analytique} disabled={!canManage} placeholder="Code analytique" onChange={e=>updateComptabilite('analytique',e.target.value)}/></label>
+          <label><span>Code journal</span><input value={settings.comptabilite.journal} disabled={!canManage} placeholder="112" onChange={e=>updateComptabilite('journal',e.target.value)}/></label>
+        </div>
+      </section>
 
       <section className="campaign-jd-chorus-note">
         <div className="campaign-jd-icon chorus">

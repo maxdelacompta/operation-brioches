@@ -1,14 +1,18 @@
 import { useUsers } from '../contexts/UsersContext'
-import UserTestPanel from '../components/UserTestPanel'
 import { useState } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { Outlet } from 'react-router-dom'
 
 import Sidebar from '../components/Sidebar'
 import Topbar from '../components/Topbar'
 import Chat from '../components/Chat'
+import UserTestPanel from '../components/UserTestPanel'
 
 function AppLayout() {
   const { currentUserId } = useUsers()
+  const { authenticated } = useAuth()
+  const location = useLocation()
   const [chatOpen, setChatOpen] = useState(false)
 
   const [unreadCount, setUnreadCount] = useState(0)
@@ -18,6 +22,8 @@ function AppLayout() {
   function toggleChat() {
     setChatOpen((current) => !current)
   }
+
+  if (!authenticated) return <Navigate to="/connexion" state={{ from: location.pathname }} replace />
 
   return (
     <div className="app-layout">

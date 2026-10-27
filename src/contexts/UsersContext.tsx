@@ -1,3 +1,4 @@
+import { testModeEnabled, TEST_MODE_AVAILABLE } from '../lib/testMode'
 import {
   createContext,
   useContext,
@@ -171,7 +172,7 @@ export function UsersProvider({
 }) {
   const [users, setUsers] = useState<AppUser[]>(loadUsers)
   const [selectedUserId, setSelectedUserId] = useState<string>(() => {
-    try { return sessionStorage.getItem('ob-test-current-user-v1') || DEMO_CURRENT_USER_ID }
+    try { return sessionStorage.getItem('ob2026-auth-session-v1') || DEMO_CURRENT_USER_ID }
     catch { return DEMO_CURRENT_USER_ID }
   })
   const currentUserId = users.some(user => user.id === selectedUserId && user.status === 'actif')
@@ -179,10 +180,26 @@ export function UsersProvider({
     : DEMO_CURRENT_USER_ID
 
   function setCurrentUserId(id: string) {
+    // Session réelle : seule l'authentification choisit librement le profil.
+    const sessionId = sessionStorage.getItem('ob2026-auth-session-v1')
+    const simulationAutorisee = TEST_MODE_AVAILABLE && testModeEnabled() && sessionId === DEMO_CURRENT_USER_ID
+    if (sessionId !== id && !simulationAutorisee) return
     if (!users.some(user => user.id === id && user.status === 'actif')) return
     setSelectedUserId(id)
-    try { sessionStorage.setItem('ob-test-current-user-v1', id) } catch { /* Navigation de démonstration */ }
   }
+
+  // Quand le mode test est coupé, revenir immédiatement au vrai compte connecté.
+  useEffect(() => {
+    const restore = () => {
+      if (testModeEnabled()) return
+      try {
+        const realId = sessionStorage.getItem('ob2026-auth-session-v1')
+        if (realId) setSelectedUserId(realId)
+      } catch { /* stockage indisponible */ }
+    }
+    window.addEventListener('ob2026-test-mode-change', restore)
+    return () => window.removeEventListener('ob2026-test-mode-change', restore)
+  }, [])
 
   /* SAUVEGARDE */
 
