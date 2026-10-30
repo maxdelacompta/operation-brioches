@@ -64,6 +64,7 @@ import FacturesPaiements from './pages/FacturesPaiements'
 
 import Administration from './pages/Administration'
 import Utilisateurs from './pages/Utilisateurs'
+import GestionMonCompte from './pages/GestionMonCompte'
 import RolesPermissions from './pages/RolesPermissions'
 import Campagnes from './pages/Campagnes'
 import ParametresGeneraux from './pages/ParametresGeneraux'
@@ -88,6 +89,7 @@ function App() {
                     <Route path="/administration/acces-connexion" element={<AccesConnexion />} />
                     <Route path="/" element={<Accueil />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/mon-compte" element={<GestionMonCompte />} />
                     <Route path="/recherche" element={<Recherche />} />
                     <Route
                       path="/gestion/suivi-caisse-tpe"

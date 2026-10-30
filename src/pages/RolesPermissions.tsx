@@ -27,6 +27,8 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Code2,
+  GraduationCap,
   ShoppingCart,
   Users,
   X,
@@ -49,6 +51,7 @@ import {
 
 import {
   PERMISSION_MODULES,
+  allowedForRole,
   usePermissions,
   type PermissionAction,
   type PermissionModule,
@@ -107,6 +110,9 @@ const roleIcons: Record<
   etablissement: Building2,
   terrain: Users,
   direction: ShieldCheck,
+  stagiaire_communication: GraduationCap,
+  stagiaire_comptabilite: GraduationCap,
+  developpeur: Code2,
 }
 
 /* =========================================================
@@ -207,6 +213,18 @@ const defaultMetadata: RoleMetaMap = {
     description:
       'Profil destiné aux activités de direction et de pilotage.',
     perimetre: 'À définir',
+  },
+  stagiaire_communication: {
+    description: 'Accès temporaire en lecture aux activités du pôle Communication, sans données sensibles ni gestion des utilisateurs.',
+    perimetre: 'Pôle Communication',
+  },
+  stagiaire_comptabilite: {
+    description: 'Accès temporaire en lecture aux activités comptables autorisées, sans validation ni opérations financières.',
+    perimetre: 'Pôle Comptabilité',
+  },
+  developpeur: {
+    description: 'Accès technique étendu : pas de suppression ni de modification des utilisateurs, droits, paramètres ou opérations financières sensibles.',
+    perimetre: 'Technique — accès étendu contrôlé',
   },
 }
 
@@ -686,7 +704,7 @@ function RolesPermissions() {
     } else {
       // Le hook emploie une mise à jour fonctionnelle, sans écrasement des changements.
       definition.actions.forEach((action) => {
-        if (!granted.includes(action)) togglePermission(selectedRole, moduleKey, action)
+        if (!granted.includes(action) && allowedForRole(selectedRole, moduleKey, action)) togglePermission(selectedRole, moduleKey, action)
       })
     }
     setNotice('Autorisations du module mises à jour.')
@@ -699,7 +717,7 @@ function RolesPermissions() {
     moduleLabel: string,
     actionLabel: string,
   ) {
-    if (!canEditSelectedRole) {
+    if (!canEditSelectedRole || !allowedForRole(selectedRole, moduleKey, action)) {
       return
     }
 
@@ -1668,7 +1686,7 @@ function RolesPermissions() {
                                     className="rp-checkbox"
                                     checked={checked}
                                     disabled={
-                                      !canEditSelectedRole
+                                      !canEditSelectedRole || !allowedForRole(selectedRole, module.key, column.key)
                                     }
                                     aria-label={`${column.label} — ${module.label} — ${ROLE_LABELS[selectedRole]}`}
                                     onChange={() =>
@@ -1692,7 +1710,7 @@ function RolesPermissions() {
                               type="checkbox"
                               className="rp-checkbox"
                               checked={module.actions.every((action) => granted.includes(action))}
-                              disabled={!canEditSelectedRole}
+                              disabled={!canEditSelectedRole || module.actions.some((action) => !allowedForRole(selectedRole, module.key, action))}
                               aria-label={`Tous les droits — ${module.label} — ${ROLE_LABELS[selectedRole]}`}
                               onChange={() => handleAllModulePermissions(module.key)}
                             />

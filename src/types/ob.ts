@@ -37,6 +37,20 @@ export type StatutCommande =
   | 'LIVREE'
   | 'ANNULEE'
 
+/** Livraison indépendante d'une même commande : le payeur reste celui de la commande. */
+export type CommandeLivraison = {
+  id: string
+  destinataireId?: number | null
+  destinataireNom: string
+  adresse: string
+  cp: string
+  ville: string
+  datePrevue: string
+  quantite: number
+  /** À compléter une fois la livraison effectuée. */
+  dateLivraison?: string
+}
+
 export type Commande = {
   id: number
   numero: string
@@ -59,6 +73,8 @@ export type Commande = {
 
   datePrevueLivraison?: string
   dateLivraison?: string
+  /** Plusieurs destinataires/dates, toujours un seul donateur payeur. */
+  livraisons?: CommandeLivraison[]
 
   remarque?: string
 }

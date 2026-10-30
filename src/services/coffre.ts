@@ -94,8 +94,11 @@ function validerContenu(
 
   const montant = eurosVersCentimes(contenu.montantCheques)
 
-  if ((contenu.nbCheques === 0) !== (montant === 0)) {
-    throw new Error(`${source} : nombre et montant des chèques incohérents.`)
+  // Certaines fiches historiques importées comportent un montant de chèques
+  // mais aucun nombre renseigné. On conserve le montant, sans inventer le nombre.
+  // Ce cas doit être signalé à l'utilisateur et vérifié avant toute remise.
+  if (contenu.nbCheques > 0 && montant === 0) {
+    throw new Error(`${source} : nombre de chèques renseigné sans montant.`)
   }
 }
 
@@ -231,7 +234,7 @@ export function calculerCoffre(
     !Number.isSafeInteger(montantCheques) ||
     totalCheques < 0 ||
     montantCheques < 0 ||
-    (totalCheques === 0) !== (montantCheques === 0)
+    (totalCheques > 0 && montantCheques === 0)
   ) {
     throw new Error('Remises de chèques incohérentes avec le stock disponible.')
   }

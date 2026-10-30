@@ -29,6 +29,9 @@ import {
 } from 'lucide-react'
 
 import { useJustificatifs } from '../contexts/JustificatifsContext'
+import { useObData } from '../contexts/ObDataContext'
+import { useSearchParams } from 'react-router-dom'
+import { calculerDemandesJustificatifs, composerDemandeChorus, type DemandeJustificatif } from '../services/demandesJustificatifs'
 import {
   ChorusIncompleteError,
   PaymentModeMissingError,
@@ -57,7 +60,7 @@ import type {
 
 import './JustificatifsDons.css'
 
-type MainTab = 'ALL' | JustificatifType
+type MainTab = 'ALL' | 'TODO' | JustificatifType
 type PageSize = 20 | 50 | 100
 
 type DonateurRef = {
@@ -328,6 +331,13 @@ function downloadText(
 
 
 function JustificatifsDons() {
+  const donneesOb = useObData() as ReturnType<typeof useObData> & { selectedCampagne?: {id:string}|null }
+  const { commandes: commandesOb, donateurs: donateursOb, fichesCaisse } = donneesOb
+  const campagneActive = donneesOb.selectedCampagne?.id ?? donneesOb.activeCampagne?.id ?? ''
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [commandeInitiale, setCommandeInitiale] = useState<string>('')
+  const [typeInitial, setTypeInitial] = useState<JustificatifType>('JDI')
+  const [messageChorus, setMessageChorus] = useState('')
   const {
     justificatifs,
     createJustificatif,
@@ -337,6 +347,51 @@ function JustificatifsDons() {
     archiveJustificatif,
     convertJdiToJdp,
   } = useJustificatifs()
+
+  const demandes = useMemo(() => calculerDemandesJustificatifs(
+    commandesOb, donateursOb, fichesCaisse, justificatifs, campagneActive,
+    todayInput(),
+  ), [commandesOb, donateursOb, fichesCaisse, justificatifs, campagneActive])
+  const demandesManquantes = demandes.filter(d => !d.existant)
+
+  function preparerDepuisCommande(id: string) {
+    const commande = commandesOb.find(c => String(c.id) === id)
+    if (!commande) return
+    const existant = justificatifs.find(j => j.type === 'JDI' &&
+      (j.commandeId === id || j.commandeNumero === commande.numero) &&
+      (j.campagne === commande.campagne || j.campagne.match(/(?:19|20)\d{2}/)?.[0] === commande.campagne.match(/(?:19|20)\d{2}/)?.[0]))
+    if (existant) {
+      setDetail(existant)
+      return
+    }
+    setCommandeInitiale(id)
+    setTypeInitial('JDI')
+    setEditing(null)
+    setModalMode('create')
+  }
+
+  useEffect(() => {
+    const id = searchParams.get('commande')
+    if (!id) return
+    const commande = commandesOb.find(c => String(c.id) === id)
+    if (!commande) return
+    preparerDepuisCommande(id)
+    setSearchParams(old => {
+      const next = new URLSearchParams(old)
+      next.delete('commande')
+      return next
+    }, { replace: true })
+  // on traite une unique navigation d'entrée ; les changements des justificatifs ne rouvrent pas le formulaire
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, commandesOb, setSearchParams])
+
+  function demanderInfosChorus(demande: DemandeJustificatif) {
+    const mail = composerDemandeChorus(demande.commande, demande.donateur)
+    setMessageChorus(`Objet : ${mail.objet}\n\n${mail.corps}`)
+    const params = `subject=${encodeURIComponent(mail.objet)}&body=${encodeURIComponent(mail.corps)}`
+    // Ouverture du client mail : aucune transmission automatique.
+    window.location.href = `mailto:${encodeURIComponent(mail.destinataire)}?${params}`
+  }
 
   const [activeTab, setActiveTab] = useState<MainTab>('ALL')
   const [search, setSearch] = useState('')
@@ -545,11 +600,14 @@ function JustificatifsDons() {
   }, [justificatifs])
 
   function openCreate() {
+    setCommandeInitiale('')
+    setTypeInitial('JDI')
     setEditing(null)
     setModalMode('create')
   }
 
   function openEdit(item: JustificatifDon) {
+    setCommandeInitiale('')
     setEditing(item)
     setModalMode('edit')
     setMoreId(null)
@@ -705,7 +763,51 @@ function JustificatifsDons() {
         >
           JDP
         </TabButton>
+        <TabButton
+          active={activeTab === 'TODO'}
+          onClick={() => setActiveTab('TODO')}
+        >
+          <Clock3 size={16} /> JD à créer ({demandesManquantes.length})
+        </TabButton>
       </div>
+
+      {activeTab === 'TODO' && (
+      <section className="jd-demandes" aria-label="Demandes de justificatifs issues des commandes">
+        <div className="jd-demandes-heading">
+          <div>
+            <span className="jd-eyebrow">LIAISON COMMANDES ENTREPRISES</span>
+            <h2>Demandes JDI / JDP · {campagneActive || 'Aucune campagne'}</h2>
+            <p>Les demandes sont calculées depuis les commandes de la campagne. Elles ne créent aucun document avant validation.</p>
+          </div>
+          <strong>{demandesManquantes.length} à préparer</strong>
+        </div>
+        {demandesManquantes.length ? <div className="jd-demandes-list">
+          {demandesManquantes.map(demande => (
+            <div className="jd-demande-line" key={`${demande.commande.id}-${demande.type}`}>
+              <div className="jd-demande-main">
+                <div><span className="jd-demande-type">{demande.type}</span><strong>{demande.commande.numero}</strong><span>{demande.donateur?.nom || 'Donateur non identifié'}</span></div>
+                <small>{demande.motif}</small>
+                {demande.rapprochement === 'NON_LIE' && <small className="jd-demande-warning">Aucune fiche de caisse reliée à cette commande : vérifier le règlement avant toute relance.</small>}
+              </div>
+              <div className="jd-demande-actions">
+                {demande.existant ? <span className="jd-demande-present">Déjà créé · {demande.existant.numero}</span> :
+                  <button type="button" className="jd-secondary-button" onClick={() => {
+                    setCommandeInitiale(String(demande.commande.id))
+                    setTypeInitial(demande.type)
+                    setEditing(null)
+                    setModalMode('create')
+                  }}><Plus size={16}/> Préparer {demande.type}</button>}
+                {demande.chorus && <button type="button" className="jd-secondary-button" onClick={() => demanderInfosChorus(demande)}><Mail size={16}/> Demande Chorus</button>}
+              </div>
+            </div>
+          ))}
+        </div> : <p className="jd-demandes-empty">Aucun justificatif à créer pour la campagne sélectionnée.</p>}
+        {messageChorus && <details className="jd-demande-mail"><summary>Afficher le brouillon Chorus</summary><pre>{messageChorus}</pre><button type="button" className="jd-secondary-button" onClick={() => void navigator.clipboard?.writeText(messageChorus)}>Copier le texte</button></details>}
+      </section>
+      )}
+
+      {activeTab !== 'TODO' && (
+      <>
 
       <section className="jd-kpi-grid">
         <Kpi
@@ -1077,10 +1179,15 @@ function JustificatifsDons() {
         </article>
       </section>
 
+      </>
+      )}
+
       {modalMode && (
         <JustificatifFormModal
           mode={modalMode}
           item={editing}
+          initialCommandeId={commandeInitiale}
+          initialType={typeInitial}
           onClose={() => {
             setModalMode(null)
             setEditing(null)
@@ -1600,12 +1707,16 @@ function StatusBadge({ value }: { value: JustificatifStatut }) {
 function JustificatifFormModal({
   mode,
   item,
+  initialCommandeId,
+  initialType,
   onClose,
   onCreate,
   onUpdate,
 }: {
   mode: 'create' | 'edit'
   item: JustificatifDon | null
+  initialCommandeId: string
+  initialType: JustificatifType
   onClose: () => void
   onCreate: (
     input: NouveauJustificatif,
@@ -1621,7 +1732,7 @@ function JustificatifFormModal({
   const [campagnes] = useState<CampagneRef[]>(readCampagnes)
   const [error, setError] = useState('')
   const [submitAction, setSubmitAction] =
-    useState<'save' | 'generate'>('generate')
+    useState<'save' | 'generate'>(initialCommandeId ? 'save' : 'generate')
   const [templateMeta, setTemplateMeta] =
     useState<CampagnePdfTemplateMeta | null>(null)
   const [templateAvailable, setTemplateAvailable] = useState(false)
@@ -1633,6 +1744,26 @@ function JustificatifFormModal({
         campagnes.find((campagne) => campagne.statut === 'ACTIVE') ??
         campagnes[0]
 
+      const initialCommande = commandes.find(c => c.id === initialCommandeId)
+      if (initialCommande) {
+        const donateur = donateurs.find(d => d.id === initialCommande.donateurId)
+        return {
+          ...createEmptyForm(initialCommande.campagne || active?.id || DEFAULT_CAMPAIGN),
+          type: initialType,
+          paiementStatut: 'EN_ATTENTE', // Règlement à vérifier avant d'émettre un JDP.
+          commandeId: initialCommande.id,
+          donateurId: initialCommande.donateurId || '',
+          donateurNom: donateur?.nom || '',
+          donateurCode: donateur?.code || '',
+          donateurVille: donateur?.ville || '',
+          donateurAdresse: [donateur?.adresse, donateur?.cp, donateur?.ville].filter(Boolean).join(' '),
+          donateurEmail: donateur?.email || '',
+          donateurTelephone: donateur?.telephone || '',
+          emailDestinataire: donateur?.email || '',
+          nbBrioches: initialCommande.quantite || 0,
+          prixUnitaire: initialCommande.prixUnitaire || 0,
+        }
+      }
       return createEmptyForm(active?.id ?? DEFAULT_CAMPAIGN)
     }
 
@@ -1829,6 +1960,10 @@ function JustificatifFormModal({
     }
 
     if (mode === 'create') {
+      if (form.type === 'JDP' && submitAction === 'generate' && form.paiementStatut !== 'PAYE') {
+        setError('Vérifie et confirme le règlement avant de générer un JDP.')
+        return
+      }
       if (submitAction === 'generate' && !templateAvailable) {
         setError(
           `Aucun modèle ${form.type} exploitable n'est enregistré pour ${form.campagne}. ` +

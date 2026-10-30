@@ -169,10 +169,6 @@ const sections: SidebarSection[] = [
     label: 'Documents',
     icon: Wallet,
     items: [
-      {
-        label: "Vue d'ensemble",
-        to: '/comptabilite',
-      },
       { label: 'Factures & Paiements', to: '/finance/factures-paiements' },
       {
         label: 'Justificatifs de dons',
@@ -180,9 +176,11 @@ const sections: SidebarSection[] = [
       },
       {
         label: 'Mécénat',
+        to: '/finance/mecenat',
       },
       {
         label: 'Pertes / Écarts',
+        to: '/finance/pertes-ecarts',
       },
     ],
   },
@@ -190,34 +188,13 @@ const sections: SidebarSection[] = [
     id: 'geographie',
     label: 'Géographie',
     icon: Map,
-    items: [
-      {
-        label: 'Carte des ventes',
-        to: '/geographie/carte',
-      },
-      {
-        label: 'Analyse par secteur',
-        to: '/geographie/secteurs',
-      },
-      {
-        label: 'Comparaison des canaux',
-        to: '/geographie/comparaison',
-      },
-      {
-        label: 'Secteurs et établissements',
-        to: '/geographie/couverture',
-      },
-    ],
+    items: [{ label: 'Carte des ventes', to: '/geographie/carte' }],
   },
   {
     id: 'administration',
     label: 'Administration',
     icon: ShieldCheck,
     items: [
-      {
-        label: "Vue d'ensemble",
-        to: '/administration',
-      },
       {
         label: 'Liste des établissements',
         to: '/administration/etablissements',
@@ -281,6 +258,7 @@ function getActiveSection(
   pathname: string,
 ): string | null {
   for (const section of sections) {
+    if (section.id === 'administration' && pathname === '/administration') return section.id
     const active =
       section.items.some((item) => {
         if (item.children?.some(child => child.to === pathname)) return true
@@ -404,9 +382,9 @@ export default function Sidebar() {
     'AEIM'
 
   const activeSection =
-    getActiveSection(
-      location.pathname,
-    )
+    location.pathname.startsWith('/rubriques/')
+      ? location.pathname.split('/')[2]
+      : getActiveSection(location.pathname)
 
   const desktopOpen =
     pinned || floatingOpen
@@ -739,6 +717,44 @@ export default function Sidebar() {
                     key={section.id}
                     className="ob-sidebar-section"
                   >
+                    {section.id === 'geographie' ? (
+                      <NavLink
+                        to="/geographie/carte"
+                        className={({ isActive }) => `ob-sidebar-group ${isActive || current ? 'is-current' : ''}`}
+                        onClick={() => {
+                          setMobileOpen(false)
+                          if (!pinned) setFloatingOpen(false)
+                        }}
+                      >
+                        <Icon size={20} />
+                        <span className="ob-sidebar-group-label">{section.label}</span>
+                      </NavLink>
+                    ) : section.id === 'administration' || section.id !== 'geographie' ? (
+                      <div className={`ob-sidebar-group ${current ? 'is-current' : ''}`}>
+                        <Icon size={20} />
+                        <NavLink
+                          to={section.id === 'administration' ? '/administration' : `/rubriques/${section.id}`}
+                          className="ob-sidebar-group-label"
+                          style={{ color: 'inherit', textDecoration: 'none', alignSelf: 'stretch', display: 'flex', alignItems: 'center' }}
+                          onClick={() => {
+                            setMobileOpen(false)
+                            if (!pinned) setFloatingOpen(false)
+                          }}
+                        >
+                          {section.label}
+                        </NavLink>
+                        <button
+                          type="button"
+                          onClick={() => toggleSection(section.id)}
+                          aria-label={expanded ? `Replier ${section.label}` : `Déplier ${section.label}`}
+                          aria-expanded={expanded}
+                          aria-controls={`ob-sidebar-section-${section.id}`}
+                          style={{ border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', padding: '10px 3px', display: 'flex', alignItems: 'center' }}
+                        >
+                          <ChevronDown size={16} className={`ob-sidebar-chevron ${expanded ? 'is-expanded' : ''}`} />
+                        </button>
+                      </div>
+                    ) : (
                     <button
                       type="button"
                       className={`ob-sidebar-group ${
@@ -773,8 +789,9 @@ export default function Sidebar() {
                         }`}
                       />
                     </button>
+                    )}
 
-                    {expanded && (
+                    {expanded && section.id !== 'geographie' && (
                       <div
                         id={`ob-sidebar-section-${section.id}`}
                         className="ob-sidebar-submenu"

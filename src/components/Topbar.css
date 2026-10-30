@@ -520,3 +520,12 @@
 .ob-topbar-logout:hover { background:#fff2e7; color:#b9520c; border-color:#ffd6af; }
 .ob-topbar-logout:focus-visible { outline:2px solid #ff8614; outline-offset:2px; }
 @media(max-width:900px) { .ob-topbar-logout { padding:9px; } .ob-topbar-logout span { display:none; } }
+
+/* Accès au compte, au survol, au clavier et au clic. */
+.ob-topbar-account-menu { position: relative; }
+.ob-topbar-account-trigger { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; border-radius: 9px; padding: 4px; }
+.ob-topbar-account-trigger:hover, .ob-topbar-account-trigger:focus-visible { background: #f1f6ff; outline-offset: 2px; }
+.ob-topbar-account-popover { position: absolute; top: calc(100% - 2px); right: 0; min-width: 210px; padding: 8px; background: #fff; border: 1px solid #dbe5f1; box-shadow: 0 10px 24px rgba(12,35,67,.13); border-radius: 11px; visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(-3px); transition: opacity .15s,transform .15s,visibility .15s; z-index: 150; }
+.ob-topbar-account-menu:hover .ob-topbar-account-popover, .ob-topbar-account-menu:focus-within .ob-topbar-account-popover { visibility: visible; opacity: 1; pointer-events: auto; transform: translateY(0); }
+.ob-topbar-account-option { display: block; color: #17395e; padding: 11px 12px; border-radius: 7px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.ob-topbar-account-option:hover, .ob-topbar-account-option:focus-visible { background: #edf5ff; }

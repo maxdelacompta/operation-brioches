@@ -177,48 +177,53 @@ export async function geocodeFrenchLocation(input: {
 
   if (!query.trim()) return null
 
+  // 1. Privilégier l'adresse précise ; 2. à défaut, centrer sur la commune.
+  const save = (coordinate: GeoCoordinate) => {
+    const cache = loadCache()
+    cache[key] = coordinate
+    saveCache(cache)
+    return coordinate
+  }
+
   try {
     const response = await fetch(
-      `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(
-        query,
-      )}&limit=1`,
+      `https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(query)}&limit=1`,
     )
+    if (response.ok) {
+      const payload = (await response.json()) as {
+        features?: Array<{
+          geometry?: { coordinates?: [number, number] }
+          properties?: { label?: string; postcode?: string }
+        }>
+      }
+      const feature = payload.features?.[0]
+      const coords = feature?.geometry?.coordinates
+      if (coords && Number.isFinite(coords[0]) && Number.isFinite(coords[1])) {
+        // Ne pas accepter une adresse hors du département attendu.
+        const zip = feature?.properties?.postcode || ''
+        if (!zip || zip.startsWith('54')) {
+          return save({ longitude: coords[0], latitude: coords[1], label: feature?.properties?.label })
+        }
+      }
+    }
+  } catch { /* tentative de repli ci-dessous */ }
 
+  const commune = cleanCommuneLabel(input.city || '')
+  if (!commune) return null
+  try {
+    const response = await fetch(
+      `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(commune)}&codeDepartement=54&fields=nom,centre&format=json&geometry=centre`,
+    )
     if (!response.ok) return null
-
-    const payload = (await response.json()) as {
-      features?: Array<{
-        geometry?: {
-          coordinates?: [number, number]
-        }
-        properties?: {
-          label?: string
-        }
-      }>
-    }
-
-    const feature = payload.features?.[0]
-    const coordinates = feature?.geometry?.coordinates
-
-    if (
-      !coordinates ||
-      !Number.isFinite(coordinates[0]) ||
-      !Number.isFinite(coordinates[1])
-    ) {
-      return null
-    }
-
-    const result: GeoCoordinate = {
-      longitude: coordinates[0],
-      latitude: coordinates[1],
-      label: feature?.properties?.label,
-    }
-
-    const cache = loadCache()
-    cache[key] = result
-    saveCache(cache)
-
-    return result
+    const records = (await response.json()) as Array<{
+      nom?: string
+      centre?: { coordinates?: [number, number] }
+    }>
+    const normalize = normalizeGeoText(commune)
+    const match = records.find(row => normalizeGeoText(row.nom || '') === normalize)
+    const coords = match?.centre?.coordinates
+    if (!coords || !Number.isFinite(coords[0]) || !Number.isFinite(coords[1])) return null
+    return save({ longitude: coords[0], latitude: coords[1], label: `${match?.nom} (centre de commune)` })
   } catch {
     return null
   }

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Gift, HandCoins, ClipboardList, Plus, Search, Trash2, PackageCheck, Building2 } from 'lucide-react'
+import { Gift, HandCoins, ClipboardList, Plus, Search, Trash2, PackageCheck, Building2, Boxes, ArrowDownToLine } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { useUsers } from '../contexts/UsersContext'
 import { useEtablissements } from '../contexts/EtablissementsContext'
+import { useObData } from '../contexts/ObDataContext'
 import './SuiviBrioches.css'
-import { STOCK_CHANGED, STOCK_KEY, DONS_KEY, stockFor, loadStockMovements, publishBriochesChange } from '../lib/briochesStock'
+import { STOCK_CHANGED, stockKeyForCampaign, donsKeyForCampaign, stockFor, loadStockMovements, publishBriochesChange } from '../lib/briochesStock'
 
 type Don = {
   id: string
@@ -17,12 +18,12 @@ type Don = {
   etablissementId?: string
   type?: 'avec' | 'sans'
 }
-const KEY = 'ob2026-demo-dons-contrepartie-v1'
+
 const money = (v: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v)
 
-function loadDons(): Don[] {
+function loadDons(campagne: string): Don[] {
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(KEY) || '[]')
+    const value: unknown = JSON.parse(localStorage.getItem(donsKeyForCampaign(campagne)) || '[]')
     if (!Array.isArray(value)) return []
     return value.filter((d): d is Don =>
       typeof d === 'object' && d !== null && typeof d.id === 'string' &&
@@ -35,6 +36,10 @@ function loadDons(): Don[] {
 
 export default function SuiviBrioches() {
   const { currentUser } = useUsers()
+  const { selectedCampagne, activeCampagne } = useObData()
+  const campagne = (selectedCampagne ?? activeCampagne)?.id ?? 'OB 2026'
+  const KEY = donsKeyForCampaign(campagne)
+  const STOCK_KEY = stockKeyForCampaign(campagne)
   const { etablissements } = useEtablissements()
   const globalAccess = currentUser?.role === 'administrateur' || currentUser?.tousEtablissements === true
   const allowed = useMemo(() => {
@@ -43,18 +48,25 @@ export default function SuiviBrioches() {
     return globalAccess ? etablissements : etablissements.filter(e => ids.includes(e.id))
   }, [currentUser, etablissements, globalAccess])
 
+  // Les réceptions sont enregistrées par Stock Brioches : cette page les lit
+  // uniquement. Ne jamais les recalculer ici (risque d'effacer les réceptions
+  // d'autres catégories d'achats ou déjà rapprochées).
   const [selectedId, setSelectedId] = useState('')
   const effectiveId = allowed.some(e => e.id === selectedId) ? selectedId : (allowed[0]?.id || '')
-  const [dons, setDons] = useState<Don[]>(loadDons)
-  const [mouvements, setMouvements] = useState(loadStockMovements)
+  const [dons, setDons] = useState<Don[]>(() => loadDons(campagne))
+  const [mouvements, setMouvements] = useState(() => loadStockMovements(campagne))
   useEffect(() => {
-    const refresh = () => { setDons(loadDons()); setMouvements(loadStockMovements()) }
-    const onStorage = (e: StorageEvent) => { if (e.key === STOCK_KEY || e.key === DONS_KEY) refresh() }
+    const refresh = () => { setDons(loadDons(campagne)); setMouvements(loadStockMovements(campagne)) }
+    refresh()
+    const onStorage = (e: StorageEvent) => { if (e.key === STOCK_KEY || e.key === KEY) refresh() }
     window.addEventListener(STOCK_CHANGED, refresh)
     window.addEventListener('storage', onStorage)
     return () => { window.removeEventListener(STOCK_CHANGED, refresh); window.removeEventListener('storage', onStorage) }
-  }, [])
+  }, [campagne, STOCK_KEY, KEY])
   const stockDisponible = effectiveId ? stockFor(effectiveId, mouvements, dons) : 0
+  const briochesReceptionnees = mouvements.reduce((total, mouvement) =>
+    total + (mouvement.etablissementId === effectiveId && mouvement.type === 'reception' ? mouvement.quantite : 0), 0)
+  const number = (value: number) => new Intl.NumberFormat('fr-FR').format(value)
   const [typeDon, setTypeDon] = useState<'avec' | 'sans'>('avec')
   const [donateur, setDonateur] = useState('')
   const [quantite, setQuantite] = useState('1')
@@ -90,6 +102,7 @@ export default function SuiviBrioches() {
 
   return <main className="sb-page">
     <PageHeader eyebrow="ÉTABLISSEMENTS / SUIVI BRIOCHES" title="Suivi Brioches" description="Enregistrement et suivi des dons avec ou sans contrepartie" illustration />
+    <div className="sb-demo-note">Campagne consultée : <strong>{campagne}</strong> · dons et stock séparés par année.</div>
     <div className="sb-demo-note">Mode démonstration : les dons sont enregistrés uniquement dans ce navigateur et sont synchronisés avec les stocks de ce navigateur.</div>
     <section className="sb-panel sb-selector" aria-label="Choisir un établissement">
       <label htmlFor="sb-etablissement"><Building2 size={18}/> Établissement consulté</label>
@@ -102,7 +115,9 @@ export default function SuiviBrioches() {
     {globalAccess && legacyDons.length > 0 && <div className="sb-demo-note">
       {legacyDons.length} ancien(s) don(s) sans établissement associé. <button type="button" className="sb-legacy-button" onClick={() => setShowLegacy(v => !v)}>{showLegacy ? `Revenir à ${title || 'l’établissement'}` : 'Consulter les dons non attribués'}</button>
     </div>}
-    <section className="sb-kpis" aria-label="Indicateurs des dons">
+    <section className="sb-kpis" aria-label="Indicateurs des dons et du stock">
+      <article className="sb-kpi"><span className="sb-kpi-icon sb-blue"><Boxes size={24}/></span><div><span>Stock disponible</span><strong>{number(stockDisponible)}</strong></div></article>
+      <article className="sb-kpi"><span className="sb-kpi-icon sb-green"><ArrowDownToLine size={24}/></span><div><span>Brioches réceptionnées</span><strong>{number(briochesReceptionnees)}</strong></div></article>
       <article className="sb-kpi"><span className="sb-kpi-icon sb-orange"><Gift size={24}/></span><div><span>Brioches remises</span><strong>{sums.brioches}</strong></div></article>
       <article className="sb-kpi"><span className="sb-kpi-icon sb-blue"><HandCoins size={24}/></span><div><span>Dons collectés</span><strong>{money(sums.montant)}</strong></div></article>
       <article className="sb-kpi"><span className="sb-kpi-icon sb-green"><ClipboardList size={24}/></span><div><span>Dons enregistrés</span><strong>{affiches.length}</strong></div></article>

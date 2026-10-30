@@ -2,6 +2,8 @@ import { Link, useParams } from 'react-router-dom'
 
 import {
   Users,
+  Building2,
+  LockKeyhole,
   KeyRound,
   CalendarDays,
   Settings,
@@ -17,6 +19,18 @@ import './Administration.css'
    ========================================================= */
 
 const sections = [
+  {
+    id: 'etablissements',
+    title: 'Liste des établissements',
+    description: 'Consulter et gérer les établissements AEIM.',
+    icon: Building2,
+  },
+  {
+    id: 'acces-connexion',
+    title: 'Accès de connexion',
+    description: 'Configurer les accès et mots de passe.',
+    icon: LockKeyhole,
+  },
   {
     id: 'utilisateurs',
     title: 'Utilisateurs',
@@ -35,7 +49,7 @@ const sections = [
     id: 'campagnes',
     title: 'Campagnes',
     description:
-      'Gérer les différentes campagnes Opération Brioches.',
+      'Gérer les différentes campagnes Opération Brioche.',
     icon: CalendarDays,
   },
   {
@@ -162,7 +176,7 @@ function Administration() {
 
           <p>
             Gérez les utilisateurs, les campagnes et
-            les paramètres d'Opération Brioches.
+            les paramètres d'Opération Brioche.
           </p>
         </div>
 

@@ -33,3 +33,14 @@
 .bv-detail-grid>div,.bv-detail-notes{background:#f4f7fb;border-color:#e1e9f2}
 .bv-history-heading{border-top:1px solid #e1e9f2;padding-top:20px}
 @media(max-width:720px){.bv-page{padding:16px}.bv-results{width:100%}.bv-header{gap:12px}.bv-tools{align-items:stretch}.bv-search{max-width:none}}
+
+/* Logistique des bénévoles */
+.bv-delivery-settings{border:1px solid #dae5f0;border-radius:12px;margin-top:18px;padding:16px;background:#f8fbff;}
+.bv-delivery-settings legend{padding:0 8px;font-size:13px;font-weight:800;color:#063b7c;}
+.bv-delivery-settings .bv-delivery-checkbox{display:flex;align-items:center;flex-direction:row;gap:10px;font-size:13px;font-weight:750;color:#123c70;cursor:pointer;}
+.bv-delivery-checkbox input{width:18px;height:18px;accent-color:#ff8614;flex-shrink:0;}
+.bv-delivery-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px;}
+.bv-delivery-grid label{display:grid;gap:7px;font-size:12px;font-weight:750;}
+.bv-delivery-grid input,.bv-delivery-grid select{width:100%;border:1px solid #dce4ec;border-radius:9px;background:#fff;padding:11px;color:#183d69;font:inherit;}
+.bv-delivery-settings p{font-size:12px;line-height:1.5;color:#637d9b;margin:12px 0 0;}
+@media(max-width:620px){.bv-delivery-grid{grid-template-columns:1fr;}}

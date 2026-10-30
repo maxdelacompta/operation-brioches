@@ -1,0 +1,536 @@
+/* =========================================================
+   TOPBAR — OPÉRATION BRIOCHES / AEIM
+   ========================================================= */
+
+.ob-topbar,
+.ob-topbar * {
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   CONTENEUR PRINCIPAL
+   ========================================================= */
+
+.ob-topbar {
+  position: relative;
+  z-index: 100;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 78px;
+
+  padding: 14px 29px;
+
+  border-bottom: 1px solid #e1e9f2;
+
+  background: #ffffff;
+  color: #1f344d;
+}
+
+/* =========================================================
+   IDENTITÉ DE L'APPLICATION
+   ========================================================= */
+
+.ob-topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+
+  min-width: 0;
+  max-width: 50%;
+  margin-left: 30px; /* Décale le logo OB et les deux lignes de titre */
+
+  color: inherit;
+  text-decoration: none;
+}
+
+.ob-topbar-logo {
+  display: grid;
+  place-items: center;
+
+  width: 43px;
+  height: 43px;
+
+  flex-shrink: 0;
+
+  border: 1px solid #ffd4aa;
+  border-radius: 11px;
+
+  background: #fff5ea;
+  color: #ff8614;
+
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+}
+
+.ob-topbar-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.ob-topbar-eyebrow {
+  color: #ff8614;
+
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 1px;
+}
+
+.ob-topbar-brand-text strong {
+  display: block;
+
+  overflow: hidden;
+
+  color: #063b7c;
+
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.25;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ob-topbar-brand:hover
+.ob-topbar-brand-text strong {
+  color: #ff8614;
+}
+
+/* =========================================================
+   ZONE D'ACTIONS
+   ========================================================= */
+
+.ob-topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 11px;
+
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   BOUTONS ICÔNES
+   ========================================================= */
+
+.ob-topbar-icon-button {
+  position: relative;
+
+  display: grid;
+  place-items: center;
+
+  width: 40px;
+  height: 40px;
+
+  flex-shrink: 0;
+
+  padding: 0;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #063b7c;
+
+  font-family: inherit;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ob-topbar-icon-button:hover {
+  border-color: #ffd4aa;
+
+  background: #fff5ea;
+  color: #ff8614;
+}
+
+.ob-topbar-icon-button.active {
+  border-color: #ff8614;
+
+  background: #fff5ea;
+  color: #ff8614;
+}
+
+/* =========================================================
+   BADGE CHAT
+   ========================================================= */
+
+.ob-topbar-chat-badge {
+  position: absolute;
+
+  top: -6px;
+  right: -6px;
+
+  display: grid;
+  place-items: center;
+
+  min-width: 19px;
+  height: 19px;
+
+  padding: 0 4px;
+
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+
+  background: #ff8614;
+  color: #ffffff;
+
+  font-size: 9px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+/* =========================================================
+   SÉPARATEUR
+   ========================================================= */
+
+.ob-topbar-divider {
+  width: 1px;
+  height: 32px;
+
+  margin: 0 5px;
+
+  background: #e1e9f2;
+}
+
+/* =========================================================
+   UTILISATEUR
+   ========================================================= */
+
+.ob-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-width: 0;
+}
+
+.ob-topbar-avatar {
+  display: grid;
+  place-items: center;
+
+  width: 42px;
+  height: 42px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #1f344d;
+  color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.3px;
+}
+
+.ob-topbar-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.ob-topbar-user-info strong {
+  display: block;
+
+  overflow: hidden;
+
+  color: #063b7c;
+
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.2;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ob-topbar-user-info span {
+  display: block;
+
+  overflow: hidden;
+
+  color: #6682a5;
+
+  font-size: 11px;
+  line-height: 1.2;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   NOTIFICATIONS — CONTENEUR
+   ========================================================= */
+
+.ob-topbar-notifications {
+  position: relative;
+}
+
+/* =========================================================
+   PANNEAU DES NOTIFICATIONS
+   ========================================================= */
+
+.ob-topbar-notification-panel {
+  position: absolute;
+
+  top: calc(100% + 13px);
+  right: 0;
+
+  z-index: 500;
+
+  width: 345px;
+  max-width: calc(100vw - 24px);
+
+  overflow: hidden;
+
+  border: 1px solid #e1e9f2;
+  border-radius: 13px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 14px 40px rgba(18, 59, 122, 0.16);
+}
+
+/* =========================================================
+   EN-TÊTE PANNEAU
+   ========================================================= */
+
+.ob-topbar-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 15px 17px;
+
+  border-bottom: 1px solid #e1e9f2;
+}
+
+.ob-topbar-panel-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ob-topbar-panel-header strong {
+  color: #063b7c;
+
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.ob-topbar-panel-header span {
+  color: #6682a5;
+  font-size: 11px;
+}
+
+.ob-topbar-panel-close {
+  display: grid;
+  place-items: center;
+
+  width: 30px;
+  height: 30px;
+
+  flex-shrink: 0;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #f3f7fb;
+  color: #6682a5;
+
+  cursor: pointer;
+}
+
+.ob-topbar-panel-close:hover {
+  background: #fff0de;
+  color: #ff8614;
+}
+
+/* =========================================================
+   ÉTAT VIDE DES NOTIFICATIONS
+   ========================================================= */
+
+.ob-topbar-notification-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+
+  padding: 29px 20px 33px;
+
+  text-align: center;
+}
+
+.ob-topbar-empty-icon {
+  display: grid;
+  place-items: center;
+
+  width: 48px;
+  height: 48px;
+
+  margin-bottom: 3px;
+
+  border-radius: 12px;
+
+  background: #fff0de;
+  color: #ff8614;
+}
+
+.ob-topbar-notification-empty strong {
+  color: #063b7c;
+
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.ob-topbar-notification-empty p {
+  max-width: 255px;
+
+  margin: 0;
+
+  color: #6682a5;
+
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+/* =========================================================
+   ACCESSIBILITÉ
+   ========================================================= */
+
+.ob-topbar button:focus-visible,
+.ob-topbar a:focus-visible {
+  outline: 3px solid rgba(255, 134, 20, 0.35);
+  outline-offset: 3px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1000px) {
+  .ob-topbar {
+    padding: 12px 18px;
+  }
+
+  .ob-topbar-brand {
+    max-width: 45%;
+  }
+
+  .ob-topbar-actions {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 650px) {
+  .ob-topbar {
+    min-height: 67px;
+
+    padding: 10px 13px;
+    gap: 10px;
+  }
+
+  .ob-topbar-logo {
+    width: 37px;
+    height: 37px;
+  }
+
+  .ob-topbar-brand {
+    gap: 8px;
+    margin-left: 0; /* Préserve la largeur disponible sur mobile */
+    max-width: calc(100% - 125px);
+  }
+
+  .ob-topbar-brand-text strong {
+    font-size: 12px;
+  }
+
+  .ob-topbar-eyebrow {
+    font-size: 9px;
+  }
+
+  .ob-topbar-actions {
+    gap: 7px;
+  }
+
+  .ob-topbar-icon-button {
+    width: 35px;
+    height: 35px;
+  }
+
+  .ob-topbar-divider,
+  .ob-topbar-user-info {
+    display: none;
+  }
+
+  .ob-topbar-avatar {
+    width: 35px;
+    height: 35px;
+
+    font-size: 10px;
+  }
+
+  .ob-topbar-notification-panel {
+    position: fixed;
+
+    top: 70px;
+    left: 12px;
+    right: 12px;
+
+    width: auto;
+    max-width: none;
+  }
+}
+/* Recherche globale placée dans l'espace central du header */
+.ob-topbar-global-search {
+  display:flex; align-items:center; gap:12px; flex:1 1 400px;
+  width:100%; max-width:460px; min-width:90px;
+  padding:12px 15px; margin:0 auto;
+  border:1px solid #dce6f1; border-radius:12px;
+  background:#fbfcff; color:#7890ae; font:inherit; font-size:13px;
+  text-align:left; cursor:pointer; transition:border-color .15s,box-shadow .15s;
+}
+.ob-topbar-global-search:hover,.ob-topbar-global-search:focus-visible {
+  border-color:#ffae72; box-shadow:0 0 0 3px rgba(255,134,20,.09);
+}
+.ob-topbar-global-search span { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.ob-topbar-global-search kbd {margin-left:auto; flex-shrink:0; background:#fff; border:1px solid #e1e9f2; border-radius:6px; padding:3px 6px; font:inherit; font-size:10px; color:#647ea2;}
+@media(max-width:1000px){.ob-topbar-global-search {max-width:340px;} .ob-topbar-global-search kbd{display:none;}}
+@media(max-width:750px){.ob-topbar-global-search {flex:0 0 40px; width:40px; min-width:40px; height:40px; justify-content:center; padding:0;} .ob-topbar-global-search span,.ob-topbar-global-search kbd {display:none;}}
+
+/* Déconnexion dans le header — sans modification des styles globaux */
+.ob-topbar-logout { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:9px 12px; flex-shrink:0; border:1px solid #dbe4ef; border-radius:10px; background:#fff; color:#173b6d; font:inherit; font-size:12px; font-weight:750; cursor:pointer; transition:background .15s, color .15s; }
+.ob-topbar-logout:hover { background:#fff2e7; color:#b9520c; border-color:#ffd6af; }
+.ob-topbar-logout:focus-visible { outline:2px solid #ff8614; outline-offset:2px; }
+@media(max-width:900px) { .ob-topbar-logout { padding:9px; } .ob-topbar-logout span { display:none; } }
+
+/* Sélection de campagne de travail : ne modifie pas le statut administratif. */
+.ob-topbar-campaign-picker { display:flex; flex-direction:column; gap:3px; min-width:150px; max-width:240px; flex:0 1 210px; }
+.ob-topbar-campaign-picker label { font-size:10px; font-weight:750; color:#64748b; }
+.ob-topbar-campaign-picker select { width:100%; min-width:0; height:36px; padding:0 9px; border:1px solid #d8e2ef; border-radius:9px; background:#fff; color:#063b7c; font:inherit; font-size:12px; cursor:pointer; }
+.ob-topbar-campaign-picker select:focus-visible { outline:2px solid #ff8614; outline-offset:2px; }
+@media(max-width:750px) { .ob-topbar-campaign-picker { min-width:105px; max-width:155px; } .ob-topbar-campaign-picker label { display:none; } }
+
+/* Sélecteur compact : statut et année seulement. */
+.ob-topbar-campaign-picker { min-width: 0; max-width: none; flex: 0 0 130px; }
+.ob-topbar-campaign-picker select { height: 32px; padding: 0 19px 0 8px; font-size: 11px; font-weight: 700; }
+@media (max-width: 750px) { .ob-topbar-campaign-picker { min-width: 0; max-width: none; flex: 0 0 112px; } }

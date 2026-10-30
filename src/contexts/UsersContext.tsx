@@ -19,17 +19,38 @@ export const ROLE_LABELS = {
   etablissement: 'Établissement',
   terrain: 'Coordinateur terrain',
   direction: 'Direction',
+  stagiaire_communication: 'Stagiaire Communication',
+  stagiaire_comptabilite: 'Stagiaire Comptabilité',
+  developpeur: 'Développeur',
 } as const
 
 export type UserRole = keyof typeof ROLE_LABELS
 
 export type UserStatus = 'actif' | 'inactif'
 
+/** Affichage cohérent pour toute l'application : Prénom Nom. */
+export function getUserDisplayName(user: Pick<AppUser, 'name' | 'prenom' | 'nom'> | null | undefined): string {
+  if (!user) return 'Utilisateur'
+  const ordered = [user.prenom?.trim(), user.nom?.trim()].filter(Boolean).join(' ')
+  return ordered || user.name || 'Utilisateur'
+}
+
+export const POLE_LABELS = {
+  communication: 'Communication',
+  comptabilite: 'Comptabilité',
+} as const
+export type UserPole = keyof typeof POLE_LABELS
+
+
 export type AppUser = {
   id: string
   name: string
+  nom?: string
+  prenom?: string
   email: string
   poste: string
+  pole?: UserPole | null
+  responsablePole?: boolean
   role: UserRole
   perimetre: string
   etablissementId?: string // Compatibilité avec les anciens modules
@@ -40,8 +61,8 @@ export type AppUser = {
 
 export type UserInput = Pick<
   AppUser,
-  'name' | 'email' | 'poste' | 'role' | 'perimetre' | 'etablissementId' | 'etablissementIds' | 'tousEtablissements'
->
+  'name' | 'nom' | 'prenom' | 'email' | 'poste' | 'role' | 'perimetre' | 'etablissementId' | 'etablissementIds' | 'tousEtablissements'
+> & Partial<Pick<AppUser, 'pole' | 'responsablePole'>>
 
 /* =========================================================
    DONNÉES LOCALES
@@ -57,6 +78,8 @@ export const DEMO_CURRENT_USER_ID = 'demo-admin'
 const demoAdmin: AppUser = {
   id: DEMO_CURRENT_USER_ID,
   name: 'Maxime Claudel',
+  nom: 'Claudel',
+  prenom: 'Maxime',
   email: '',
   poste: '',
   role: 'administrateur',
@@ -99,6 +122,9 @@ function normalizeUser(user: AppUser): AppUser {
   const tousEtablissements = user.tousEtablissements === true
   return {
     ...user,
+    name: user.prenom?.trim() && user.nom?.trim() ? `${user.prenom.trim()} ${user.nom.trim()}` : user.name,
+    pole: user.pole && user.pole in POLE_LABELS ? user.pole : null,
+    responsablePole: Boolean(user.responsablePole && user.pole && user.pole in POLE_LABELS),
     etablissementIds: tousEtablissements ? [] : etablissementIds,
     etablissementId: tousEtablissements ? '' : (etablissementIds[0] ?? ''),
     tousEtablissements,
@@ -231,24 +257,26 @@ export function UsersProvider({
       status: 'actif',
     }
 
-    setUsers((current) => [
-      ...current,
-      newUser,
-    ])
+    setUsers((current) => {
+      // Un responsable de pôle maximum ; aucun changement de rôle ni de droits.
+      if (newUser.pole && newUser.responsablePole && current.some(u => u.status === 'actif' && u.pole === newUser.pole && u.responsablePole)) return current
+      return [...current, newUser]
+    })
   }
 
   /* MODIFICATION */
 
   function updateUser(id: string, input: UserInput) {
-    setUsers((current) =>
-      current.map((user) =>
+    setUsers((current) => {
+      if (input.pole && input.responsablePole && current.some(u => u.id !== id && u.status === 'actif' && u.pole === input.pole && u.responsablePole)) return current
+      return current.map((user) =>
         user.id === id
           ? {
               ...normalizeUser({ ...user, ...input }),
             }
           : user,
-      ),
-    )
+      )
+    })
   }
 
   /* ACTIVATION / DÉSACTIVATION */
@@ -260,8 +288,10 @@ export function UsersProvider({
       return
     }
 
-    setUsers((current) =>
-      current.map((user) =>
+    setUsers((current) => {
+      const target = current.find(u => u.id === id)
+      if (target?.status === 'inactif' && target.pole && target.responsablePole && current.some(u => u.id !== id && u.status === 'actif' && u.pole === target.pole && u.responsablePole)) return current
+      return current.map((user) =>
         user.id === id
           ? {
               ...user,
@@ -271,8 +301,8 @@ export function UsersProvider({
                   : 'actif',
             }
           : user,
-      ),
-    )
+      )
+    })
   }
 
   /* VALEUR PARTAGÉE */

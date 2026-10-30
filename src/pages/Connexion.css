@@ -337,3 +337,6 @@
 @media (prefers-reduced-motion: reduce) {
   .ob-login-page * { transition: none !important; }
 }
+
+.ob-login-renew {background: transparent;border:0;color:#0b3269;font-weight:750;font-size:12px;cursor:pointer;text-decoration:underline;padding:12px 0;text-align:center;}
+.ob-login-renew:hover {color:#f47c17;}

@@ -6,7 +6,7 @@ import './Connexion.css'
 
 /** Page d'accueil de connexion — conserve l'authentification locale existante. */
 export default function Connexion() {
-  const { authenticated, needsSetup, signIn, initializeAdmin } = useAuth()
+  const { authenticated, needsSetup, signIn, initializeAdmin, changePassword } = useAuth()
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -14,6 +14,10 @@ export default function Connexion() {
   const [show, setShow] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [renew, setRenew] = useState(false)
+  const [forced, setForced] = useState(false)
+  const [renewalPassword, setRenewalPassword] = useState('')
+  const [renewalConfirmation, setRenewalConfirmation] = useState('')
 
   if (authenticated) return <Navigate to="/" replace />
 
@@ -28,9 +32,15 @@ export default function Connexion() {
         setIdentifier('admin')
         setPassword('')
         setConfirmation('')
+      } else if (renew || forced) {
+        if (confirmation !== renewalConfirmation) throw new Error('Les nouveaux mots de passe ne correspondent pas.')
+        await changePassword(identifier, password, renewalPassword)
+        setRenew(false); setForced(false); setPassword(''); setRenewalPassword(''); setRenewalConfirmation('')
+        setError('Mot de passe renouvelé. Connectez-vous avec votre nouveau mot de passe.')
       } else {
         const message = await signIn(identifier, password)
-        if (message) setError(message)
+        if (message === 'PASSWORD_CHANGE_REQUIRED') { setForced(true); setRenew(true); setError('Première connexion : choisissez votre propre mot de passe.') }
+        else if (message) setError(message)
         else navigate('/', { replace: true })
       }
     } catch (e) {
@@ -54,7 +64,7 @@ export default function Connexion() {
             <h1 id="ob-login-title">{needsSetup ? 'Bienvenue, administrateur.' : 'Heureux de vous retrouver.'}</h1>
             <p>{needsSetup
               ? 'Définissez votre mot de passe local pour commencer à utiliser cette installation.'
-              : 'Connectez-vous pour retrouver vos équipes, vos commandes et toutes les actions de l’Opération Brioches.'}</p>
+              : renew ? 'Renouvelez votre mot de passe à l’aide de votre mot de passe actuel.' : 'Connectez-vous pour retrouver vos équipes, vos commandes et toutes les actions de l’Opération Brioches.'}</p>
           </div>
 
           <form onSubmit={submit}>
@@ -67,7 +77,7 @@ export default function Connexion() {
               </label>
             )}
             <label>
-              <span>Mot de passe</span>
+              <span>{renew ? 'Mot de passe actuel / provisoire' : 'Mot de passe'}</span>
               <div className="ob-login-password">
                 <input type={show ? 'text' : 'password'}
                   autoComplete={needsSetup ? 'new-password' : 'current-password'}
@@ -84,12 +94,17 @@ export default function Connexion() {
                   value={confirmation} onChange={e => setConfirmation(e.target.value)} />
               </label>
             )}
+            {renew && !needsSetup && <>
+              <label><span>Nouveau mot de passe (12 caractères minimum)</span><input type="password" autoComplete="new-password" required minLength={12} value={renewalPassword} onChange={e=>setRenewalPassword(e.target.value)}/></label>
+              <label><span>Confirmer le nouveau mot de passe</span><input type="password" autoComplete="new-password" required minLength={12} value={renewalConfirmation} onChange={e=>setRenewalConfirmation(e.target.value)}/></label>
+            </>}
             {error && <div className="ob-login-error" role="alert">{error}</div>}
             <button className="ob-login-submit" disabled={busy} type="submit">
-              {busy ? 'Un instant…' : needsSetup ? 'Activer mon accès' : 'Accéder à mon espace'}
+              {busy ? 'Un instant…' : needsSetup ? 'Activer mon accès' : renew ? 'Enregistrer mon nouveau mot de passe' : 'Accéder à mon espace'}
               {!busy && <ArrowRight size={19} />}
             </button>
           </form>
+          {!needsSetup && <button type="button" className="ob-login-renew" onClick={()=>{if(!forced) setRenew(!renew);setError('')}}>{renew ? 'Retour à la connexion' : 'Renouveler mon mot de passe'}</button>}
 
           <div className="ob-login-divider"><span>ou</span></div>
           <div className="ob-login-future" aria-label="Connexion Microsoft 365, bientôt disponible">

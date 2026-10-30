@@ -24,10 +24,13 @@ import {
 
 import {
   ROLE_LABELS,
+  POLE_LABELS,
   useUsers,
+  getUserDisplayName,
   type AppUser,
   type UserInput,
   type UserRole,
+  type UserPole,
   type UserStatus,
 } from '../contexts/UsersContext'
 
@@ -41,8 +44,12 @@ import './Utilisateurs.css'
 
 const emptyForm: UserInput = {
   name: '',
+  nom: '',
+  prenom: '',
   email: '',
   poste: '',
+  pole: null,
+  responsablePole: false,
   role: 'etablissement',
   perimetre: '',
   etablissementId: '',
@@ -63,6 +70,19 @@ function initials(name: string) {
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join('')
+}
+
+/** Compatibilité avec les profils créés avant la séparation des champs. */
+function identiteUtilisateur(user: AppUser) {
+  if (user.nom || user.prenom) return { nom: user.nom || '', prenom: user.prenom || '' }
+  const full = user.name.trim()
+  if (!full) return { nom: '', prenom: '' }
+  if (user.id === DEMO_CURRENT_USER_ID) {
+    const parts = full.split(/\s+/)
+    return { prenom: parts[0] || '', nom: parts.slice(1).join(' ') }
+  }
+  const parts = full.split(/\s+/)
+  return { nom: parts[0] || '', prenom: parts.slice(1).join(' ') }
 }
 
 /* =========================================================
@@ -88,6 +108,7 @@ function Utilisateurs() {
     toggleUserStatus,
   } = useUsers()
 
+  const [poleFilter, setPoleFilter] = useState<UserPole | 'tous' | 'sans'>('tous')
   const [search, setSearch] = useState('')
 
   const [roleFilter, setRoleFilter] = useState<
@@ -130,9 +151,10 @@ function Utilisateurs() {
 
     return users.filter((user) => {
       const text = [
-        user.name,
+        getUserDisplayName(user),
         user.email,
         user.poste,
+        user.pole ? POLE_LABELS[user.pole] : '',
         user.perimetre,
         ROLE_LABELS[user.role],
       ]
@@ -141,6 +163,7 @@ function Utilisateurs() {
 
       return (
         (!query || text.includes(query)) &&
+        (poleFilter === 'tous' || (poleFilter === 'sans' ? !user.pole : user.pole === poleFilter)) &&
         (roleFilter === 'tous' ||
           user.role === roleFilter) &&
         (statusFilter === 'tous' ||
@@ -151,6 +174,7 @@ function Utilisateurs() {
     users,
     search,
     roleFilter,
+    poleFilter,
     statusFilter,
   ])
 
@@ -171,11 +195,16 @@ function Utilisateurs() {
 
     setForm({
       name: user.name,
+      ...identiteUtilisateur(user),
       email: user.email,
       poste: user.poste,
+      pole: user.pole || null,
+      responsablePole: Boolean(user.responsablePole),
       role: user.role,
       perimetre: user.perimetre,
       etablissementId: user.etablissementId || '',
+      etablissementIds: user.etablissementIds,
+      tousEtablissements: user.tousEtablissements,
     })
 
     setError('')
@@ -198,16 +227,22 @@ function Utilisateurs() {
     setError('')
 
     const input: UserInput = {
-      name: form.name.trim(),
+      nom: (form.nom || '').trim(),
+      prenom: (form.prenom || '').trim(),
+      name: `${(form.prenom || '').trim()} ${(form.nom || '').trim()}`.trim(),
       email: form.email.trim().toLowerCase(),
       poste: form.poste.trim(),
+      pole: form.pole || null,
+      responsablePole: Boolean(form.pole && form.responsablePole),
       role: form.role,
       perimetre: form.perimetre.trim(),
       etablissementId: form.etablissementId || '',
+      etablissementIds: form.etablissementIds,
+      tousEtablissements: form.tousEtablissements,
     }
 
-    if (!input.name) {
-      setError('Le nom est obligatoire.')
+    if (!input.nom || !input.prenom) {
+      setError('Le nom et le prénom sont obligatoires.')
       return
     }
 
@@ -234,6 +269,14 @@ function Utilisateurs() {
         'Cette adresse e-mail est déjà utilisée.',
       )
       return
+    }
+
+    if (input.pole && input.responsablePole) {
+      const already = users.find(u => u.id !== editingId && u.status === 'actif' && u.pole === input.pole && u.responsablePole)
+      if (already) {
+        setError(`Le pôle ${POLE_LABELS[input.pole]} possède déjà un responsable : ${already.name}. Retire d'abord sa responsabilité.`)
+        return
+      }
     }
 
     if (editingId) {
@@ -347,6 +390,18 @@ function Utilisateurs() {
 
       </div>
 
+      <section className="users-poles">
+        {(Object.keys(POLE_LABELS) as UserPole[]).map(pole => {
+          const membres = users.filter(u => u.pole === pole)
+          const responsable = membres.find(u => u.responsablePole && u.status === 'actif')
+          return <article className="users-pole-card" key={pole}>
+            <div className="users-pole-head"><strong>Pôle {POLE_LABELS[pole]}</strong><span>{membres.length} membre(s)</span></div>
+            <p>Responsable : <strong>{responsable ? getUserDisplayName(responsable) : 'À désigner'}</strong></p>
+            <small>{membres.filter(u => u.status === 'actif').length} utilisateur(s) actif(s)</small>
+          </article>
+        })}
+      </section>
+
       {/* MESSAGE DE CONFIRMATION */}
 
       {notice && (
@@ -382,17 +437,24 @@ function Utilisateurs() {
             <div className="users-form-grid">
 
               <label>
-                Nom et prénom *
+                Nom *
                 <input
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
+                  value={form.nom || ''}
+                  onChange={(event) => setForm((current) => ({ ...current, nom: event.target.value }))}
                   required
-                  placeholder="Nom Prénom"
+                  autoComplete="family-name"
+                  placeholder="CLAUDEL"
+                />
+              </label>
+
+              <label>
+                Prénom *
+                <input
+                  value={form.prenom || ''}
+                  onChange={(event) => setForm((current) => ({ ...current, prenom: event.target.value }))}
+                  required
+                  autoComplete="given-name"
+                  placeholder="Maxime"
                 />
               </label>
 
@@ -431,6 +493,20 @@ function Utilisateurs() {
               </label>
 
               <label>
+                Pôle
+                <select value={form.pole || ''} onChange={event => setForm(current => ({...current, pole: (event.target.value || null) as UserPole | null, responsablePole: false}))}>
+                  <option value="">Aucun pôle</option>
+                  {(Object.keys(POLE_LABELS) as UserPole[]).map(pole => <option key={pole} value={pole}>{POLE_LABELS[pole]}</option>)}
+                </select>
+              </label>
+
+              <label className="users-pole-check">
+                <input type="checkbox" checked={Boolean(form.responsablePole)} disabled={!form.pole} onChange={event => setForm(current => ({...current, responsablePole:event.target.checked}))} />
+                Responsable de ce pôle
+                <small>Organisation de l'équipe uniquement : aucun droit administrateur supplémentaire.</small>
+              </label>
+
+              <label>
                 Rôle
                 <select
                   value={form.role}
@@ -438,6 +514,14 @@ function Utilisateurs() {
                     setForm((current) => ({
                       ...current,
                       role: event.target.value as UserRole,
+                      pole: event.target.value === 'stagiaire_communication'
+                        ? 'communication'
+                        : event.target.value === 'stagiaire_comptabilite'
+                          ? 'comptabilite'
+                          : current.pole,
+                      responsablePole: event.target.value.startsWith('stagiaire_')
+                        ? false
+                        : current.responsablePole,
                     }))
                   }
                 >
@@ -532,6 +616,12 @@ function Utilisateurs() {
             />
           </div>
 
+          <select value={poleFilter} aria-label="Filtrer par pôle" onChange={event => setPoleFilter(event.target.value as UserPole | 'tous' | 'sans')}>
+            <option value="tous">Tous les pôles</option>
+            {(Object.keys(POLE_LABELS) as UserPole[]).map(pole => <option key={pole} value={pole}>{POLE_LABELS[pole]}</option>)}
+            <option value="sans">Sans pôle</option>
+          </select>
+
           <select
             value={roleFilter}
             aria-label="Filtrer par rôle"
@@ -583,6 +673,7 @@ function Utilisateurs() {
               <tr>
                 <th>Utilisateur</th>
                 <th>Poste</th>
+                <th>Pôle / responsabilité</th>
                 <th>Rôle</th>
                 <th>Établissement</th>
                 <th>Périmètre</th>
@@ -600,13 +691,13 @@ function Utilisateurs() {
                     <div className="users-person">
 
                       <div className="users-avatar">
-                        {initials(user.name) || (
+                        {initials(getUserDisplayName(user)) || (
                           <UserRound size={18} />
                         )}
                       </div>
 
                       <div>
-                        <strong>{user.name}</strong>
+                        <strong>{getUserDisplayName(user)}</strong>
 
                         <span>
                           {user.email ||
@@ -619,6 +710,11 @@ function Utilisateurs() {
 
                   <td>
                     {user.poste || '—'}
+                  </td>
+
+                  <td>
+                    <span className="users-pole-label">{user.pole ? POLE_LABELS[user.pole] : '—'}</span>
+                    {user.responsablePole && user.pole && <span className="users-pole-leader">Responsable</span>}
                   </td>
 
                   <td>
@@ -650,8 +746,8 @@ function Utilisateurs() {
 
                       <button
                         type="button"
-                        title={`Modifier ${user.name}`}
-                        aria-label={`Modifier ${user.name}`}
+                        title={`Modifier ${getUserDisplayName(user)}`}
+                        aria-label={`Modifier ${getUserDisplayName(user)}`}
                         onClick={() => openEdit(user)}
                       >
                         <Pencil size={17} />
@@ -673,14 +769,14 @@ function Utilisateurs() {
                           user.status === 'actif'
                             ? 'Désactiver'
                             : 'Activer'
-                        } ${user.name}`}
+                        } ${getUserDisplayName(user)}`}
                         onClick={() => {
                           toggleUserStatus(user.id)
 
                           setNotice(
                             user.status === 'actif'
-                              ? `${user.name} désactivé.`
-                              : `${user.name} activé.`,
+                              ? `${getUserDisplayName(user)} désactivé.`
+                              : `${getUserDisplayName(user)} activé.`,
                           )
                         }}
                       >
@@ -700,7 +796,7 @@ function Utilisateurs() {
               {filteredUsers.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={8}
                     className="users-empty"
                   >
                     Aucun utilisateur trouvé.

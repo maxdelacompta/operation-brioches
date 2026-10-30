@@ -401,6 +401,11 @@ type ObDataContextValue = {
 
   activeCampagne: Campagne | null
 
+  /** Campagne choisie pour la navigation locale (distincte du statut ACTIVE). */
+  selectedCampagne: Campagne | null
+  selectedCampagneId: string
+  setSelectedCampagneId: (id: string) => void
+
   /* DÉPÔTS BANCAIRES */
 
   depotsBanque: DepotBanque[]
@@ -541,6 +546,19 @@ export function ObDataProvider({
       ),
   )
 
+  /* Sélection de travail conservée dans ce navigateur. */
+  const [selectedCampagneId, setSelectedCampagneIdState] = useState<string>(() => {
+    try { return localStorage.getItem('ob-campagne-selection-v1') || '' } catch { return '' }
+  })
+
+  function setSelectedCampagneId(id: string) {
+    setSelectedCampagneIdState(id)
+    try {
+      if (id) localStorage.setItem('ob-campagne-selection-v1', id)
+      else localStorage.removeItem('ob-campagne-selection-v1')
+    } catch { /* Stockage indisponible : état conservé jusqu'au rechargement. */ }
+  }
+
   /* =======================================================
      5. DÉPÔTS BANCAIRES
 
@@ -572,6 +590,11 @@ export function ObDataProvider({
       ) ?? null,
 
     [campagnes],
+  )
+
+  const selectedCampagne = useMemo(
+    () => campagnes.find(c => c.id === selectedCampagneId) ?? activeCampagne,
+    [campagnes, selectedCampagneId, activeCampagne],
   )
 
   /* =======================================================
@@ -1143,6 +1166,9 @@ export function ObDataProvider({
 
     campagnes,
     activeCampagne,
+    selectedCampagne,
+    selectedCampagneId,
+    setSelectedCampagneId,
 
     /* DÉPÔTS BANCAIRES */
 

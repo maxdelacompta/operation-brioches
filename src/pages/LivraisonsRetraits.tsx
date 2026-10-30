@@ -14,6 +14,8 @@ import {
   ChevronRight,
   Clock3,
   Download,
+  Minus,
+  Printer,
   MapPin,
   MoreHorizontal,
   Package,
@@ -26,6 +28,8 @@ import {
 } from 'lucide-react'
 
 import { useObData } from '../contexts/ObDataContext'
+import { useEtablissements } from '../contexts/EtablissementsContext'
+import { useUsers } from '../contexts/UsersContext'
 import type {
   MissionLivraison,
   ModeLivraison,
@@ -45,10 +49,49 @@ type TourForm = {
   date: string
   mode: Exclude<ModeLivraison, 'NON_AFFECTE'>
   responsable: string
+  retraitType: 'ETABLISSEMENT' | 'STAND'
   commandes: Record<number, { selected: boolean; heure: string }>
 }
 
+type BenevoleLivraison = { id:string;nom:string;prenom:string;mission?:string;statut?:string;disponibilites?:string;peutEffectuerLivraisons?:boolean;departLivraison?:string;adresseDepart?:string }
+type StandLivraison = { id:string; nom:string; date:string;lieu?:string;campagne?:string }
+function readArray<T>(key:string):T[] {
+  try {const content:unknown=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(content)?content as T[]:[]}
+  catch {return []}
+}
+const weekdayLabel = (date:string) => {
+  const weekdays=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi']
+  const [year,month,day]=date.split('-').map(Number)
+  return weekdays[new Date(year,month-1,day).getDay()]
+}
+// Les créneaux servent à signaler une disponibilité déclarée, pas à prouver
+// que le bénévole s'est engagé pour cette livraison.
+function availableForDate(person:BenevoleLivraison,date:string) {
+  if(!person.disponibilites?.trim()) return true
+  const day=weekdayLabel(date).toLocaleLowerCase('fr')
+  return person.disponibilites.toLocaleLowerCase('fr').includes(day)
+}
+
 const STORAGE_KEY = 'ob-livraisons-retraits-v1'
+const MULTI_STORAGE_KEY = 'ob-livraisons-multisites-v1'
+type MultiAffectation = {
+  commandeId: number
+  ligneId: string
+  date: string
+  heure: string
+  mode: ModeLivraison
+  responsable: string
+  statut: StatutLivraison
+}
+function readMultiAffectations(): Record<string, MultiAffectation> {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(MULTI_STORAGE_KEY) || '{}')
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, MultiAffectation> : {}
+  } catch { return {} }
+}
+const keyMulti = (commandeId: number, ligneId: string) => `${commandeId}:${ligneId}`
+const anneeDe = (value: string) => value.match(/(?:19|20)\d{2}/)?.[0] ?? ''
+
 
 const MODE_LABELS: Record<ModeLivraison, string> = {
   NON_AFFECTE: 'Non affecté',
@@ -139,21 +182,80 @@ function formatDateLabel(value: string) {
   }).format(new Date(year, month - 1, day))
 }
 
+// Chaînes échappées avant toute utilisation dans la fenêtre d'impression.
+const htmlEscape=(value:unknown)=>String(value??'').replace(/[&<>"']/g,c=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+} as Record<string,string>)[c])
+const TOUR_DEPART_KEY='ob-livraisons-departs-v1'
+const TOUR_ORDRE_KEY='ob-livraisons-ordre-v1'
+const TOUR_ALERTES_KEY='ob-livraisons-reattribution-v1'
+function readObject<T>(key:string):Record<string,T>{
+  try{const data:unknown=JSON.parse(localStorage.getItem(key)||'{}');return data&&typeof data==='object'&&!Array.isArray(data)?data as Record<string,T>:{} }
+  catch{return {}}
+}
 function csvCell(value: unknown) {
   const text = String(value ?? '')
   return `"${text.replace(/"/g, '""')}"`
 }
 
 export default function LivraisonsRetraits() {
-  const {
-    commandes,
-    setCommandes,
-    getDonateurById,
-  } = useObData()
+  const selection = useObData() as ReturnType<typeof useObData> & {selectedCampagne?: {id:string}}
+  const {commandes, setCommandes, getDonateurById, activeCampagne} = selection
+  const campagneAnnee = anneeDe(selection.selectedCampagne?.id ?? activeCampagne?.id ?? '')
+  const { etablissements } = useEtablissements()
+  const { users } = useUsers()
+  const [benevolesLogistique,setBenevolesLogistique]=useState<BenevoleLivraison[]>(() => readArray('ob-bdd-benevoles-v1'))
+  const [standsLogistique,setStandsLogistique]=useState<StandLivraison[]>(() => readArray('ob-stands-brioches-v1'))
+  useEffect(()=>{
+    const refresh=()=>{
+      setBenevolesLogistique(readArray('ob-bdd-benevoles-v1'))
+      setStandsLogistique(readArray('ob-stands-brioches-v1'))
+    }
+    window.addEventListener('focus',refresh)
+    window.addEventListener('storage',refresh)
+    return ()=>{window.removeEventListener('focus',refresh);window.removeEventListener('storage',refresh)}
+  },[])
+
+  const [multiAffectations, setMultiAffectations] = useState<Record<string, MultiAffectation>>(readMultiAffectations)
+  useEffect(() => { localStorage.setItem(MULTI_STORAGE_KEY, JSON.stringify(multiAffectations)) }, [multiAffectations])
+  const lignesMulti = useMemo(() => commandes
+    .filter(commande => commande.statut !== 'ANNULEE' &&
+      (campagneAnnee === '' || anneeDe(commande.campagne) === campagneAnnee))
+    .flatMap(commande => (commande.livraisons ?? []).map((ligne, index) => ({
+      commande, ligne, ligneId: ligne.id || `index-${index}`,
+      cle: keyMulti(commande.id, ligne.id || `index-${index}`),
+    }))), [commandes, campagneAnnee])
+  function updateMulti(cle: string, commandeId: number, ligneId: string, dateInitiale: string, patch: Partial<MultiAffectation>) {
+    setMultiAffectations(current => {
+      const old = current[cle] ?? {
+        commandeId, ligneId, date: dateInitiale || todayInput(), heure: '',
+        mode: 'NON_AFFECTE' as ModeLivraison, responsable: '', statut: 'A_PLANIFIER' as StatutLivraison,
+      }
+      return {...current, [cle]: {...old, ...patch}}
+    })
+  }
+  function setMultiStatut(item: (typeof lignesMulti)[number], status: StatutLivraison) {
+    const itemState = multiAffectations[item.cle]
+    const dateLivraison = itemState?.date || item.ligne.datePrevue || todayInput()
+    updateMulti(item.cle, item.commande.id, item.ligneId, dateLivraison, {statut:status})
+    // Une livraison partielle ne doit jamais marquer toute la commande livrée.
+    setCommandes(current => current.map(commande => {
+      if (commande.id !== item.commande.id) return commande
+      const livraisons = (commande.livraisons ?? []).map((ligne, i) =>
+        (ligne.id || `index-${i}`) === item.ligneId
+          ? {...ligne, dateLivraison: status === 'LIVREE' ? dateLivraison : undefined}
+          : ligne)
+      const toutesLivrees = livraisons.length > 0 && livraisons.every(l => Boolean(l.dateLivraison))
+      return {...commande, livraisons,
+        ...(toutesLivrees ? {statut: 'LIVREE' as const, dateLivraison} : {}),
+      }
+    }))
+  }
+
 
   const initialDate = useMemo(() => {
     const dates = commandes
-      .map((commande) => commande.datePrevueLivraison)
+      .flatMap((commande) => [commande.datePrevueLivraison, ...(commande.livraisons ?? []).map(l => l.datePrevue)])
       .filter((date): date is string => Boolean(date))
       .sort()
 
@@ -171,6 +273,10 @@ export default function LivraisonsRetraits() {
   const [selectedDate, setSelectedDate] =
     useState(initialDate)
 
+  const multiDuJour = useMemo(() => lignesMulti.filter(item =>
+    (multiAffectations[item.cle]?.date || item.ligne.datePrevue) === selectedDate),
+    [lignesMulti, multiAffectations, selectedDate])
+
   const [activeTab, setActiveTab] =
     useState<Tab>('GLOBAL')
 
@@ -181,9 +287,18 @@ export default function LivraisonsRetraits() {
     useState<'TOUS' | ModeLivraison>('TOUS')
   const [responsableFilter, setResponsableFilter] =
     useState('TOUS')
+  const [benevoleDeplie, setBenevoleDeplie] = useState<string | null>(null)
   const [secteurFilter, setSecteurFilter] =
     useState('TOUS')
 
+  const [departs,setDeparts]=useState<Record<string,string>>(()=>readObject<string>(TOUR_DEPART_KEY))
+  const [ordreTour,setOrdreTour]=useState<Record<string,number>>(()=>readObject<number>(TOUR_ORDRE_KEY))
+  const [alertesReattribution,setAlertesReattribution]=useState<Record<string,string>>(()=>readObject<string>(TOUR_ALERTES_KEY))
+  const [tourEdit,setTourEdit]=useState<{mode:ModeLivraison;responsable:string}|null>(null)
+  const [commandeAjout,setCommandeAjout]=useState('')
+  useEffect(()=>{localStorage.setItem(TOUR_DEPART_KEY,JSON.stringify(departs))},[departs])
+  useEffect(()=>{localStorage.setItem(TOUR_ORDRE_KEY,JSON.stringify(ordreTour))},[ordreTour])
+  useEffect(()=>{localStorage.setItem(TOUR_ALERTES_KEY,JSON.stringify(alertesReattribution))},[alertesReattribution])
   const [tourOpen, setTourOpen] = useState(false)
   const [detailId, setDetailId] =
     useState<string | null>(null)
@@ -193,8 +308,41 @@ export default function LivraisonsRetraits() {
       date: initialDate,
       mode: 'BENEVOLE',
       responsable: '',
+      retraitType: 'ETABLISSEMENT',
       commandes: {},
     }))
+
+  const responsablesProposes = useMemo(() => {
+    if(tourForm.mode === 'BENEVOLE') return benevolesLogistique
+      .filter(b=>b.statut !== 'Inactif' && b.peutEffectuerLivraisons === true && availableForDate(b,tourForm.date))
+      .map(b=>({id:b.id,label:`${b.prenom} ${b.nom}`.trim()}))
+    if(tourForm.mode === 'ESAT') return etablissements
+      // La BDD Établissements est la source de référence : les ESAT sont
+      // proposés même lorsque la case « peut effectuer des livraisons » est vide.
+      // Les établissements portant les codes 20 ou 29 sont également inclus.
+      .filter(e=>e.statut==='ACTIF' && (
+        e.type==='ESAT' || ['20','29'].includes(String(e.code ?? '').trim().replace(/^0+(?=\d)/,''))
+      ))
+      .map(e=>({id:e.id,label:`${e.nom}${e.ville ? ` · ${e.ville}` : ''}`}))
+      .sort((a,b)=>a.label.localeCompare(b.label,'fr'))
+    if(tourForm.mode === 'SERVICE_COMM') return users
+      .filter(u=>u.role==='communication' && u.status==='actif')
+      .map(u=>({id:u.id,label:u.name}))
+    if(tourForm.retraitType === 'ETABLISSEMENT') return etablissements
+      .filter(e=>e.statut==='ACTIF' && e.peutEffectuerLivraisons)
+      .map(e=>({id:e.id,label:e.nom}))
+    return standsLogistique
+      // Un retrait peut avoir lieu le lendemain du stand : on filtre donc sur
+      // la campagne, et non sur l'égalité stricte des dates.
+      .filter(st=>!campagneAnnee || anneeDe(st.campagne||st.date)===campagneAnnee)
+      .sort((a,b)=>{
+        // Les stands prévus le jour de la tournée sont proposés en premier.
+        const aToday=a.date===tourForm.date ? 0 : 1
+        const bToday=b.date===tourForm.date ? 0 : 1
+        return aToday-bToday || a.date.localeCompare(b.date) || a.nom.localeCompare(b.nom,'fr')
+      })
+      .map(st=>({id:st.id,label:`${st.nom}${st.lieu ? ` · ${st.lieu}` : ''} · ${st.date}`}))
+  },[tourForm.mode,tourForm.retraitType,tourForm.date,benevolesLogistique,etablissements,users,standsLogistique,campagneAnnee])
 
   useEffect(() => {
     localStorage.setItem(
@@ -211,6 +359,7 @@ export default function LivraisonsRetraits() {
       for (const commande of commandes) {
         if (
           commande.statut === 'ANNULEE' ||
+          ((commande.livraisons?.length ?? 0) > 0) ||
           (!commande.datePrevueLivraison &&
             !commande.dateLivraison)
         ) {
@@ -277,9 +426,11 @@ export default function LivraisonsRetraits() {
   const selectedDayMissions = useMemo(
     () =>
       missions.filter(
-        (mission) => mission.date === selectedDate,
+        (mission) => mission.date === selectedDate &&
+          commandes.some(c=>c.id===mission.commandeId &&
+            (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee)),
       ),
-    [missions, selectedDate],
+    [missions, selectedDate, commandes, campagneAnnee],
   )
 
   const enriched = useMemo(
@@ -458,6 +609,37 @@ export default function LivraisonsRetraits() {
     search,
   ])
 
+  // La vue bénévoles présente des personnes, pas une liste plate de commandes.
+  const benevolesDuJour = useMemo(() => benevolesLogistique
+    .filter(b => (b.statut || '').toLocaleLowerCase('fr') !== 'inactif')
+    .filter(b => b.peutEffectuerLivraisons === true)
+    .filter(b => availableForDate(b, selectedDate))
+    .map(b => ({
+      id: b.id,
+      nom: `${b.prenom || ''} ${b.nom || ''}`.trim(),
+      disponibiliteDeclaree: Boolean(b.disponibilites?.trim()),
+    }))
+    .filter(b => Boolean(b.nom))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr')),
+    [benevolesLogistique, selectedDate])
+
+  const groupesBenevoles = useMemo(() => {
+    const map = new Map<string, {id:string; nom:string; disponibiliteDeclaree:boolean; missions:typeof visible}>()
+    benevolesDuJour.forEach(b => map.set(normalizeText(b.nom), {...b, missions:[]}))
+    // On conserve les missions affectées, même si la fiche bénévole a été modifiée
+    // ou si la disponibilité déclarée a changé entre-temps.
+    visible.filter(item => item.mission.mode === 'BENEVOLE' && item.mission.responsable.trim())
+      .forEach(item => {
+        const key = normalizeText(item.mission.responsable)
+        if (!map.has(key)) map.set(key, {
+          id: `historique-${key}`,nom: item.mission.responsable,
+          disponibiliteDeclaree: false,missions: [],
+        })
+        map.get(key)!.missions.push(item)
+      })
+    return [...map.values()].sort((a,b) => a.nom.localeCompare(b.nom,'fr'))
+  }, [benevolesDuJour, visible])
+
   const stats = useMemo(() => {
     const unique = (mode: ModeLivraison) =>
       new Set(
@@ -554,14 +736,15 @@ export default function LivraisonsRetraits() {
     () =>
       commandes
         .filter(
-          (commande) => commande.statut !== 'ANNULEE',
+          (commande) => commande.statut !== 'ANNULEE' && (commande.livraisons?.length ?? 0) === 0 && (campagneAnnee === '' || anneeDe(commande.campagne) === campagneAnnee) &&
+            !missions.some(m=>m.commandeId===commande.id && m.mode!=='NON_AFFECTE'),
         )
         .sort((a, b) =>
           a.numero.localeCompare(b.numero, 'fr', {
             numeric: true,
           }),
         ),
-    [commandes],
+    [commandes, campagneAnnee, missions],
   )
 
   function changeTab(tab: Tab) {
@@ -599,6 +782,7 @@ export default function LivraisonsRetraits() {
       date: selectedDate,
       mode: 'BENEVOLE',
       responsable: '',
+      retraitType: 'ETABLISSEMENT',
       commandes: commandState,
     })
 
@@ -630,11 +814,11 @@ export default function LivraisonsRetraits() {
       return
     }
 
-    const responsable =
-      tourForm.mode === 'RETRAIT'
-        ? tourForm.responsable.trim() ||
-          'Retrait client'
-        : tourForm.responsable.trim()
+    const responsable = tourForm.responsable.trim()
+    if(!responsablesProposes.some(option=>option.label===responsable)) {
+      window.alert('Sélectionne un responsable dans la liste correspondant au mode choisi.')
+      return
+    }
 
     if (!responsable) {
       window.alert(
@@ -643,6 +827,9 @@ export default function LivraisonsRetraits() {
       return
     }
 
+    if(selectedIds.some(id=>missions.some(m=>m.commandeId===id && m.mode!=='NON_AFFECTE'))){
+      window.alert('Une commande a déjà été affectée à une tournée. Actualise la liste avant de continuer.');return
+    }
     const now = new Date().toISOString()
 
     setMissions((current) => {
@@ -650,9 +837,7 @@ export default function LivraisonsRetraits() {
 
       for (const commandeId of selectedIds) {
         const currentMissionIndex = next.findIndex(
-          (mission) =>
-            mission.commandeId === commandeId &&
-            mission.date === tourForm.date,
+          (mission) => mission.commandeId === commandeId,
         )
 
         const heure =
@@ -664,6 +849,7 @@ export default function LivraisonsRetraits() {
             ...next[currentMissionIndex],
             mode: tourForm.mode,
             responsable,
+            date: tourForm.date,
             heure,
             statut:
               next[currentMissionIndex].statut ===
@@ -701,6 +887,7 @@ export default function LivraisonsRetraits() {
       ),
     )
 
+    setAlertesReattribution(prev=>{const next={...prev};selectedIds.forEach(id=>delete next[String(id)]);return next})
     setSelectedDate(tourForm.date)
     setTourOpen(false)
   }
@@ -741,6 +928,56 @@ export default function LivraisonsRetraits() {
         ),
       )
     }
+  }
+
+  const tourKey=(mode:ModeLivraison,responsable:string)=>`${selectedDate}|${mode}|${responsable}`
+  const missionsDeTour=(mode:ModeLivraison,responsable:string)=>enriched
+    .filter(item=>item.mission.mode===mode && item.mission.responsable===responsable)
+    .sort((a,b)=>(ordreTour[a.mission.id]??9999)-(ordreTour[b.mission.id]??9999) ||
+       a.ville.localeCompare(b.ville,'fr') || a.nom.localeCompare(b.nom,'fr'))
+
+  function enleverDeTour(mission:MissionLivraison){
+    if(mission.statut==='LIVREE') {window.alert('Livraison déjà effectuée : elle ne peut pas être retirée sans procédure de correction.');return}
+    if(!window.confirm('Retirer cette livraison de la tournée ? Elle sera signalée comme À RÉATTRIBUER.')) return
+    setMissions(current=>current.map(m=>m.id===mission.id?{
+      ...m,mode:'NON_AFFECTE',responsable:'',heure:'',statut:'A_PLANIFIER',updatedAt:new Date().toISOString()
+    }:m))
+    setAlertesReattribution(prev=>({...prev,[String(mission.commandeId)]:'Commande retirée de la tournée, à réattribuer'}))
+  }
+
+  function ajouterATour(mode:ModeLivraison,responsable:string){
+    const commandeId=Number(commandeAjout)
+    if(!commandeId || !eligibleCommandes.some(c=>c.id===commandeId)){window.alert('Sélectionne une commande non affectée.');return}
+    setMissions(current=>{
+      if(current.some(m=>m.commandeId===commandeId && m.mode!=='NON_AFFECTE'))return current
+      const old=current.find(m=>m.commandeId===commandeId)
+      return old?current.map(m=>m.id===old.id?{...m,date:selectedDate,mode,responsable,heure:'',statut:'PLANIFIEE',updatedAt:new Date().toISOString()}:m):[
+        ...current,{id:createMissionId(),commandeId,date:selectedDate,mode,responsable,heure:'',statut:'PLANIFIEE',commentaire:'',updatedAt:new Date().toISOString()}]
+    })
+    setCommandes(current=>current.map(c=>c.id===commandeId?{...c,datePrevueLivraison:selectedDate}:c))
+    setAlertesReattribution(prev=>{const next={...prev};delete next[String(commandeId)];return next})
+    setCommandeAjout('');setTourEdit(null)
+  }
+
+  function bougerArret(mode:ModeLivraison,responsable:string,missionId:string,direction:-1|1){
+    const stops=missionsDeTour(mode,responsable)
+    const i=stops.findIndex(x=>x.mission.id===missionId)
+    const j=i+direction
+    if(i<0||j<0||j>=stops.length)return
+    const next=[...stops];[next[i],next[j]]=[next[j],next[i]]
+    setOrdreTour(old=>({...old,...Object.fromEntries(next.map((x,k)=>[x.mission.id,k]))}))
+  }
+
+  function imprimerTour(mode:ModeLivraison,responsable:string){
+    const stops=missionsDeTour(mode,responsable)
+    if(!stops.length)return
+    const departure=departs[tourKey(mode,responsable)]?.trim()||'Non renseigné'
+    const rows=stops.map((item,i)=>`<tr><td>${i+1}</td><td>${htmlEscape(item.nom)}<br/><small>${htmlEscape(item.ville)} · ${htmlEscape(item.donateur?.adresse??'')}</small></td><td>${htmlEscape(item.commande.numero)}</td><td>${htmlEscape(item.commande.quantite)}</td><td>${htmlEscape(item.mission.heure||'À prévoir')}</td></tr>`).join('')
+    const bons=stops.map((item,i)=>`<section class="bon"><h2>Bon de livraison ${i+1}/${stops.length}</h2><p><b>Commande :</b> ${htmlEscape(item.commande.numero)} — <b>Campagne :</b> ${htmlEscape(item.commande.campagne)}</p><p><b>Destinataire :</b> ${htmlEscape(item.nom)}</p><p><b>Adresse / ville :</b> ${htmlEscape(item.donateur?.adresse??'')} ${htmlEscape(item.ville)}</p><p><b>Quantité à remettre :</b> ${htmlEscape(item.commande.quantite)} brioches</p><p><b>Quantité effectivement reçue :</b> __________________</p><div class="sign"><div>Date / heure : _______________</div><div>Signature et tampon du destinataire :<div class="space"></div></div></div></section>`).join('')
+    const html=`<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>Tournée ${htmlEscape(responsable)} ${htmlEscape(selectedDate)}</title><style>@page{size:A4;margin:14mm}body{font:12px Arial,sans-serif;color:#153764}h1{font-size:24px}h2{font-size:18px}table{border-collapse:collapse;width:100%;margin:22px 0}th,td{border:1px solid #bdcddd;padding:9px;text-align:left}th{background:#eef5fc}.meta{background:#f4f8fc;padding:12px;line-height:1.7}small{color:#627b98}.bon{page-break-before:always;min-height:240mm}.space{height:90px}.sign{margin-top:36px;border:1px solid #c7d4e2;padding:16px;line-height:2}.footer{font-size:11px;color:#71849d}@media print{button{display:none}}</style></head><body><h1>Opération Brioche · Feuille de tournée</h1><div class="meta"><b>Date :</b> ${htmlEscape(formatDateLabel(selectedDate))}<br/><b>Responsable :</b> ${htmlEscape(responsable)}<br/><b>Mode :</b> ${htmlEscape(MODE_LABELS[mode])}<br/><b>Départ :</b> ${htmlEscape(departure)}<br/><b>Heure de départ :</b> __________ &nbsp; <b>Temps de route :</b> à calculer &nbsp; <b>Retour :</b> __________</div><p>Ordre des arrêts défini dans le logiciel. Les durées de route et d'arrivée doivent être confirmées avant le départ.</p><table><thead><tr><th>#</th><th>Destination</th><th>Commande</th><th>Brioches</th><th>Heure prévue</th></tr></thead><tbody>${rows}</tbody></table><p class="footer">Document opérationnel — les quantités remises sont à confirmer et signer sur les bons suivants.</p>${bons}<script>window.addEventListener('load',()=>window.print())<\/script></body></html>`
+    const frame=window.open('','_blank')
+    if(!frame){window.alert('Autorise les fenêtres pop-up pour imprimer la feuille de tournée.');return}
+    frame.document.open();frame.document.write(html);frame.document.close()
   }
 
   function exportCsv() {
@@ -943,6 +1180,41 @@ export default function LivraisonsRetraits() {
         />
       </section>
 
+      <section className="lr-multisites lr-card">
+        <div className="lr-multisites-heading">
+          <div><h2><Truck size={19}/> Destinations multi-sites</h2>
+            <p>Une ligne par destination · un seul donateur payeur · campagne {campagneAnnee || 'courante'}</p></div>
+          <span className="lr-multisites-count">{lignesMulti.length} destination(s) · {multiDuJour.length} pour le {formatDateLabel(selectedDate)}</span>
+        </div>
+        {multiDuJour.length ? <div className="lr-multisites-list">
+          {multiDuJour.map(item => {
+            const state = multiAffectations[item.cle]
+            const delivered = Boolean(item.ligne.dateLivraison) || state?.statut === 'LIVREE'
+            const currentStatus: StatutLivraison = delivered ? 'LIVREE' : state?.statut || 'A_PLANIFIER'
+            return <article className="lr-multisite-row" key={item.cle}>
+              <div className="lr-multisite-destination">
+                <strong>{item.ligne.destinataireNom || 'Destinataire sans nom'}</strong>
+                <span>{[item.ligne.adresse, item.ligne.cp, item.ligne.ville].filter(Boolean).join(' · ') || 'Adresse à compléter'}</span>
+                <small>{item.commande.numero} · {item.ligne.quantite} brioches · payeur : {getDonateurById(item.commande.donateurId)?.nom || 'Inconnu'}</small>
+              </div>
+              <label>Mode<select value={state?.mode || 'NON_AFFECTE'} disabled={delivered} onChange={event => updateMulti(item.cle,item.commande.id,item.ligneId,item.ligne.datePrevue,{mode:event.target.value as ModeLivraison})}>
+                {Object.entries(MODE_LABELS).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+              </select></label>
+              <label>Responsable<input value={state?.responsable || ''} disabled={delivered} onChange={event => updateMulti(item.cle,item.commande.id,item.ligneId,item.ligne.datePrevue,{responsable:event.target.value})} placeholder="Nom / structure" /></label>
+              <label>Heure<input type="time" value={state?.heure || ''} disabled={delivered} onChange={event => updateMulti(item.cle,item.commande.id,item.ligneId,item.ligne.datePrevue,{heure:event.target.value})}/></label>
+              <div className="lr-multisite-actions"><span className={delivered?'is-delivered':''}>{STATUS_LABELS[currentStatus]}</span>
+                {!delivered && <button type="button" onClick={() => {
+                  if((state?.mode || 'NON_AFFECTE')==='NON_AFFECTE' || !state?.responsable?.trim()) {window.alert('Choisis un mode et un responsable avant de planifier.');return}
+                  setMultiStatut(item,'PLANIFIEE')
+                }}>Planifier</button>}
+                {currentStatus === 'PLANIFIEE' && <button type="button" className="lr-multi-deliver" onClick={() => setMultiStatut(item,'LIVREE')}>Marquer livrée</button>}
+              </div>
+            </article>
+          })}
+        </div> : <p className="lr-multisites-empty">Aucune destination multi-sites prévue à cette date. Choisis la date d'une livraison dans le calendrier.</p>}
+        <p className="lr-multisites-note">Les affectations sont enregistrées dans ce navigateur. La facturation reste unique par commande ; les livraisons sont suivies individuellement.</p>
+      </section>
+
       <div className="lr-main-grid">
         <section className="lr-card lr-missions-card">
           <div className="lr-card-title">
@@ -1067,6 +1339,34 @@ export default function LivraisonsRetraits() {
             </select>
           </div>
 
+          {activeTab === 'BENEVOLES' ? (
+            <div className="lr-benevole-groups">
+              <p className="lr-benevole-explain">Choisis un bénévole pour voir ses livraisons du jour. Les bénévoles sans mission sont aussi affichés.</p>
+              {groupesBenevoles.map(b => {
+                const ouvert = benevoleDeplie === b.id
+                const quantite = b.missions.reduce((n,item) => n + Number(item.commande.quantite || 0),0)
+                return <section key={b.id} className="lr-benevole-group">
+                  <button type="button" className="lr-benevole-group-trigger" aria-expanded={ouvert} onClick={() => setBenevoleDeplie(ouvert ? null : b.id)}>
+                    <UserRound size={19}/>
+                    <span className="lr-benevole-group-name"><strong>{b.nom}</strong><small>{b.missions.length} livraison(s) · {quantite.toLocaleString('fr-FR')} brioches</small></span>
+                    {!b.disponibiliteDeclaree && <span className="lr-benevole-unknown">Disponibilité à confirmer</span>}
+                    <ChevronRight size={18} className={ouvert ? 'is-open' : ''}/>
+                  </button>
+                  {ouvert && <div className="lr-benevole-group-content">
+                    {b.missions.length ? <div className="lr-table-wrap"><table className="lr-table"><thead><tr>
+                      <th>Heure</th><th>Client / destinataire</th><th>Quantité</th><th>Ville</th><th>Statut</th><th>Actions</th>
+                    </tr></thead><tbody>{b.missions.map(({mission,commande,nom,ville,contact}) => <tr key={mission.id}>
+                      <td>{mission.heure || '—'}</td><td><strong>{nom}</strong><small>{contact ? `Contact : ${contact}` : commande.numero}</small></td>
+                      <td>{commande.quantite} brioches</td><td>{ville || '—'}</td><td><StatusBadge status={mission.statut}/></td>
+                      <td><button type="button" className="lr-icon-button" onClick={()=>setDetailId(mission.id)} aria-label={`Ouvrir ${commande.numero}`}><MoreHorizontal size={18}/></button></td>
+                    </tr>)}</tbody></table></div>
+                    : <p className="lr-benevole-no-mission">Aucune livraison attribuée pour cette date.</p>}
+                  </div>}
+                </section>
+              })}
+              {groupesBenevoles.length === 0 && <p className="lr-benevole-no-mission">Aucun bénévole autorisé à livrer et disponible dans la BDD pour cette date.</p>}
+            </div>
+          ) : (
           <div className="lr-table-wrap">
             <table className="lr-table">
               <thead>
@@ -1168,6 +1468,7 @@ export default function LivraisonsRetraits() {
               </tbody>
             </table>
           </div>
+          )}
         </section>
 
         <aside className="lr-aside">
@@ -1178,10 +1479,54 @@ export default function LivraisonsRetraits() {
                 <h2>Tournées du jour</h2>
               </div>
               <span>
-                {tournees.length} responsables
+                {activeTab === 'BENEVOLES' ? benevolesDuJour.length : tournees.length} responsables
               </span>
             </div>
 
+            {activeTab === 'BENEVOLES' ? (
+              <div className="lr-benevole-today">
+                <p>Bénévoles autorisés à livrer et compatibles avec la date sélectionnée.</p>
+                {benevolesDuJour.map(b => {
+                  const count = enriched.filter(item => item.mission.mode === 'BENEVOLE' && normalizeText(item.mission.responsable) === normalizeText(b.nom)).length
+                  return <button type="button" key={b.id} className="lr-benevole-today-item" onClick={() => {setBenevoleDeplie(b.id);setResponsableFilter('TOUS')}}>
+                    <UserRound size={17}/><span><strong>{b.nom}</strong><small>{count} livraison(s){!b.disponibiliteDeclaree ? ' · Disponibilité à confirmer' : ''}</small></span><ChevronRight size={16}/>
+                  </button>
+                })}
+                {benevolesDuJour.length === 0 && <p className="lr-benevole-no-mission">Aucun bénévole disponible à cette date.</p>}
+              </div>
+            ) : <>
+            {Object.keys(alertesReattribution).filter(id=>commandes.some(c=>String(c.id)===id && (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee))).length>0&&
+              <div className="lr-reattribution-alert"><AlertTriangle size={16}/>
+                {Object.keys(alertesReattribution).filter(id=>commandes.some(c=>String(c.id)===id && (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee))).length} commande(s) retirée(s) à réattribuer.
+              </div>}
+            <div className="lr-tour-management">
+              <p>Gestion des arrêts · + ajouter · − retirer · ↑↓ ordonner</p>
+              {tournees.filter(t=>t.mode!=='NON_AFFECTE').map(t=>{
+                const stops=missionsDeTour(t.mode,t.responsable)
+                const key=tourKey(t.mode,t.responsable)
+                return <div className="lr-tour-editor" key={key}>
+                  <div className="lr-tour-editor-head"><strong>{t.responsable} · {MODE_LABELS[t.mode]}</strong>
+                    <button type="button" onClick={()=>imprimerTour(t.mode,t.responsable)}><Printer size={15}/> Feuille de tournée</button>
+                  </div>
+                  <label className="lr-depart-field">Point de départ (domicile, établissement ou Siège)
+                    <input placeholder="Ex. Siège AEIM, Villers-lès-Nancy" value={departs[key]||''} onChange={e=>setDeparts(old=>({...old,[key]:e.target.value}))}/>
+                  </label>
+                  {stops.map((item,i)=><div className="lr-tour-editor-stop" key={item.mission.id}>
+                    <span><b>{i+1}. {item.nom}</b><small>{item.ville} · {item.commande.quantite} brioches</small></span>
+                    <button type="button" title="Monter" disabled={i===0} onClick={()=>bougerArret(t.mode,t.responsable,item.mission.id,-1)}>↑</button>
+                    <button type="button" title="Descendre" disabled={i===stops.length-1} onClick={()=>bougerArret(t.mode,t.responsable,item.mission.id,1)}>↓</button>
+                    <button type="button" title="Retirer et réattribuer" disabled={item.mission.statut==='LIVREE'} onClick={()=>enleverDeTour(item.mission)}><Minus size={15}/></button>
+                  </div>)}
+                  {tourEdit?.mode===t.mode&&tourEdit?.responsable===t.responsable ? <div className="lr-add-stop">
+                    <select value={commandeAjout} onChange={e=>setCommandeAjout(e.target.value)}>
+                      <option value="">Choisir une commande non affectée</option>
+                      {eligibleCommandes.map(c=><option key={c.id} value={c.id}>{c.numero} · {getDonateurById(c.donateurId)?.nom||'Donateur'} · {c.quantite} brioches</option>)}
+                    </select><button type="button" onClick={()=>ajouterATour(t.mode,t.responsable)}>Ajouter</button>
+                    <button type="button" onClick={()=>setTourEdit(null)}>Annuler</button>
+                  </div>:<button type="button" className="lr-tour-add" onClick={()=>{setTourEdit({mode:t.mode,responsable:t.responsable});setCommandeAjout('')}}><Plus size={15}/> Ajouter une livraison</button>}
+                </div>
+              })}
+            </div>
             <div className="lr-tour-list">
               {tournees.map((tour) => {
                 const total = tour.missions.reduce(
@@ -1312,6 +1657,7 @@ export default function LivraisonsRetraits() {
                 </p>
               )}
             </div>
+            </>}
           </section>
 
           <section className="lr-card lr-alert-card">
@@ -1432,6 +1778,7 @@ export default function LivraisonsRetraits() {
                           (current) => ({
                             ...current,
                             date: event.target.value,
+                            responsable:'',
                           }),
                         )
                       }
@@ -1452,14 +1799,7 @@ export default function LivraisonsRetraits() {
                           (current) => ({
                             ...current,
                             mode,
-                            responsable:
-                              mode ===
-                              'SERVICE_COMM'
-                                ? 'Service Communication'
-                                : mode ===
-                                    'RETRAIT'
-                                  ? 'Retrait client'
-                                  : '',
+                            responsable: '',
                           }),
                         )
                       }}
@@ -1479,23 +1819,30 @@ export default function LivraisonsRetraits() {
                     </select>
                   </label>
 
+                  {tourForm.mode === 'RETRAIT' && <label>
+                    <span>Type de retrait</span>
+                    <select value={tourForm.retraitType} onChange={event=>setTourForm(current=>({
+                      ...current,retraitType:event.target.value as TourForm['retraitType'],responsable:''
+                    }))}>
+                      <option value="ETABLISSEMENT">Retrait établissement</option>
+                      <option value="STAND">Retrait stand</option>
+                    </select>
+                  </label>}
                   <label>
-                    <span>
-                      Responsable / structure
-                    </span>
-                    <input
-                      value={tourForm.responsable}
-                      onChange={(event) =>
-                        setTourForm(
-                          (current) => ({
-                            ...current,
-                            responsable:
-                              event.target.value,
-                          }),
-                        )
-                      }
-                      placeholder="Ex. Tartempion"
-                    />
+                    <span>{tourForm.mode==='BENEVOLE'?'Bénévole disponible':tourForm.mode==='ESAT'?'ESAT pouvant livrer':tourForm.mode==='SERVICE_COMM'?'Personne du service communication':tourForm.retraitType==='STAND'?'Stand concerné':'Établissement concerné'}</span>
+                    <select required value={tourForm.responsable} onChange={event=>setTourForm(current=>({
+                      ...current,responsable:event.target.value
+                    }))}>
+                      <option value="">Sélectionner dans la liste</option>
+                      {responsablesProposes.map(option=><option key={option.id} value={option.label}>{option.label}</option>)}
+                    </select>
+                    {responsablesProposes.length===0&&<small className="lr-source-empty">{
+                      tourForm.mode==='ESAT'
+                        ? 'Aucun ESAT actif trouvé dans BDD → Établissements (type ESAT ou code 20/29).'
+                        : tourForm.mode==='RETRAIT' && tourForm.retraitType==='STAND'
+                          ? 'Aucun stand trouvé dans Gestion → Stands Brioches pour la campagne sélectionnée.'
+                          : 'Aucune entrée éligible. Vérifie les disponibilités ou les autorisations dans la base correspondante.'
+                    }</small>}
                   </label>
                 </div>
 
@@ -1506,8 +1853,7 @@ export default function LivraisonsRetraits() {
                         Ajouter les commandes
                       </h3>
                       <p>
-                        Coche les arrêts de cette
-                        tournée et indique leur heure.
+                        Seules les commandes non affectées sont proposées. Les horaires sont indicatifs.
                       </p>
                     </div>
                   </div>

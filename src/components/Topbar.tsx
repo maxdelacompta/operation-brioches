@@ -19,6 +19,7 @@ import {
 
 import {
   ROLE_LABELS,
+  getUserDisplayName,
   useUsers,
 } from '../contexts/UsersContext'
 
@@ -112,7 +113,7 @@ function Topbar({
      ======================================================= */
 
   const userName =
-    currentUser?.name || 'Utilisateur'
+    getUserDisplayName(currentUser)
 
   const userRole = currentUser
     ? ROLE_LABELS[currentUser.role]
@@ -459,8 +460,13 @@ function Topbar({
             Relié à UsersContext.
         ================================================ */}
 
-        <div className="ob-topbar-user">
-
+        <div className="ob-topbar-user ob-topbar-account-menu">
+          <Link
+            to="/mon-compte"
+            className="ob-topbar-account-trigger"
+            aria-label={`Gestion de mon compte — ${userName}`}
+            title="Gestion de mon compte"
+          >
           <div className="ob-topbar-avatar">
 
             {userInitials}
@@ -478,7 +484,12 @@ function Topbar({
             </span>
 
           </div>
-
+          </Link>
+          <div className="ob-topbar-account-popover">
+            <Link to="/mon-compte" className="ob-topbar-account-option">
+              Gestion de mon compte
+            </Link>
+          </div>
         </div>
 
         <button

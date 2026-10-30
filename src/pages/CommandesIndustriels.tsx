@@ -1,4 +1,5 @@
 import CompactStatCard from '../components/ui/CompactStatCard'
+import { useObData } from '../contexts/ObDataContext'
 import { useMemo, useState, type FormEvent } from 'react'
 import {
   CalendarDays, Download, Printer,
@@ -65,6 +66,10 @@ function estIndustriel(fournisseur: Fournisseur) {
 
 export default function CommandesIndustriels() {
   const { commandesArtisans, setCommandesArtisans, fournisseurs } = useArtisans()
+  const { selectedCampagne, activeCampagne } = useObData()
+  const campagneSelectionnee = selectedCampagne ?? activeCampagne
+  const anneeCampagne = String(campagneSelectionnee?.annee ?? campagneSelectionnee?.id.match(/(?:19|20)\d{2}/)?.[0] ?? '')
+
   const { etablissements } = useEtablissements()
   const [message, setMessage] = useState('')
   const etablissementsDisponibles = useMemo(() => etablissements.filter(e => e.statut === 'ACTIF').sort((a,b) => a.nom.localeCompare(b.nom,'fr')), [etablissements])
@@ -77,7 +82,7 @@ export default function CommandesIndustriels() {
 
   function ouvrirCreation() {
     const premier = fournisseurs.filter(estIndustriel).find(f => f.statut !== 'INACTIF')
-    const campagneActuelle = String(new Date().getFullYear())
+    const campagneActuelle = anneeCampagne || String(new Date().getFullYear())
     setEdition({
       id: `commande-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       numero: numeroCommandeSuivant(commandesArtisans, campagneActuelle),
@@ -272,7 +277,6 @@ export default function CommandesIndustriels() {
   }
 
   const [recherche, setRecherche] = useState('')
-  const [campagne, setCampagne] = useState('TOUTES')
   const [statut, setStatut] = useState<StatutFiltre>('TOUS')
 
   const fournisseursIndustriels = useMemo(
@@ -288,19 +292,10 @@ export default function CommandesIndustriels() {
   const commandesIndustriels = useMemo(
     () =>
       commandesArtisans.filter((commande) =>
-        idsIndustriels.has(commande.artisanId),
+        idsIndustriels.has(commande.artisanId) &&
+        String(commande.campagne ?? '').match(/(?:19|20)\d{2}/)?.[0] === anneeCampagne,
       ),
-    [commandesArtisans, idsIndustriels],
-  )
-
-  const campagnes = useMemo(
-    () =>
-      [...new Set(commandesIndustriels.map((item) => item.campagne))]
-        .filter(Boolean)
-        .sort((a, b) =>
-          b.localeCompare(a, 'fr', { numeric: true }),
-        ),
-    [commandesIndustriels],
+    [commandesArtisans, idsIndustriels, anneeCampagne],
   )
 
   const resultats = useMemo(() => {
@@ -326,9 +321,7 @@ export default function CommandesIndustriels() {
           .toLocaleLowerCase('fr')
           .includes(motif)
 
-      const correspondCampagne =
-        campagne === 'TOUTES' ||
-        commande.campagne === campagne
+      const correspondCampagne = true
 
       const correspondStatut = statut === 'TOUS' || etapeCommande(commande) === statut
 
@@ -342,7 +335,6 @@ export default function CommandesIndustriels() {
     commandesIndustriels,
     fournisseursIndustriels,
     recherche,
-    campagne,
     statut,
   ])
 
@@ -438,27 +430,6 @@ export default function CommandesIndustriels() {
               }
             />
           </label>
-
-          <select
-            value={campagne}
-            onChange={(event) =>
-              setCampagne(event.target.value)
-            }
-            aria-label="Filtrer par campagne"
-          >
-            <option value="TOUTES">
-              Toutes les campagnes
-            </option>
-
-            {campagnes.map((value) => (
-              <option
-                key={value}
-                value={value}
-              >
-                {value}
-              </option>
-            ))}
-          </select>
 
           <select
             value={statut}

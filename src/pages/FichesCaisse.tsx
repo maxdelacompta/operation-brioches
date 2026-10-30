@@ -51,6 +51,8 @@ import type {
 } from '../types/ob'
 
 import { calculerCoffre } from '../services/coffre'
+import { useUsers } from '../contexts/UsersContext'
+import ImportFichesCaisseExcel from './ImportFichesCaisseExcel'
 
 import './FichesCaisse.css'
 
@@ -270,37 +272,22 @@ const PIECES: {
 
 function FichesCaisse() {
   const [globalSearchParams] = useSearchParams()
+  const { currentUser } = useUsers()
+  const canImport = currentUser?.role === 'administrateur'
+  const [importOpen, setImportOpen] = useState(false)
   const {
     fichesCaisse,
     setFichesCaisse,
     depotsBanque,
+    selectedCampagne,
+    activeCampagne,
   } = useObData()
 
-  /* =======================================================
-     INTÉGRATION AUTOMATIQUE DES ANCIENNES FICHES
-     ======================================================= */
+  const campagneEnCours = selectedCampagne ?? activeCampagne
+  const campagneId = campagneEnCours?.id ?? ''
 
-  useEffect(() => {
-    if (
-      !fichesCaisse.some(
-        fiche => fiche.statutCoffre !== 'CONTROLEE',
-      )
-    ) {
-      return
-    }
-
-    setFichesCaisse(current =>
-      current.map(fiche =>
-        fiche.statutCoffre === 'CONTROLEE'
-          ? fiche
-          : {
-              ...fiche,
-              statutCoffre: 'CONTROLEE',
-            },
-      ),
-    )
-  }, [fichesCaisse, setFichesCaisse])
-
+  // Les fiches importées restent « À contrôler » jusqu'à une
+  // action de contrôle explicite. Pas de validation automatique.
 
   const [
     search,
@@ -448,6 +435,7 @@ function FichesCaisse() {
     useMemo(() => {
       const values =
         fichesCaisse
+          .filter(fiche => fiche.campagne === campagneId)
           .map(
             (fiche) =>
               fiche.secteur,
@@ -473,6 +461,7 @@ function FichesCaisse() {
       ]
     }, [
       fichesCaisse,
+      campagneId,
     ])
 
   /* =======================================================
@@ -489,6 +478,7 @@ function FichesCaisse() {
       const filtered =
         fichesCaisse.filter(
           (fiche) => {
+            if (!campagneId || fiche.campagne !== campagneId) return false
             const searchable =
               [
                 fiche.numero,
@@ -586,6 +576,7 @@ function FichesCaisse() {
       )
     }, [
       fichesCaisse,
+      campagneId,
       search,
       typeFilter,
       secteurFilter,
@@ -848,7 +839,7 @@ const pageButtons = Array.from(
      ======================================================= */
 
   function openEditModal(fiche: FicheCaisse) {
-    // Une fiche contrôlée alimente déjà le coffre : correction bloquée.
+    // Une fiche déjà contrôlée reste verrouillée ; les autres peuvent être corrigées.
     if (fiche.statutCoffre === 'CONTROLEE') {
       window.alert(
         'Cette fiche est contrôlée et intégrée au coffre. Une procédure de correction dédiée est nécessaire pour modifier ses montants.',
@@ -888,16 +879,18 @@ const pageButtons = Array.from(
 
       const prochaineFiche: FicheCaisse = {
         ...fiche,
-        statutCoffre: 'CONTROLEE',
-        dateControleCoffre: new Date().toISOString(),
-}
+        statutCoffre: 'A_CONTROLER',
+        dateControleCoffre: undefined,
+      }
 
       // Validation des quantités et des chèques avant la sauvegarde.
       // La simulation ne déclenche aucun mouvement réel du coffre.
       calculerCoffre(
         prochaineFiche.campagne,
-        [{ ...prochaineFiche, statutCoffre: 'CONTROLEE' }],
-        [],
+        modalMode === 'edit'
+          ? fichesCaisse.map(item => item.id === prochaineFiche.id ? prochaineFiche : item)
+          : [...fichesCaisse, prochaineFiche],
+        depotsBanque,
       )
 
       setFichesCaisse(current =>
@@ -913,53 +906,6 @@ const pageButtons = Array.from(
         error instanceof Error ? error.message : 'Enregistrement impossible.',
       )
     }
-  }
-
-  /* =======================================================
-     CONTRÔLER POUR LE COFFRE
-
-     La fiche conserve son ID et n'est pas dupliquée.
-     Le coffre calcule ensuite les entrées automatiquement.
-     ======================================================= */
-
-  function controlerFiche(fiche: FicheCaisse) {
-    if (fiche.statutCoffre === 'CONTROLEE') return
-
-    const prochaineFiche: FicheCaisse = {
-      ...fiche,
-      statutCoffre: 'CONTROLEE',
-      dateControleCoffre: new Date().toISOString(),
-    }
-
-    const prochainesFiches = fichesCaisse.map(item =>
-      item.id === fiche.id ? prochaineFiche : item,
-    )
-
-    try {
-      // Refuser la validation si elle conduit à un stock incohérent.
-      calculerCoffre(fiche.campagne, prochainesFiches, depotsBanque)
-    } catch (error) {
-      window.alert(
-        `Impossible de contrôler cette fiche.\n\n${
-          error instanceof Error ? error.message : 'Erreur inconnue.'
-        }`,
-      )
-      return
-    }
-
-    const confirme = window.confirm(
-      `Contrôler la fiche ${fiche.numero} ?\n\n` +
-      'Ses pièces, billets et chèques seront ajoutés au coffre. ' +
-      'La fiche sera ensuite verrouillée pour éviter une modification involontaire.',
-    )
-
-    if (!confirme) return
-
-    setFichesCaisse(prochainesFiches)
-    setDetailFiche(current =>
-      current?.id === fiche.id ? prochaineFiche : current,
-    )
-    setActionMenuId(null)
   }
 
   /* =======================================================
@@ -2651,6 +2597,7 @@ const pageButtons = Array.from(
         </div>
 
         <div className="fiches-caisse-header-actions">
+          {canImport && <button type="button" className="fiches-caisse-secondary-button" onClick={() => setImportOpen(true)}><FileSpreadsheet size={18}/> Import Excel</button>}
 
           <div className="fiches-caisse-export">
 
@@ -2751,6 +2698,11 @@ const pageButtons = Array.from(
 
       </header>
 
+      {canImport && importOpen && <ImportFichesCaisseExcel fiches={fichesCaisse} onClose={() => setImportOpen(false)} onCommit={(incoming) => setFichesCaisse(current => {
+        const incomingIds = new Set(incoming.map(f => f.id))
+        return [...current.filter(f => !incomingIds.has(f.id)), ...incoming]
+      })} />}
+
       {/* =================================================
           KPI
       ================================================= */}
@@ -2763,11 +2715,9 @@ const pageButtons = Array.from(
               size={24}
             />
           }
-          label="Fiches contrôlées"
+          label="Fiches au coffre"
           value={String(
-            filteredFiches.filter(
-              fiche => fiche.statutCoffre === 'CONTROLEE',
-            ).length,
+            filteredFiches.length,
           )}
         />
 
@@ -3310,20 +3260,7 @@ const pageButtons = Array.from(
 
                     <td className="fiche-caisse-number">
                       {fiche.numero}
-                      <small
-                        style={{
-                          display: 'block',
-                          marginTop: 5,
-                          color: fiche.statutCoffre === 'CONTROLEE'
-                            ? '#16834e'
-                            : '#b96711',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {fiche.statutCoffre === 'CONTROLEE'
-                          ? '✓ Contrôlée — intégrée au coffre'
-                          : 'À contrôler — hors coffre'}
-                      </small>
+
                     </td>
 
                     {visibleColumns.date && (
@@ -3451,25 +3388,6 @@ const pageButtons = Array.from(
                           />
                         </button>
 
-                        {fiche.statutCoffre !== 'CONTROLEE' && (
-                          <button
-                            type="button"
-                            title="Contrôler et intégrer au coffre"
-                            aria-label={`Contrôler la fiche ${fiche.numero}`}
-                            onClick={() => controlerFiche(fiche)}
-                            style={{
-                              width: 'auto',
-                              minWidth: 95,
-                              padding: '6px 9px',
-                              background: '#fff0de',
-                              color: '#a65b13',
-                              fontSize: 11,
-                              fontWeight: 800,
-                            }}
-                          >
-                            <Check size={15} /> Contrôler
-                          </button>
-                        )}
 
                         <button
                           type="button"
@@ -3508,18 +3426,6 @@ const pageButtons = Array.from(
                             fiche.id && (
                             <div className="fiche-row-more-menu">
 
-                              {fiche.statutCoffre !== 'CONTROLEE' && (
-                                <button
-                                  type="button"
-                                  onClick={() => controlerFiche(fiche)}
-                                >
-                                  <Check size={18} />
-                                  <div>
-                                    <strong>Contrôler pour le coffre</strong>
-                                    <span>Intégrer les espèces et les chèques</span>
-                                  </div>
-                                </button>
-                              )}
 
                               <button
                                 type="button"
@@ -3790,6 +3696,7 @@ const pageButtons = Array.from(
           fiches={
             fichesCaisse
           }
+          campagneId={campagneId}
           onClose={() => {
             setModalOpen(
               false,
@@ -4382,16 +4289,53 @@ function FicheDetailModal({
    MODALE CREATION / MODIFICATION
    ========================================================= */
 
+type ClosedStandOption={id:string;nom:string;date:string;ville:string;campagne:string;briochesTotal:number;briochesPrevues:number;donsSansBrioche:number;montantDonsSansBrioche:number}
+const normalizeCampaignYear=(value:string)=>value.match(/(?:19|20)\d{2}/)?.[0]??value.trim()
+function getClosedStandOptions(campagneId:string):ClosedStandOption[]{
+ try {
+  const raw=JSON.parse(localStorage.getItem('ob-stands-brioches-v1')||'[]') as unknown
+  if(!Array.isArray(raw))return []
+  return raw.flatMap((candidate:unknown)=>{
+   if(!candidate||typeof candidate!=='object')return []
+   const item=candidate as Record<string,unknown>
+   const id=String(item.id||'')
+   if(!id)return []
+   const closedText=localStorage.getItem(`ob-stand-cloture-v1-${id}`)
+   if(!closedText)return []
+   let closed:Record<string,unknown>
+   try{
+    const parsed:unknown=JSON.parse(closedText)
+    if(!parsed||typeof parsed!=='object')return []
+    closed=parsed as Record<string,unknown>
+   }catch{return []}
+   const date=String(item.date||'')
+   const year=String(item.campagne||item.campagneId||date.slice(0,4))
+   const total=Number(closed.briochesTotal)
+   return [{
+    id,nom:String(item.nom||'Stand'),date,
+    ville:String(item.ville||item.commune||item.lieu||''),
+    campagne:year,
+    briochesTotal:Number.isFinite(total)?total:0,
+    briochesPrevues:Math.max(0,Number(item.briochesPrevues)||0),
+    donsSansBrioche:Number(closed.donsSansBrioche)||0,
+    montantDonsSansBrioche:Number(closed.montantDonsSansBrioche)||0,
+   }]
+  }).filter(item=>!campagneId||normalizeCampaignYear(item.campagne)===normalizeCampaignYear(campagneId))
+ }catch{return []}
+}
+
 function FicheCaisseModal({
   mode,
   fiche,
   fiches,
+  campagneId,
   onClose,
   onSave,
 }: {
   mode: FicheFormMode
   fiche: FicheCaisse | null
   fiches: FicheCaisse[]
+  campagneId: string
   onClose: () => void
   onSave: (fiche: FicheCaisse) => void
 }) {
@@ -4406,6 +4350,7 @@ function FicheCaisseModal({
           }
         : createEmptyFiche(
             fiches,
+            campagneId,
           ),
     )
 
@@ -4413,6 +4358,26 @@ function FicheCaisseModal({
     error,
     setError,
   ] = useState('')
+  const [closedStands,setClosedStands] = useState(()=>getClosedStandOptions(campagneId))
+  const [closedStandOtherCampaigns,setClosedStandOtherCampaigns] = useState(()=>getClosedStandOptions('').filter(item=>normalizeCampaignYear(item.campagne)!==normalizeCampaignYear(campagneId)).length)
+  useEffect(()=>{
+    const refresh=()=>{
+      setClosedStands(getClosedStandOptions(campagneId))
+      setClosedStandOtherCampaigns(getClosedStandOptions('').filter(item=>normalizeCampaignYear(item.campagne)!==normalizeCampaignYear(campagneId)).length)
+    }
+    refresh()
+    window.addEventListener('focus',refresh)
+    window.addEventListener('storage',refresh)
+    return ()=>{window.removeEventListener('focus',refresh);window.removeEventListener('storage',refresh)}
+  },[campagneId])
+  const [chosenStandId,setChosenStandId]=useState<string>(()=>String((fiche as FicheCaisse & {standId?:string}|null)?.standId||''))
+  const [manualBrioches,setManualBrioches]=useState<string>(()=>{
+    const value=(fiche as (FicheCaisse & {nbBriochesStand?:number})|null)?.nbBriochesStand
+    return typeof value==='number' && value>0 ? String(value) : ''
+  })
+  const selectedClosedStand=closedStands.find(item=>item.id===chosenStandId)
+  const needsManualCount=Boolean(selectedClosedStand && selectedClosedStand.briochesTotal===0)
+
 
   function updateField<
     K extends keyof FicheCaisse,
@@ -4480,8 +4445,34 @@ function FicheCaisseModal({
       return
     }
 
+    if(form.type==='STAND' && needsManualCount && manualBrioches.trim()!=='' &&
+       (!Number.isSafeInteger(Number(manualBrioches)) || Number(manualBrioches)<0)){
+      setError('Le nombre de brioches remises doit être un entier positif ou nul.')
+      return
+    }
+
+    // Le plafond est vérifié avant création et modification de la fiche.
+    // Ne jamais modifier le compteur clôturé : la fiche fait foi pour la saisie papier.
+    const oldStandId = String((fiche as (FicheCaisse & {standId?:string})|null)?.standId || '')
+    if(form.type==='STAND' && chosenStandId && selectedClosedStand && needsManualCount){
+      const qty = manualBrioches.trim()==='' ? 0 : Number(manualBrioches)
+      const other = fiches.filter(item => item.id!==fiche?.id &&
+        (item as FicheCaisse & {standId?:string}).standId===chosenStandId &&
+        item.campagne.match(/(?:19|20)\d{2}/)?.[0]===campagneId.match(/(?:19|20)\d{2}/)?.[0])
+      const already = other.reduce((sum,item)=>sum+Math.max(0,Number((item as FicheCaisse & {nbBriochesStand?:number}).nbBriochesStand)||0),0)
+      const available = Math.max(0,selectedClosedStand.briochesPrevues - already)
+      if(qty>available){setError(`Impossible de déclarer ${qty} brioches : ce stand dispose de ${selectedClosedStand.briochesPrevues} brioches, dont ${already} déjà attribuées à d'autres fiches. Maximum : ${available}.`);return}
+    }
+    void oldStandId
+
+    const standQuantite = selectedClosedStand
+      ? (needsManualCount ? (manualBrioches.trim()==='' ? 0 : Number(manualBrioches)) : selectedClosedStand.briochesTotal)
+      : undefined
+
     onSave({
       ...form,
+      ...(form.type==='STAND' && chosenStandId && standQuantite!==undefined
+        ? {standId:chosenStandId,nbBriochesStand:standQuantite} : {standId:undefined,nbBriochesStand:undefined}),
 
       libelle:
         form.libelle.trim(),
@@ -4637,6 +4628,38 @@ function FicheCaisseModal({
                     </option>
                   </select>
                 </FormField>
+
+                {form.type === 'STAND' && (
+                  <FormField label="Stand terminé" wide>
+                    <div style={{display:'grid',gap:8,width:'100%'}}>
+                      <select value={chosenStandId} onChange={event=>{
+                        const value=event.target.value
+                        setChosenStandId(value)
+                        setManualBrioches('')
+                        const stand=closedStands.find(item=>item.id===value)
+                        if(stand)setForm(current=>({...current,libelle:stand.nom,ville:stand.ville,date:stand.date||current.date}))
+                      }}>
+                        <option value="">Sélectionner un stand terminé</option>
+                        {closedStands.map(stand=><option key={stand.id} value={stand.id}>{stand.nom} — {stand.date} — {stand.briochesTotal} brioches</option>)}
+                      </select>
+                      {selectedClosedStand && (needsManualCount ? (
+                        <div style={{display:'grid',gap:8,padding:'12px',background:'#fff7e9',border:'1px solid #f2d09a',borderRadius:9}}>
+                          <strong>Ce stand a été clôturé sans brioche comptabilisée.</strong>
+                          <label htmlFor="ob-stand-manual-brioches">Nombre de brioches remises (saisie manuelle)</label>
+                          <input id="ob-stand-manual-brioches" type="number" min="0" max={selectedClosedStand.briochesPrevues} step="1"
+                            placeholder={`0 à ${selectedClosedStand.briochesPrevues}`} value={manualBrioches}
+                            onChange={event=>setManualBrioches(event.target.value)} />
+                          <small>Maximum : {selectedClosedStand.briochesPrevues} brioches prévues pour ce stand. La quantité sera affichée sur la fiche du stand après enregistrement. Le compteur clôturé ne sera pas modifié. Si tu ne connais pas le nombre, laisse le champ vide : 0 sera enregistré comme valeur non renseignée.</small>
+                        </div>
+                      ) : (
+                        <div style={{padding:'10px 12px',background:'#edf8f1',borderRadius:9,color:'#145b3a'}}>
+                          <strong>{selectedClosedStand.briochesTotal} brioches remises</strong> · Décompte figé du compteur
+                        </div>
+                      ))}
+                      {closedStands.length===0&&<small>{closedStandOtherCampaigns>0 ? `Aucun stand terminé pour ${campagneId}. ${closedStandOtherCampaigns} stand(s) terminé(s) existe(nt) sur une autre campagne : sélectionne la campagne correspondante dans la Topbar.` : `Aucun stand terminé trouvé pour ${campagneId} sur ce navigateur. Vérifie que le compteur a bien été clôturé ici.`}</small>}
+                    </div>
+                  </FormField>
+                )}
 
                 <FormField
                   label="Campagne"
@@ -5692,9 +5715,9 @@ function getSortValue(
 
 function createEmptyFiche(
   fiches: FicheCaisse[],
+  campagneId: string,
 ): FicheCaisse {
-  const year =
-    new Date().getFullYear()
+  const year = Number(campagneId.match(/(?:19|20)\d{2}/)?.[0] ?? new Date().getFullYear())
 
   return {
     id:
@@ -5709,10 +5732,10 @@ function createEmptyFiche(
     numero:
       createFicheNumber(
         fiches,
+        campagneId,
       ),
 
-    campagne:
-      `OB ${year}`,
+    campagne: campagneId || `OB ${year}`,
 
     date:
       getTodayInput(),
@@ -5766,14 +5789,14 @@ function createEmptyFiche(
 
 function createFicheNumber(
   fiches: FicheCaisse[],
+  campagneId: string,
 ) {
-  const year =
-    new Date().getFullYear()
+  const year = Number(campagneId.match(/(?:19|20)\d{2}/)?.[0] ?? new Date().getFullYear())
 
   const next =
     Math.max(
       0,
-      ...fiches.map(
+      ...fiches.filter(fiche => fiche.campagne === campagneId).map(
         (fiche) => {
           const match =
             fiche.numero.match(

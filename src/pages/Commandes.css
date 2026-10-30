@@ -2390,3 +2390,160 @@
   }
 
 }
+
+/* Commande entreprise à plusieurs dates et destinations */
+.commande-delivery-intro { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:12px; }
+.commande-delivery-intro strong { display:block; color:#063b7c; font-weight:850; }
+.commande-delivery-intro p,.commande-delivery-hint { color:#667f9e; margin:5px 0 0; font-size:12px; line-height:1.5; }
+.commande-delivery-lines { display:grid; gap:14px; }
+.commande-delivery-line { border:1px solid #dbe6f2; background:#f8fbff; border-radius:14px; padding:16px; }
+.commande-delivery-line-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.commande-delivery-line-title strong { color:#073b7c; font-size:14px; }
+.commande-delivery-line-title button { border:0; background:transparent; color:#b44b3c; display:inline-flex; gap:5px; align-items:center; cursor:pointer; }
+.commande-delivery-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.commande-delivery-fields label { display:grid; gap:6px; color:#063b7c; font-weight:750; font-size:12px; }
+.commande-delivery-fields input,.commande-delivery-fields select { box-sizing:border-box; width:100%; min-height:41px; border:1px solid #d5e0eb; border-radius:10px; background:white; color:#143e75; padding:9px 12px; font:inherit; }
+.commande-delivery-total { display:flex; justify-content:space-between; gap:15px; align-items:center; padding:14px; border-radius:11px; border:1px solid #cfdff0; background:white; font-size:12px; }
+.commande-delivery-total strong { font-size:14px; color:#073b7c; }
+.commande-delivery-total.is-invalid { border-color:#f5ba8b; background:#fff9f1; }
+.commande-delivery-total.is-valid { border-color:#9cddba; background:#f0fff5; }
+.commande-detail-deliveries { grid-column:1/-1; }
+.commande-detail-deliveries p { font-size:12px; color:#6682a5; }
+.commande-detail-delivery { display:grid; gap:4px; border-top:1px solid #e1e9f2; padding:10px 0; font-size:12px; }
+.commande-detail-delivery span { color:#647c9b; }
+@media (max-width:650px) { .commande-delivery-fields { grid-template-columns:1fr; } }
+
+
+/* =========================================================
+   RÉPARTITION DÉPLIABLE DEPUIS LE TABLEAU DES COMMANDES
+   ========================================================= */
+.commande-number-with-dispatch { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.commande-number-with-dispatch > strong { font-size: 13px; color: #164f8b; }
+.commande-dispatch-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid #d6e5f3; border-radius: 8px;
+  background: #f3f8fe; color: #124679; padding: 6px 8px;
+  font: inherit; font-size: 11px; font-weight: 750; cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.commande-day-table .commande-dispatch-toggle span { display: inline; margin: 0; color: inherit; font-size: inherit; }
+.commande-dispatch-toggle:hover, .commande-dispatch-toggle:focus-visible {
+  background: #eaf4ff; border-color: #8ebce9; outline-offset: 2px;
+}
+.commande-dispatch-toggle[aria-expanded="true"] { background: #e8f3ff; border-color: #8dbde9; }
+.commande-day-table tbody tr.commande-dispatch-detail-row,
+.commande-day-table tbody tr.commande-dispatch-detail-row:hover { background: #f7faff; cursor: default; }
+.commande-day-table .commande-dispatch-detail-row > td { padding: 0 14px 15px; }
+.commande-dispatch-panel { border: 1px solid #dce8f4; border-radius: 13px; background: #fff; padding: 15px; margin-top: 7px; }
+.commande-dispatch-panel-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
+.commande-dispatch-panel-header h4 { display: flex; align-items: center; gap: 9px; margin: 0 0 5px; color: #0b3f7a; font-size: 14px; }
+.commande-dispatch-panel-header h4 svg { color: #ff8614; }
+.commande-dispatch-panel-header p { margin: 0; font-size: 12px; color: #6b809a; }
+.commande-dispatch-total { color: #8b5f0a; background: #fff5df; border-radius: 999px; padding: 8px 12px; font-weight: 800; font-size: 12px; white-space: nowrap; }
+.commande-dispatch-total.is-ok { background: #e6f7ee; color: #187a4c; }
+.commande-dispatch-items { display: grid; gap: 8px; }
+.commande-dispatch-item { display: grid; grid-template-columns: 25px minmax(185px, 1fr) minmax(115px, auto) minmax(90px, auto) minmax(85px, auto); align-items: center; gap: 12px; padding: 11px 13px; background: #f8fbff; border: 1px solid #e1eaf3; border-radius: 10px; }
+.commande-dispatch-item-index { display: grid !important; place-items: center; margin: 0 !important; width: 25px; height: 25px; border-radius: 50%; background: #e8f1fc; color: #0b3f7a !important; font-size: 11px !important; font-weight: 850; }
+.commande-dispatch-item-destination { min-width: 0; }
+.commande-dispatch-item-destination strong { font-size: 12px !important; }
+.commande-day-table .commande-dispatch-item-destination span { color: #6c8096; font-size: 11px; margin-top: 4px; overflow-wrap: anywhere; }
+.commande-dispatch-item-date { display: flex; gap: 6px; align-items: center; color: #526f8e; }
+.commande-day-table .commande-dispatch-item-date span { display: inline; margin: 0; color: inherit; font-size: 11px; white-space: nowrap; }
+.commande-dispatch-item-date svg { flex: 0 0 auto; }
+.commande-dispatch-item-qty { white-space: nowrap; font-size: 12px !important; color: #0b3f7a !important; }
+.commande-dispatch-item-status { display: inline-flex !important; width: max-content; margin: 0 !important; font-weight: 800; border-radius: 999px; padding: 6px 9px; background: #fff1df; color: #9b5904 !important; font-size: 10px !important; }
+.commande-dispatch-item-status.is-delivered { background: #e6f7ee; color: #187a4c !important; }
+@media(max-width:850px) {
+  .commande-dispatch-item { grid-template-columns: 25px minmax(0,1fr) auto; gap: 9px; }
+  .commande-dispatch-item-date { grid-column: 2; }
+  .commande-dispatch-item-status { grid-column: 3; }
+}
+
+
+/* ---------------------------------------------------------
+   COMMANDES DONS — VUE DÉDIÉE AUX STRUCTURES MULTI-SITES
+   --------------------------------------------------------- */
+.commande-vues {display:flex;flex-wrap:wrap;gap:10px;margin:0 0 8px;}
+.commande-vue-button {display:inline-flex;align-items:center;gap:9px;padding:11px 16px;border:1px solid #d9e4f0;border-radius:11px;background:#fff;color:#133f75;font:inherit;font-weight:800;font-size:13px;cursor:pointer;transition:background .15s,border-color .15s;}
+.commande-vue-button > span {display:inline-grid;place-items:center;min-width:25px;min-height:25px;padding:0 7px;border-radius:8px;background:#eff4f9;color:#486a8c;font-size:11px;}
+.commande-vue-button:hover {background:#f2f7fe;border-color:#adc9e4;}
+.commande-vue-button.is-active {background:#0a3b78;color:white;border-color:#0a3b78;}
+.commande-vue-button.is-active > span {background:rgba(255,255,255,.16);color:#fff;}
+.commande-vue-note {margin:0 0 20px;color:#7186a0;font-size:12px;line-height:1.5;}
+.commande-structures {display:grid;gap:14px;}
+.commande-structure-card {overflow:hidden;border:1px solid #dce7f1;border-radius:16px;background:white;box-shadow:0 5px 19px rgba(7,46,94,.05);}
+.commande-structure-header {display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;padding:17px 20px;border:0;background:linear-gradient(90deg,#f2f8ff,#fff);color:#0b3d77;cursor:pointer;text-align:left;font:inherit;}
+.commande-structure-header:hover {background:#edf5ff;}
+.commande-structure-name {display:flex;align-items:center;gap:12px;min-width:0;}
+.commande-structure-icon {flex:0 0 auto;display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e0efff;color:#0d5fba;}
+.commande-structure-name strong {display:block;font-size:16px;font-weight:850;}
+.commande-structure-name small {display:block;margin-top:4px;color:#64809e;font-size:11px;}
+.commande-structure-metrics {display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;color:#5e7794;font-size:11px;white-space:nowrap;}
+.commande-structure-metrics > strong {color:#0b3d77;font-size:12px;}
+.commande-structure-orders {display:grid;gap:12px;padding:16px;border-top:1px solid #e6edf5;}
+.commande-structure-order {border:1px solid #e4ebf3;border-radius:12px;background:#fff;padding:15px;}
+.commande-structure-order-head {display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.commande-structure-order-title {display:flex;align-items:center;flex-wrap:wrap;gap:12px;}
+.commande-structure-order-title > strong {color:#0c447c;font-size:14px;}
+.commande-structure-order-title > span {color:#71869d;font-size:12px;}
+.commande-structure-order-actions {display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;}
+.commande-structure-order-actions > span {margin-right:4px;color:#173f72;font-weight:750;font-size:12px;}
+.commande-structure-order-actions button {display:inline-flex;gap:6px;align-items:center;padding:8px 10px;border:1px solid #d3e2f1;border-radius:8px;background:#f7faff;color:#164c87;font:inherit;font-weight:750;font-size:11px;cursor:pointer;}
+.commande-structure-order-actions button:hover {border-color:#86b1db;background:#edf6ff;}
+.commande-structure-deliveries {display:grid;gap:7px;margin-top:14px;}
+.commande-structure-delivery {display:grid;grid-template-columns:20px minmax(160px,1fr) auto auto auto;align-items:center;gap:12px;border:1px solid #e4edf5;border-radius:10px;padding:12px;background:#f8fbff;color:#376182;}
+.commande-structure-delivery > svg {color:#ff8614;}
+.commande-structure-delivery > div {min-width:0;}
+.commande-structure-delivery > div strong {display:block;color:#123e78;font-size:12px;}
+.commande-structure-delivery > div small {display:block;margin-top:3px;color:#6b83a0;font-size:11px;}
+.commande-structure-delivery > span:not(.commande-structure-status) {display:flex;align-items:center;gap:5px;color:#516f90;font-size:11px;white-space:nowrap;}
+.commande-structure-delivery > strong {color:#123e78;font-size:12px;white-space:nowrap;}
+.commande-structure-status {border-radius:99px;padding:6px 10px;background:#fff0dc;color:#a36010;font-size:10px;font-weight:850;white-space:nowrap;}
+.commande-structure-status.is-delivered {background:#e5f8ed;color:#137a48;}
+.commande-structure-total {display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:10px;color:#92610b;font-size:12px;}
+.commande-structure-total.is-valid {color:#177d51;}
+.commande-structure-total.is-invalid {color:#b54728;}
+.commande-structure-single {margin:12px 0 0;padding:12px;background:#f8fbff;border-radius:9px;color:#5d7794;font-size:12px;}
+.commande-structures-empty {display:grid;justify-items:center;gap:10px;padding:38px 20px;border:1px dashed #cdddea;border-radius:13px;background:#f8fbfe;color:#6a84a0;text-align:center;font-size:13px;}
+.commande-structures-empty strong {color:#133e77;font-size:15px;}
+.commande-structures-empty p {margin:0;}
+@media(max-width:1000px){.commande-structure-header{align-items:flex-start;flex-direction:column}.commande-structure-metrics{justify-content:flex-start;white-space:normal}.commande-structure-delivery{grid-template-columns:20px 1fr auto}.commande-structure-delivery > span:not(.commande-structure-status){grid-column:2}.commande-structure-status{grid-column:3}}
+@media(max-width:610px){.commande-vue-button{width:100%;justify-content:center}.commande-structure-delivery{grid-template-columns:20px minmax(0,1fr)}.commande-structure-delivery > span:not(.commande-structure-status){grid-column:2}.commande-structure-delivery > strong,.commande-structure-status{grid-column:2;justify-self:start}}
+
+/* Lien vers les justificatifs sans modifier l'affichage multi-sites */
+.commande-jd-panel{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;padding:14px 18px;margin:14px 0;border:1px solid #d8e5f4;border-radius:13px;background:#f6faff}
+.commande-jd-panel>span{display:inline-flex;align-items:center;flex-wrap:wrap;gap:7px;font-size:13px;color:#234a78}
+.commande-jd-link{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;min-height:34px;border-radius:9px;border:1px solid #bfd4ed;background:white;color:#0b4380;font-size:12px;font-weight:800;text-decoration:none;white-space:nowrap}
+.commande-jd-link:hover{border-color:#ff8a21;background:#fff6eb;color:#c85b00}
+
+
+/* Documents JDI / JDP dans le détail de commande */
+.commande-documents-inline{padding:22px 24px 26px;display:grid;gap:16px}
+.commande-documents-header{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.commande-documents-header h3{display:flex;gap:9px;align-items:center;font-size:16px;margin:0 0 5px;color:#0b3b77}
+.commande-documents-header h3 svg{color:#ff8614}
+.commande-documents-header p{margin:0;color:#637c98;font-size:12px;line-height:1.6}
+.commande-documents-create,.commande-documents-download{border:1px solid #cedff0;background:#fff;color:#124779;border-radius:10px;padding:10px 14px;display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.commande-documents-create{background:#ff8614;color:#fff;border-color:#ff8614}
+.commande-documents-download:hover{background:#f3f8fd}
+.commande-documents-create:hover{background:#eb750b}
+.commande-documents-create:disabled,.commande-documents-download:disabled{opacity:.5;cursor:not-allowed}
+.commande-documents-list{display:grid;gap:10px}
+.commande-documents-row{display:flex;gap:14px;align-items:center;padding:14px;border:1px solid #dce7f4;border-radius:12px;background:#fbfdff;flex-wrap:wrap}
+.commande-documents-type{display:grid;place-items:center;min-width:47px;min-height:40px;border-radius:9px;font-size:12px;font-weight:850;background:#fff1df;color:#bc6305}
+.commande-documents-type.jdp{background:#e4f7ec;color:#147449}
+.commande-documents-info{flex:1;min-width:180px;display:grid;gap:4px}
+.commande-documents-info strong{font-size:13px;color:#103f79}
+.commande-documents-info small{font-size:11px;color:#66809e}
+.commande-documents-empty{padding:24px;border:1px dashed #cbd9eb;border-radius:12px;background:#f7faff;text-align:center;display:grid;justify-items:center;gap:8px;color:#627d9d;font-size:12px}
+.commande-documents-empty strong{color:#0b3b77;font-size:14px}
+.commande-documents-disclaimer{font-size:11px;color:#6e7f93;margin:0}
+.commande-documents-feedback{padding:11px 14px;border-radius:10px;background:#fff4e6;color:#82510e;font-size:12px;margin:0}
+@media(max-width:620px){.commande-documents-inline{padding:15px}.commande-documents-download{width:100%;justify-content:center}}
+
+/* Campagne sélectionnée dans la Topbar et verrouillage lecture seule. */
+.commandes-campagne-verrouillee { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:0 0 16px; padding:13px 16px; background:#fff8ee; border:1px solid #f1d4aa; border-radius:12px; color:#6c4c24; font-size:13px; }
+.commandes-campagne-verrouillee strong { font-weight:800; color:#93571d; }
+.commandes-campagne-selection { display:flex; flex-direction:column; gap:5px; justify-content:center; }
+.commandes-campagne-selection strong { color:#083d7c; font-size:13px; }
+.commandes-page button:disabled { cursor:not-allowed; opacity:.52; }

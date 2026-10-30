@@ -1186,3 +1186,89 @@
     justify-content: center;
   }
 }
+
+/* Demandes JDI/JDP issues des commandes, sans émission implicite. */
+.jd-demandes {border:1px solid #dae6f4;border-radius:16px;background:#fff;padding:18px 20px;margin-bottom:20px;box-shadow:0 5px 16px rgba(34,56,83,.04)}
+.jd-demandes-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.jd-demandes-heading h2{margin:4px 0 6px;font-size:19px;color:#082f66}
+.jd-demandes-heading p{margin:0;font-size:12px;color:#647d9a;max-width:850px}
+.jd-demandes-heading>strong{color:#ad5800;background:#fff3e4;border:1px solid #ffe0bd;padding:9px 13px;border-radius:999px;font-size:12px}
+.jd-demandes-list{display:grid;gap:10px;max-height:440px;overflow:auto}
+.jd-demande-line{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid #e0e9f3;border-radius:11px;background:#fbfdff}
+.jd-demande-main{min-width:0;display:grid;gap:5px}
+.jd-demande-main>div{display:flex;align-items:center;flex-wrap:wrap;gap:9px;font-size:13px;color:#3c5b7b}
+.jd-demande-main strong{color:#0b3c77;font-size:14px}
+.jd-demande-main small{color:#5f7a98;font-size:12px;line-height:1.4}
+.jd-demande-main .jd-demande-warning{color:#9a640a}
+.jd-demande-type{padding:4px 9px;border-radius:7px;background:#eaf4ff;color:#0b498f;font-weight:900;font-size:11px}
+.jd-demande-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.jd-demande-actions .jd-secondary-button{min-height:34px;padding:6px 10px;font-size:12px}
+.jd-demande-present{color:#178451;background:#e7f7ee;padding:7px 10px;border-radius:9px;font-size:12px;font-weight:800}
+.jd-demandes-empty{font-size:13px;color:#637f9d}
+.jd-demande-mail{margin-top:12px;padding:12px;border:1px solid #e0e9f3;border-radius:11px}
+.jd-demande-mail summary{cursor:pointer;font-weight:750}
+.jd-demande-mail pre{white-space:pre-wrap;font:13px/1.6 system-ui;color:#224971}
+@media(max-width:780px){.jd-demande-line{align-items:flex-start;flex-direction:column}.jd-demandes{padding:14px}}
+
+/* Onglets JDI/JDP : quatre boutons cohérents, sans barre blanche étirée. */
+.jd-page .jd-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+.jd-page .jd-tabs .jd-tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-sizing: border-box;
+  min-width: 92px;
+  min-height: 43px;
+  padding: 0 18px;
+  border: 1px solid #dce6f2;
+  border-radius: 11px;
+  color: #174373;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.jd-page .jd-tabs .jd-tab:first-child { min-width: 145px; }
+.jd-page .jd-tabs .jd-tab:last-child { border-right: 1px solid #dce6f2; }
+.jd-page .jd-tabs .jd-tab:hover:not(.active) {
+  background: #f6f9fd;
+  border-color: #a9c2df;
+}
+.jd-page .jd-tabs .jd-tab.active {
+  color: #fff;
+  border-color: #ff8614;
+  background: #ff8614;
+  box-shadow: 0 3px 9px rgba(255, 134, 20, .13);
+}
+.jd-page .jd-tabs .jd-tab.active:last-child { border-color: #ff8614; }
+.jd-page .jd-tabs .jd-tab:focus-visible {
+  outline: 3px solid rgba(255, 134, 20, .3);
+  outline-offset: 2px;
+}
+.jd-demandes { margin-top: 2px; }
+.jd-demandes-list { max-height: none; }
+@media (max-width: 650px) {
+  .jd-page .jd-tabs { width: 100%; }
+  .jd-page .jd-tabs .jd-tab { min-width: 90px; padding: 0 12px; }
+  .jd-page .jd-tabs .jd-tab:first-child { min-width: 126px; }
+}

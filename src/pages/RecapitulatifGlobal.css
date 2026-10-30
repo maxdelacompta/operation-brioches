@@ -1649,3 +1649,20 @@
   }
 
 }
+/* Correctif : ne pas étirer les actions rapides à la hauteur du tableau
+   récapitulatif voisin (qui peut contenir de nombreuses lignes). */
+.recap-bottom > .recap-actions {
+  align-self: start;
+  min-height: 0;
+}
+
+.recap-actions .recap-action-grid {
+  flex: 0 0 auto;
+  grid-auto-rows: minmax(69px, auto);
+  align-content: start;
+}
+
+.recap-actions .recap-action-grid > button,
+.recap-actions .recap-action-grid > a {
+  align-self: start;
+}

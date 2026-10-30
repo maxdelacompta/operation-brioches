@@ -1,0 +1,23 @@
+
+.ob-account { max-width: 1080px; margin: 0 auto; padding: 30px 28px 60px; color: #1d3550; }
+.ob-account-back { display: inline-flex; align-items: center; gap: 8px; color: #1b5797; text-decoration: none; margin-bottom: 22px; font-weight: 700; font-size: 13px; }
+.ob-account-heading { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.ob-account-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 15px; background: #fff1e2; color: #e77b18; }
+.ob-account-heading h1 { margin: 0 0 6px; font-size: 25px; }
+.ob-account-heading p, .ob-account-subtitle { margin: 0; color: #71839a; font-size: 13px; line-height: 1.5; }
+.ob-account-grid { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(260px,1fr); gap: 20px; align-items: start; }
+.ob-account-card { background: white; border: 1px solid #e1e8f1; border-radius: 16px; padding: 24px; box-shadow: 0 4px 18px rgba(24,48,84,.035); }
+.ob-account-card h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 18px; }
+.ob-account-card form { display: flex; flex-direction: column; gap: 17px; margin-top: 24px; }
+.ob-account-card label { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 700; }
+.ob-account-card input { width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid #cfdbea; background: #fff; border-radius: 9px; color: #1d3550; font: inherit; box-sizing: border-box; }
+.ob-account-card input:focus { outline: 2px solid #aed0ff; outline-offset: 1px; }
+.ob-account-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ob-account-save { align-self: flex-start; padding: 12px 18px; border: none; border-radius: 9px; background: #1c6eb4; color: white; font-weight: 750; cursor: pointer; }
+.ob-account-save:hover { background: #125c9b; }
+.ob-account-error { color: #bd3535; font-size: 13px; margin: 0; }
+.ob-account-success { display: flex; align-items: center; gap: 7px; color: #1b8b5a; font-size: 13px; margin: 0; }
+.ob-account-card dl { margin: 20px 0; display: grid; grid-template-columns: 120px 1fr; gap: 12px; font-size: 13px; }
+.ob-account-card dt { color: #71839a; } .ob-account-card dd { margin: 0; font-weight: 700; }
+.ob-account-note { padding: 13px; border-radius: 8px; background: #f3f7fc; color: #62738b; font-size: 12px; line-height: 1.6; }
+@media (max-width: 730px) { .ob-account { padding: 22px 15px; } .ob-account-grid { grid-template-columns: 1fr; } .ob-account-name-row { grid-template-columns: 1fr; } }

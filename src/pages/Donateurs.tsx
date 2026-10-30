@@ -53,6 +53,8 @@ import type {
 } from '../types/ob'
 
 import './Donateurs.css'
+import { useUsers } from '../contexts/UsersContext'
+import ImportDonateursExcel from './ImportDonateursExcel'
 
 /* =========================================================
    TYPES
@@ -147,6 +149,8 @@ const EMPTY_DONATEUR: Donateur = {
    ========================================================= */
 
 function Donateurs() {
+  const { currentUser } = useUsers()
+  const [importOpen, setImportOpen] = useState(false)
   const navigate =
     useNavigate()
 
@@ -1191,6 +1195,12 @@ function Donateurs() {
 
         </div>
 
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {currentUser?.role === 'administrateur' && (
+            <button type="button" className="donateurs-secondary-button" onClick={() => setImportOpen(true)}>
+              <Download size={17} /> Import Excel
+            </button>
+          )}
         <button
           type="button"
           className="donateurs-primary-button"
@@ -1204,6 +1214,7 @@ function Donateurs() {
 
           Nouveau donateur
         </button>
+        </div>
 
       </header>
 
@@ -1934,6 +1945,18 @@ function Donateurs() {
         </div>
 
       </section>
+
+      {importOpen && currentUser?.role === 'administrateur' && (
+        <ImportDonateursExcel
+          donateurs={donateurs}
+          onCommit={(incoming) => setDonateurs((current) => {
+            const updated = new Map(current.map(d => [d.id, d]))
+            incoming.forEach(d => updated.set(d.id, d))
+            return Array.from(updated.values())
+          })}
+          onClose={() => setImportOpen(false)}
+        />
+      )}
 
       {formOpen && (
         <DonateurModal

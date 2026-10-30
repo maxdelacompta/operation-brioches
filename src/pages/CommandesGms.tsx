@@ -1,4 +1,6 @@
+import { standsPourCampagne } from '../lib/standsLivraisons'
 import CompactStatCard from '../components/ui/CompactStatCard'
+import { useObData } from '../contexts/ObDataContext'
 import { Fragment, useMemo, useState, type FormEvent } from 'react'
 import {
   CalendarDays, Download, Printer,
@@ -71,7 +73,12 @@ function estGms(fournisseur: Fournisseur) {
 
 export default function CommandesGms() {
   const { commandesArtisans, setCommandesArtisans, fournisseurs } = useArtisans()
+  const { selectedCampagne, activeCampagne } = useObData()
+  const campagneSelectionnee = selectedCampagne ?? activeCampagne
+  const anneeCampagne = String(campagneSelectionnee?.annee ?? campagneSelectionnee?.id.match(/(?:19|20)\d{2}/)?.[0] ?? '')
+
   const { etablissements } = useEtablissements()
+  const standsDisponibles = standsPourCampagne(anneeCampagne)
   const { mairies } = useMairies()
   const mairiesDisponibles = useMemo(() => mairies.filter(m => m.statut === 'ACTIVE').sort((a,b) => (a.nomAffiche || a.commune).localeCompare(b.nomAffiche || b.commune, 'fr')), [mairies])
   const destinationLibelleLigne = (d: DestinationGms) => d.type === 'ETABLISSEMENT' ? etablissements.find(e=>e.id===d.referenceId)?.nom || d.nom || 'Établissement à préciser' : d.type === 'MAIRIE' ? mairies.find(m=>m.id===d.referenceId)?.nomAffiche || mairies.find(m=>m.id===d.referenceId)?.commune || d.nom || 'Mairie à préciser' : d.nom || 'Stand à préciser'
@@ -90,7 +97,7 @@ export default function CommandesGms() {
 
   function ouvrirCreation() {
     const premier = fournisseurs.filter(estGms).find(f => f.statut !== 'INACTIF')
-    const campagneActuelle = String(new Date().getFullYear())
+    const campagneActuelle = anneeCampagne || String(new Date().getFullYear())
     setEdition({
       id: `commande-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       numero: numeroCommandeSuivant(commandesArtisans, campagneActuelle),
@@ -152,7 +159,7 @@ export default function CommandesGms() {
     const dest = destinationsDe(edition)
     const ancienne = commandesArtisans.find(c=>c.id===editionId) as CommandeGmsSuivi | undefined
     if (ancienne?.paye && edition.paye && (JSON.stringify(dest)!==JSON.stringify(destinationsDe(ancienne)) || edition.quantiteCommandee!==ancienne.quantiteCommandee || edition.artisanId!==ancienne.artisanId || montantTtc!==montantCommande(ancienne))) { setErreur('Repasse le paiement en attente avant de modifier une commande payée.'); return }
-    if (!dest.length || dest.some(d => !Number.isInteger(d.quantite) || d.quantite <= 0 || (d.type !== 'STAND' && !d.referenceId) || (d.type === 'STAND' && (!d.nom.trim() || !d.adresse.trim())))) { setErreur('Chaque destination doit être identifiée avec une quantité positive ; les stands doivent avoir un nom et une adresse.'); return }
+    if (!dest.length || dest.some(d => !Number.isInteger(d.quantite) || d.quantite <= 0 || (d.type !== 'STAND' && !d.referenceId) || (d.type === 'STAND' && !standsDisponibles.some(stand=>stand.id===d.referenceId)))) { setErreur('Chaque destination doit être identifiée avec une quantité positive ; les stands doivent avoir un nom et une adresse.'); return }
     if (dest.reduce((n,d)=>n+d.quantite,0) !== edition.quantiteCommandee) { setErreur('La somme des quantités livrées doit être égale à la quantité commandée.'); return }
     if (!estConfirmee(edition) && dest.some(d=>d.livre)) { setErreur('Confirme le bon avant de saisir une livraison.'); return }
     if (edition.paye && !livraisonsTerminees(edition)) { setErreur('Toutes les destinations doivent être livrées avant paiement.'); return }
@@ -295,7 +302,6 @@ export default function CommandesGms() {
   }
 
   const [recherche, setRecherche] = useState('')
-  const [campagne, setCampagne] = useState('TOUTES')
   const [statut, setStatut] = useState<StatutFiltre>('TOUS')
 
   const fournisseursGms = useMemo(
@@ -311,19 +317,10 @@ export default function CommandesGms() {
   const commandesGms = useMemo(
     () =>
       commandesArtisans.filter((commande) =>
-        idsGms.has(commande.artisanId),
+        idsGms.has(commande.artisanId) &&
+        String(commande.campagne ?? '').match(/(?:19|20)\d{2}/)?.[0] === anneeCampagne,
       ),
-    [commandesArtisans, idsGms],
-  )
-
-  const campagnes = useMemo(
-    () =>
-      [...new Set(commandesGms.map((item) => item.campagne))]
-        .filter(Boolean)
-        .sort((a, b) =>
-          b.localeCompare(a, 'fr', { numeric: true }),
-        ),
-    [commandesGms],
+    [commandesArtisans, idsGms, anneeCampagne],
   )
 
   const resultats = useMemo(() => {
@@ -349,9 +346,7 @@ export default function CommandesGms() {
           .toLocaleLowerCase('fr')
           .includes(motif)
 
-      const correspondCampagne =
-        campagne === 'TOUTES' ||
-        commande.campagne === campagne
+      const correspondCampagne = true
 
       const correspondStatut = statut === 'TOUS' || etapeCommande(commande) === statut
 
@@ -365,7 +360,6 @@ export default function CommandesGms() {
     commandesGms,
     fournisseursGms,
     recherche,
-    campagne,
     statut,
   ])
 
@@ -461,27 +455,6 @@ export default function CommandesGms() {
               }
             />
           </label>
-
-          <select
-            value={campagne}
-            onChange={(event) =>
-              setCampagne(event.target.value)
-            }
-            aria-label="Filtrer par campagne"
-          >
-            <option value="TOUTES">
-              Toutes les campagnes
-            </option>
-
-            {campagnes.map((value) => (
-              <option
-                key={value}
-                value={value}
-              >
-                {value}
-              </option>
-            ))}
-          </select>
 
           <select
             value={statut}
@@ -646,7 +619,10 @@ export default function CommandesGms() {
                 {destinationsDe(edition).map((d,i)=><div className="gms-dest-row" key={d.id}>
                   <div className="gms-dest-row-head"><strong>Livraison {i+1}</strong><button type="button" className="ind-edit" title="Supprimer cette destination" onClick={()=>setEdition(p=>p?{...p,destinations:destinationsDe(p).filter(x=>x.id!==d.id)}:null)}><X size={16}/></button></div>
                   <label>Type<select value={d.type} onChange={e=>changerDestination(d.id,{type:e.target.value as DestinationGms['type'],referenceId:'',nom:'',adresse:'',livre:false})}><option value="ETABLISSEMENT">Établissement AEIM</option><option value="MAIRIE">Mairie</option><option value="STAND">Stand</option></select></label>
-                  {d.type === 'STAND' ? <><label>Nom du stand<input value={d.nom} onChange={e=>changerDestination(d.id,{nom:e.target.value})} placeholder="Ex. Stand marché"/></label><label>Adresse complète<input value={d.adresse} onChange={e=>changerDestination(d.id,{adresse:e.target.value})}/></label></> : <label>Destinataire<select value={d.referenceId} onChange={e=>changerDestination(d.id,{referenceId:e.target.value})}><option value="">Sélectionner…</option>{(d.type==='MAIRIE'?mairiesDisponibles.map(m=>({id:m.id,nom:m.nomAffiche||m.commune})):etablissementsDisponibles.map(e=>({id:e.id,nom:e.nom}))).map(o=><option value={o.id} key={o.id}>{o.nom}</option>)}</select></label>}
+                  {d.type === 'STAND' ? <><label>Stand existant<select value={d.referenceId} onChange={e=>{
+                    const stand=standsDisponibles.find(s=>s.id===e.target.value)
+                    changerDestination(d.id,{referenceId:stand?.id||'',nom:stand?.nom||'',adresse:[stand?.lieu,stand?.adresse].filter(Boolean).join(' · '),livre:false})
+                  }}><option value="">Sélectionner un stand de la campagne…</option>{standsDisponibles.map(stand=><option key={stand.id} value={stand.id}>{stand.date} · {stand.nom}{stand.lieu?` · ${stand.lieu}`:''}</option>)}</select></label><label>Adresse / lieu<input value={d.adresse} readOnly title="À modifier dans la fiche du stand" /></label></> : <label>Destinataire<select value={d.referenceId} onChange={e=>changerDestination(d.id,{referenceId:e.target.value})}><option value="">Sélectionner…</option>{(d.type==='MAIRIE'?mairiesDisponibles.map(m=>({id:m.id,nom:m.nomAffiche||m.commune})):etablissementsDisponibles.map(e=>({id:e.id,nom:e.nom}))).map(o=><option value={o.id} key={o.id}>{o.nom}</option>)}</select></label>}
                   <label>Quantité<input type="number" min="1" step="1" value={d.quantite || ''} onChange={e=>changerDestination(d.id,{quantite:Number(e.target.value)})}/></label>
                   <label>Livraison<select value={d.livre?'LIVRE':'ATTENTE'} disabled={!estConfirmee(edition)} onChange={e=>changerDestination(d.id,{livre:e.target.value==='LIVRE'})}><option value="ATTENTE">À livrer</option><option value="LIVRE">Livré</option></select></label>
                 </div>)}

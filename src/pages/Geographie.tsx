@@ -33,7 +33,7 @@ import type {
 
 import 'maplibre-gl/dist/maplibre-gl.css'
 
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import { useObData } from '../contexts/ObDataContext'
 import { useMairies } from '../contexts/MairiesContext'
@@ -56,6 +56,28 @@ import type {
 } from '../types/geographie'
 
 import './Geographie.css'
+
+// Le module Stands conserve actuellement ses données dans le navigateur.
+// Ces points restent estimatifs et ne créent aucune écriture comptable.
+type StandCarto = {
+  id: string; nom: string; lieu?: string; adresseStand?: string;
+  date?: string; briochesPrevues?: number; briochesRemises?: number;
+}
+type OperationStandCarto = { kind?: string; qty?: number; amount?: number }
+const STANDS_CARTO_KEY = 'ob-stands-brioches-v1'
+function readStandsCarto(): StandCarto[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(STANDS_CARTO_KEY) || '[]')
+    return Array.isArray(value) ? value.filter((s): s is StandCarto =>
+      Boolean(s && typeof s === 'object' && typeof s.id === 'string')) : []
+  } catch { return [] }
+}
+function readStandCartoOps(id: string): OperationStandCarto[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(`ob-stand-operations-v1-${id}`) || '[]')
+    return Array.isArray(value) ? value : []
+  } catch { return [] }
+}
 
 type PanelTab = 'ANALYSE' | 'DETAILS' | 'LISTE'
 type BaseMap = 'CARTE' | 'SATELLITE'
@@ -212,7 +234,8 @@ function getInitialMode(pathname: string): GeoMapMode {
   if (pathname.includes('/secteurs')) return 'SECTORS'
   if (pathname.includes('/comparaison')) return 'COMPARISON'
   if (pathname.includes('/couverture')) return 'POINTS'
-  return 'HEATMAP'
+  // Vue par défaut : les établissements sans ventes doivent rester visibles.
+  return 'POINTS'
 }
 
 function metricValue(
@@ -928,6 +951,7 @@ function addDataLayers(map: MapLibreMap) {
 
 export default function Geographie() {
   const location = useLocation()
+  const navigate = useNavigate()
 
   const {
     commandes,
@@ -941,6 +965,21 @@ export default function Geographie() {
     useCommandesMairiesRs()
 
   const { etablissements } = useEtablissements()
+  const [standsRevision, setStandsRevision] = useState(0)
+  // Actualisation à la réouverture de la carte, même si les données
+  // ont changé depuis l'onglet Stands sur le même navigateur.
+  useEffect(() => {
+    const refresh = () => setStandsRevision(value => value + 1)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('storage', refresh)
+    window.addEventListener('pageshow', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('storage', refresh)
+      window.removeEventListener('pageshow', refresh)
+    }
+  }, [])
+
 
   const mapContainerRef =
     useRef<HTMLDivElement | null>(null)
@@ -960,7 +999,7 @@ export default function Geographie() {
     useState<BaseMap>('CARTE')
 
   const [panelTab, setPanelTab] =
-    useState<PanelTab>('ANALYSE')
+    useState<PanelTab>('LISTE')
 
   const [search, setSearch] =
     useState('')
@@ -1292,76 +1331,72 @@ export default function Geographie() {
         })
       }
 
-      // Les établissements sans fiche de caisse apparaissent
-      // en couverture territoriale avec un volume nul.
-      if (
-        location.pathname.includes(
-          '/couverture',
-        )
-      ) {
-        for (const item of etablissements) {
-          if (
-            item.statut !== 'ACTIF' ||
-            !item.participeOperationBrioches
-          ) {
-            continue
-          }
+      // Tous les établissements du référentiel doivent être visibles,
+      // qu'ils disposent ou non d'une fiche caisse ou participent à la campagne.
+      for (const item of etablissements) {
+        if (points.some(point =>
+          point.channel === 'ETABLISSEMENT' &&
+          normalize(point.name) === normalize(item.nom)
+        )) continue
 
-          const id = `etab-ref-${item.id}`
+        const cached = getCachedCoordinate({
+          address: item.adresse,
+          postalCode: item.codePostal,
+          city: item.ville,
+          label: item.nom,
+        })
+        points.push({
+          id: `etab-ref-${item.id}`,
+          sourceId: item.id,
+          sourceType: 'ETABLISSEMENT_REF',
+          campaign: campaignFilter === 'TOUTES' ? campaigns[0] || '' : campaignFilter,
+          channel: 'ETABLISSEMENT',
+          name: item.nom,
+          address: item.adresse || '',
+          postalCode: item.codePostal || '',
+          city: item.ville || '',
+          sector: item.secteur || item.ville || 'Non renseigné',
+          date: '', entrusted: null, sold: null, donations: 0,
+          estimatedSold: false,
+          estimateNote: item.statut === 'INACTIF'
+            ? 'Établissement inactif — présence cartographique uniquement.'
+            : 'Établissement de référence — aucune vente imputée sans donnée métier.',
+          longitude: cached?.longitude ?? null,
+          latitude: cached?.latitude ?? null,
+        })
+      }
 
-          if (
-            points.some(
-              (point) =>
-                point.channel ===
-                  'ETABLISSEMENT' &&
-                normalize(point.name) ===
-                  normalize(item.nom),
-            )
-          ) {
-            continue
-          }
-
-          const cached =
-            getCachedCoordinate({
-              address: item.adresse,
-              postalCode:
-                item.codePostal,
-              city: item.ville,
-              label: item.nom,
-            })
-
-          points.push({
-            id,
-            sourceId: item.id,
-            sourceType:
-              'ETABLISSEMENT_REF',
-            campaign:
-              campaignFilter === 'TOUTES'
-                ? campaigns[0] || ''
-                : campaignFilter,
-            channel: 'ETABLISSEMENT',
-            name: item.nom,
-            address: item.adresse,
-            postalCode:
-              item.codePostal,
-            city: item.ville,
-            sector:
-              item.secteur ||
-              item.ville ||
-              'Non renseigné',
-            date: '',
-            entrusted: null,
-            sold: null,
-            donations: 0,
-            estimatedSold: false,
-            estimateNote:
-              'Point de couverture sans donnée de vente associée.',
-            longitude:
-              cached?.longitude ?? null,
-            latitude:
-              cached?.latitude ?? null,
-          })
-        }
+      // Stands du nouveau module : 1 point par stand, quel que soit son statut.
+      // Le lieu sert de commune, et l'emplacement précis d'adresse facultative.
+      for (const stand of readStandsCarto()) {
+        const ops = readStandCartoOps(stand.id)
+        const distributed = ops.filter(op => op.kind === 'brioche')
+          .reduce((sum, op) => sum + (Number(op.qty) || 0), 0)
+        const gifts = ops.filter(op => op.kind === 'don')
+          .reduce((sum, op) => sum + (Number(op.amount) || 0), 0)
+        const city = stand.lieu || ''
+        const address = stand.adresseStand || ''
+        const cached = getCachedCoordinate({ address, city, label: stand.nom })
+        points.push({
+          id: `stand-ref-${stand.id}`,
+          sourceId: stand.id,
+          sourceType: 'STAND_REF',
+          campaign: stand.date?.slice(0, 4) || '',
+          channel: 'STAND',
+          name: stand.nom,
+          address,
+          postalCode: '',
+          city,
+          sector: city || 'Non renseigné',
+          date: stand.date || '',
+          entrusted: Number(stand.briochesPrevues) || 0,
+          sold: (Number(stand.briochesRemises) || 0) + distributed,
+          donations: gifts,
+          estimatedSold: true,
+          estimateNote: 'Bilan indicatif : seules les donations sans brioche sont chiffrées ici. Les dons associés aux brioches ne sont pas connus. Aucun rapprochement comptable.',
+          longitude: cached?.longitude ?? null,
+          latitude: cached?.latitude ?? null,
+        })
       }
 
       return points
@@ -1377,6 +1412,7 @@ export default function Geographie() {
       etablissements,
       location.pathname,
       campaigns,
+      standsRevision,
       coordinateVersion,
     ],
   )
@@ -1416,7 +1452,8 @@ export default function Geographie() {
 
       setGeocodingCount(unique.size)
 
-      let resolved = 0
+      let processed = 0
+      let updated = false
 
       for (const point of unique.values()) {
         if (cancelled) return
@@ -1430,28 +1467,18 @@ export default function Geographie() {
             label: point.name,
           })
 
-        if (coordinate) {
-          resolved += 1
-        }
-
-        if (!cancelled) {
-          setGeocodingCount(
-            Math.max(
-              0,
-              unique.size - resolved,
-            ),
-          )
-        }
+        processed += 1
+        if (coordinate) updated = true
+        if (!cancelled) setGeocodingCount(Math.max(0, unique.size - processed))
 
         await new Promise((resolve) =>
           window.setTimeout(resolve, 90),
         )
       }
 
-      if (!cancelled && resolved > 0) {
-        setCoordinateVersion(
-          (value) => value + 1,
-        )
+      if (!cancelled) {
+        setGeocodingCount(0)
+        if (updated) setCoordinateVersion(value => value + 1)
       }
     }
 
@@ -2097,12 +2124,12 @@ export default function Geographie() {
 
   const topPoints =
     [...filteredPoints]
-      .sort(
-        (a, b) =>
-          metricValue(b, metric) -
-          metricValue(a, metric),
-      )
-      .slice(0, 8)
+      .sort((a, b) => {
+        // Priorité aux points bien localisés, puis ordre alphabétique.
+        const locA = a.latitude !== null && a.longitude !== null ? 1 : 0
+        const locB = b.latitude !== null && b.longitude !== null ? 1 : 0
+        return locB - locA || a.name.localeCompare(b.name, 'fr')
+      })
 
   return (
     <main className="geo-page">
@@ -2117,9 +2144,8 @@ export default function Geographie() {
           </h1>
 
           <p>
-            Visualisez où les brioches se vendent le mieux
-            et identifiez les conditions de succès sur le territoire,
-            jusqu’au secteur Briey / Longwy.
+            Retrouvez les stands et établissements, leurs localisations et leurs bilans déclaratifs.
+            Les points sans coordonnées restent accessibles dans l’onglet Liste.
           </p>
         </div>
 
@@ -3034,6 +3060,20 @@ export default function Geographie() {
                     </div>
                   )}
 
+                  {(selected.sourceType === 'STAND_REF' || selected.channel === 'ETABLISSEMENT') && (
+                    <div className="geo-quality-note">
+                      <div>
+                        <strong>{selected.latitude === null || selected.longitude === null ? 'Localisation à compléter' : 'Fiche métier'}</strong>
+                        <p>{selected.latitude === null || selected.longitude === null
+                          ? 'Ce point figure bien dans la liste mais son adresse n’a pas permis de le positionner précisément sur la carte. Vérifiez la commune et l’adresse dans sa fiche.'
+                          : 'Retrouvez les informations complètes dans le module métier.'}</p>
+                        <button type="button" onClick={() => navigate(selected.sourceType === 'STAND_REF' ? '/gestion/stands-brioches' : '/administration/etablissements')}>
+                          Ouvrir {selected.sourceType === 'STAND_REF' ? 'la gestion des stands' : 'les établissements'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="geo-location-detail">
                     <h3>
                       Localisation
@@ -3077,6 +3117,9 @@ export default function Geographie() {
           {panelTab ===
             'LISTE' && (
             <div className="geo-list-panel">
+              <div className="geo-quality-note" style={{ margin: '12px' }}>
+                <span>{filteredPoints.length} point(s) dans la sélection, dont {unresolvedCount} non localisé(s). Tous restent consultables ici.</span>
+              </div>
               {topPoints.map(
                 (point) => (
                   <button
@@ -3103,8 +3146,8 @@ export default function Geographie() {
                         {point.name}
                       </strong>
                       <small>
-                        {point.city ||
-                          point.sector}
+                        {point.city || point.sector}
+                        {point.longitude === null || point.latitude === null ? ' · Adresse à préciser' : ' · Sur la carte'}
                       </small>
                     </div>
 

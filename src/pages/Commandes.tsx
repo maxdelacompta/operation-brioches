@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useMemo,
   useState,
@@ -34,6 +35,7 @@ import {
 
 import {
   useSearchParams,
+  Link,
 } from 'react-router-dom'
 
 import ExcelJS from 'exceljs'
@@ -50,22 +52,123 @@ import {
 
 import type {
   Commande,
+  CommandeLivraison,
   Donateur,
   StatutCommande,
 } from '../types/ob'
 
+import { useUsers } from '../contexts/UsersContext'
+import { useJustificatifs } from '../contexts/JustificatifsContext'
+import { generateAndDownloadJustificatifPdf } from '../services/justificatifPdf'
+import type { JustificatifDon } from '../types/justificatifs'
+
 import './Commandes.css'
+
+// Une campagne peut avoir été stockée sous '2025', 'OB 2025' ou 'OB2025'.
+function memeCampagneEntreprise(a: string, b: string): boolean {
+  if (a === b) return true
+  if (/^TEST[-_ ]/i.test(a) || /^TEST[-_ ]/i.test(b)) return false
+  const aa = a.match(/(?:19|20)\d{2}/)?.[0]
+  const bb = b.match(/(?:19|20)\d{2}/)?.[0]
+  return Boolean(aa && bb && aa === bb)
+}
 
 type CommandeFormMode =
   | 'create'
   | 'edit'
+
+type GroupeStructure = {
+  key: string
+  payeur: Donateur | undefined
+  campagne: string
+  commandes: Commande[]
+  nombreSites: number
+  nombreDates: number
+  totalBrioches: number
+  montantTotal: number
+}
+
+/** Une structure multi-sites regroupe les commandes d'un même payeur et d'une même campagne.
+ *  Chaque commande conserve son propre numéro et sa propre identité financière.
+ */
+function regrouperStructures(commandes: Commande[], donateurs: Donateur[]): GroupeStructure[] {
+  const map = new Map<string, Commande[]>()
+  for (const commande of commandes) {
+    const cleCampagne = commande.campagne.match(/(?:19|20)\d{2}/)?.[0] ?? commande.campagne
+    const cle = `${cleCampagne}:${commande.donateurId}`
+    const groupe = map.get(cle) ?? []
+    groupe.push(commande)
+    map.set(cle, groupe)
+  }
+
+  const marqueAncienMulti = (value: string | undefined) =>
+    /multi[\s-]*dates?|plusieurs?\s+(?:sites?|lieux)|multi[\s-]*sites?/i.test(value ?? '')
+
+  const resultat: GroupeStructure[] = []
+  map.forEach((commandesPayeur, key) => {
+    const dates = new Set<string>()
+    const lieux = new Set<string>()
+    let contientRepartition = false
+
+    for (const commande of commandesPayeur) {
+      const lignes = commande.livraisons ?? []
+      if (lignes.length >= 2 || marqueAncienMulti(commande.dateCommande) ||
+          marqueAncienMulti(commande.datePrevueLivraison) || marqueAncienMulti(commande.remarque)) {
+        contientRepartition = true
+      }
+      if (lignes.length) {
+        for (const ligne of lignes) {
+          if (ligne.datePrevue) dates.add(ligne.datePrevue)
+          const lieu = [ligne.adresse, ligne.cp, ligne.ville, ligne.destinataireNom]
+            .join('|').trim().toLocaleLowerCase('fr')
+          if (lieu.replace(/\|/g, '')) lieux.add(lieu)
+        }
+      } else {
+        const date = commande.datePrevueLivraison || commande.dateLivraison || commande.dateCommande
+        if (date) dates.add(date)
+        const payeur = donateurs.find(d => d.id === commande.donateurId)
+        const lieu = [payeur?.adresse, payeur?.cp, payeur?.ville].join('|').trim().toLocaleLowerCase('fr')
+        if (lieu.replace(/\|/g, '')) lieux.add(lieu)
+      }
+    }
+
+    if (!contientRepartition && !(commandesPayeur.length > 1 && (dates.size > 1 || lieux.size > 1))) return
+
+    const payeur = donateurs.find(d => d.id === commandesPayeur[0].donateurId)
+    resultat.push({
+      key,
+      payeur,
+      campagne: commandesPayeur[0].campagne,
+      commandes: [...commandesPayeur].sort((a,b)=>a.dateCommande.localeCompare(b.dateCommande)),
+      nombreSites: lieux.size,
+      nombreDates: dates.size,
+      totalBrioches: commandesPayeur.reduce((total,c)=>total+c.quantite,0),
+      montantTotal: commandesPayeur.reduce((total,c)=>total+c.quantite*c.prixUnitaire,0),
+    })
+  })
+  return resultat.sort((a,b)=>(a.payeur?.nom ?? '').localeCompare(b.payeur?.nom ?? '', 'fr'))
+}
+
 
 function Commandes() {
   const {
     donateurs,
     commandes,
     setCommandes,
+    selectedCampagne,
+    activeCampagne,
+    campagnes: campagnesEnregistrees,
   } = useObData()
+  const {currentUser} = useUsers()
+  const admin = currentUser?.role === 'administrateur'
+  const campagneTravail = selectedCampagne ?? activeCampagne
+  const campagneId = campagneTravail?.id ?? ''
+  const campagneFermee = campagneTravail?.statut === 'TERMINEE'
+  const lectureSeule = campagneFermee && !admin
+  const peutModifierCommande = (commande: Commande) => {
+    const campagneSource = campagnesEnregistrees.find(c => memeCampagneEntreprise(c.id, commande.campagne))
+    return Boolean(admin || (campagneSource && campagneSource.statut !== 'TERMINEE'))
+  }
 
   const [
     searchParams,
@@ -76,11 +179,6 @@ function Commandes() {
     search,
     setSearch,
   ] = useState('')
-
-  const [
-    campagneFilter,
-    setCampagneFilter,
-  ] = useState('Toutes')
 
   const [
     statutFilter,
@@ -144,6 +242,24 @@ function Commandes() {
     setExportMenuOpen,
   ] = useState(false)
 
+  // Une vue dédiée évite de mélanger les structures multi-sites et le calendrier courant.
+  const vueStructures = searchParams.get('vue') === 'structures'
+  const [expandedStructures, setExpandedStructures] = useState<Record<string, boolean>>({})
+  function changerVue(structures: boolean) {
+    setSearchParams(current => {
+      const next = new URLSearchParams(current)
+      if (structures) next.set('vue', 'structures')
+      else next.delete('vue')
+      // Les filtres de recherche / sélection provenant de l'URL sont conservés.
+      return next
+    })
+  }
+
+  // Affichage des destinations directement sous chaque commande,
+  // sans modifier sa sélection ou ouvrir le formulaire.
+  const [expandedLivraisons, setExpandedLivraisons] =
+    useState<Record<number, boolean>>({})
+
   /* =========================================================
      OUVERTURE DEPUIS DONATEURS
      ========================================================= */
@@ -196,7 +312,7 @@ function Commandes() {
             donateurId,
         )
 
-      if (exists) {
+      if (exists && campagneId && !lectureSeule) {
         setPreselectedDonateurId(
           donateurId,
         )
@@ -216,7 +332,16 @@ function Commandes() {
     commandes,
     donateurs,
     searchParams,
+    campagneId,
+    lectureSeule,
   ])
+
+  useEffect(() => {
+    setSelectedCommande(null)
+    setModalOpen(false)
+    setEditingCommande(null)
+    setActionMenuId(null)
+  }, [campagneId])
 
   /* =========================================================
      HELPERS LOCAUX
@@ -254,11 +379,14 @@ function Commandes() {
           const searchable = [
             commande.numero,
             commande.campagne,
+            commande.dateCommande,
+            commande.datePrevueLivraison,
             donateur?.nom,
             donateur?.ville,
             donateur?.code,
             donateur?.contactNom,
             donateur?.contactPrenom,
+            ...(commande.livraisons ?? []).flatMap(l => [l.destinataireNom, l.adresse, l.ville, l.cp]),
           ]
             .filter(Boolean)
             .join(' ')
@@ -271,10 +399,7 @@ function Commandes() {
             )
 
           const matchesCampagne =
-            campagneFilter ===
-              'Toutes' ||
-            commande.campagne ===
-              campagneFilter
+            Boolean(campagneId) && memeCampagneEntreprise(commande.campagne, campagneId)
 
           const matchesStatut =
             statutFilter ===
@@ -293,9 +418,29 @@ function Commandes() {
       commandes,
       donateurs,
       search,
-      campagneFilter,
+      campagneId,
       statutFilter,
     ])
+
+  const structuresMultisites = useMemo(
+    () => regrouperStructures(filteredCommandes, donateurs),
+    [filteredCommandes, donateurs],
+  )
+  const commandesStructuresIds = useMemo(
+    () => new Set(structuresMultisites.flatMap(structure => structure.commandes.map(c => c.id))),
+    [structuresMultisites],
+  )
+  const commandesClassiques = useMemo(
+    () => filteredCommandes.filter(c => !commandesStructuresIds.has(c.id)),
+    [filteredCommandes, commandesStructuresIds],
+  )
+  const commandesVue = vueStructures
+    ? filteredCommandes.filter(c => commandesStructuresIds.has(c.id))
+    : commandesClassiques
+
+  useEffect(() => {
+    setSelectedCommande(current => current && !commandesVue.some(c=>c.id===current.id) ? null : current)
+  }, [vueStructures, filteredCommandes])
 
   /* =========================================================
      GROUPES PAR DATE
@@ -309,7 +454,7 @@ function Commandes() {
           Commande[]
         >()
 
-      filteredCommandes.forEach(
+      commandesClassiques.forEach(
         (commande) => {
           if (
             !map.has(
@@ -355,34 +500,18 @@ function Commandes() {
           }),
         )
     }, [
-      filteredCommandes,
+      commandesClassiques,
     ])
-
-  const campagnes =
-    useMemo(() => {
-      return [
-        'Toutes',
-
-        ...Array.from(
-          new Set(
-            commandes.map(
-              (commande) =>
-                commande.campagne,
-            ),
-          ),
-        ),
-      ]
-    }, [commandes])
 
   /* =========================================================
      KPI
      ========================================================= */
 
   const totalCommandes =
-    filteredCommandes.length
+    commandesVue.length
 
   const totalQuantite =
-    filteredCommandes.reduce(
+    commandesVue.reduce(
       (
         total,
         commande,
@@ -393,7 +522,7 @@ function Commandes() {
     )
 
   const totalMontant =
-    filteredCommandes.reduce(
+    commandesVue.reduce(
       (
         total,
         commande,
@@ -405,14 +534,14 @@ function Commandes() {
     )
 
   const totalALivrer =
-    filteredCommandes.filter(
+    commandesVue.filter(
       (commande) =>
         commande.statut ===
         'A_LIVRER',
     ).length
 
   const totalConfirmees =
-    filteredCommandes.filter(
+    commandesVue.filter(
       (commande) =>
         commande.statut ===
         'CONFIRMEE',
@@ -470,6 +599,7 @@ function Commandes() {
      ========================================================= */
 
   function openCreateCommande() {
+    if (!campagneId || lectureSeule) return
     setModalMode(
       'create',
     )
@@ -496,6 +626,7 @@ function Commandes() {
   function openEditCommande(
     commande: Commande,
   ) {
+    if (!memeCampagneEntreprise(commande.campagne, campagneId) || !peutModifierCommande(commande)) return
     setModalMode(
       'edit',
     )
@@ -547,6 +678,13 @@ function Commandes() {
   function saveCommande(
     commande: Commande,
   ) {
+    if (!campagneId || !memeCampagneEntreprise(commande.campagne, campagneId)) return
+    if (modalMode === 'edit') {
+      const original = commandes.find(item => item.id === commande.id)
+      if (!original || !peutModifierCommande(original)) return
+      // Une commande ne peut pas être déplacée silencieusement vers une autre campagne.
+      if (!memeCampagneEntreprise(original.campagne, commande.campagne)) return
+    } else if (lectureSeule) return
     if (
       modalMode ===
       'edit'
@@ -580,6 +718,7 @@ function Commandes() {
   function cancelCommande(
     commande: Commande,
   ) {
+    if (!memeCampagneEntreprise(commande.campagne, campagneId) || !peutModifierCommande(commande)) return
     const updated: Commande = {
       ...commande,
       statut: 'ANNULEE',
@@ -612,9 +751,6 @@ function Commandes() {
 
   function resetFilters() {
     setSearch('')
-    setCampagneFilter(
-      'Toutes',
-    )
     setStatutFilter(
       'Tous',
     )
@@ -715,7 +851,7 @@ function Commandes() {
       },
     ]
 
-    filteredCommandes.forEach(
+    commandesVue.forEach(
       (commande) => {
         const donateur =
           getDonateur(
@@ -885,7 +1021,7 @@ function Commandes() {
     )
 
     const rows =
-      filteredCommandes.map(
+      commandesVue.map(
         (commande) => {
           const donateur =
             getDonateur(
@@ -976,6 +1112,13 @@ function Commandes() {
 
   return (
     <div className="commandes-page">
+
+      {campagneFermee && (
+        <div className="commandes-campagne-verrouillee" role="status">
+          <strong>Campagne terminée · {campagneTravail?.nom}</strong>
+          <span>{admin ? 'Accès administrateur : corrections autorisées.' : 'Consultation uniquement : créations, modifications et annulations verrouillées.'}</span>
+        </div>
+      )}
 
       <header className="commandes-header">
 
@@ -1071,6 +1214,8 @@ function Commandes() {
           <button
             type="button"
             className="commandes-primary-button"
+            disabled={!campagneId || lectureSeule}
+            title={lectureSeule ? 'Campagne terminée : modification réservée aux administrateurs' : undefined}
             onClick={
               openCreateCommande
             }
@@ -1103,40 +1248,10 @@ function Commandes() {
 
         </div>
 
-        <label className="commandes-filter-field">
-
-          <span>
-            Campagne
-          </span>
-
-          <select
-            value={
-              campagneFilter
-            }
-            onChange={(
-              event,
-            ) =>
-              setCampagneFilter(
-                event.target.value,
-              )
-            }
-          >
-            {campagnes.map(
-              (campagne) => (
-                <option
-                  key={
-                    campagne
-                  }
-                >
-                  {
-                    campagne
-                  }
-                </option>
-              ),
-            )}
-          </select>
-
-        </label>
+        <div className="commandes-filter-field commandes-campagne-selection">
+          <span>Campagne sélectionnée</span>
+          <strong>{campagneTravail?.nom ?? 'Aucune campagne'}{campagneFermee ? ' · Terminée' : ''}</strong>
+        </div>
 
         <label className="commandes-filter-field">
 
@@ -1199,6 +1314,32 @@ function Commandes() {
 
       </section>
 
+      <nav className="commande-vues" aria-label="Types de commandes entreprises">
+        <button
+          type="button"
+          className={`commande-vue-button ${!vueStructures ? 'is-active' : ''}`}
+          aria-current={!vueStructures ? 'page' : undefined}
+          onClick={() => changerVue(false)}
+        >
+          <CalendarDays size={18}/>
+          Commandes par journée <span>{commandesClassiques.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`commande-vue-button ${vueStructures ? 'is-active' : ''}`}
+          aria-current={vueStructures ? 'page' : undefined}
+          onClick={() => changerVue(true)}
+        >
+          <Building2 size={18}/>
+          Structures multi-sites / multi-dates <span>{structuresMultisites.length}</span>
+        </button>
+      </nav>
+      <p className="commande-vue-note">
+        {vueStructures
+          ? 'Classement par structure payeuse. Chaque commande conserve son numéro et son règlement ; ses livraisons peuvent avoir plusieurs adresses et dates.'
+          : 'Commandes classiques classées par date. Les structures avec plusieurs sites ou dates possèdent désormais leur propre rubrique.'}
+      </p>
+
       <section className="commandes-kpi-grid">
 
         <CommandeKpi
@@ -1249,7 +1390,7 @@ function Commandes() {
 
       </section>
 
-      {groupes.length >
+      {!vueStructures && groupes.length >
         0 && (
         <div className="commandes-days-toolbar">
 
@@ -1288,6 +1429,100 @@ function Commandes() {
         </div>
       )}
 
+      {vueStructures ? (
+        <section className="commande-structures" aria-label="Structures multi-sites et multi-dates">
+          {structuresMultisites.length === 0 && (
+            <div className="commande-structures-empty">
+              <Building2 size={32}/>
+              <strong>Aucune structure multi-sites pour ces filtres</strong>
+              <p>Crée une commande avec plusieurs destinations ou dates, ou vérifie tes filtres.</p>
+            </div>
+          )}
+          {structuresMultisites.map(structure => {
+            const expanded = expandedStructures[structure.key] ?? true
+            return (
+              <article className="commande-structure-card" key={structure.key}>
+                <button
+                  type="button"
+                  className="commande-structure-header"
+                  aria-expanded={expanded}
+                  onClick={() => setExpandedStructures(current => ({...current,[structure.key]:!expanded}))}
+                >
+                  <span className="commande-structure-name">
+                    <span className="commande-structure-icon"><Building2 size={21}/></span>
+                    <span>
+                      <strong>{structure.payeur?.nom || 'Structure inconnue'}</strong>
+                      <small>Payeur unique par commande · {structure.campagne}</small>
+                    </span>
+                  </span>
+                  <span className="commande-structure-metrics">
+                    <span>{structure.commandes.length} commande(s)</span>
+                    <span>{structure.nombreSites} site(s)</span>
+                    <span>{structure.nombreDates} date(s)</span>
+                    <strong>{formatNumber(structure.totalBrioches)} brioches</strong>
+                    <strong>{formatMoney(structure.montantTotal)}</strong>
+                    {expanded ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
+                  </span>
+                </button>
+                {expanded && (
+                  <div className="commande-structure-orders">
+                    {structure.commandes.map(commande => {
+                      const livraisons = commande.livraisons ?? []
+                      const totalReparti = livraisons.reduce((total,ligne)=>total+(Number(ligne.quantite)||0),0)
+                      return (
+                        <div className="commande-structure-order" key={commande.id}>
+                          <div className="commande-structure-order-head">
+                            <div className="commande-structure-order-title">
+                              <strong>{commande.numero}</strong>
+                              <span>{formatDateShort(commande.dateCommande)}</span>
+                              <StatutBadge statut={commande.statut}/>
+                            </div>
+                            <div className="commande-structure-order-actions">
+                              <span>{formatNumber(commande.quantite)} brioches · {formatMoney(commande.quantite * commande.prixUnitaire)}</span>
+                              <button type="button" onClick={() => setSelectedCommande(commande)}>Voir la commande</button>
+                              <Link to={`/finance/justificatifs-dons?commande=${commande.id}`} className="commande-jd-link">
+                                <FileDown size={14}/> JDI / JDP
+                              </Link>
+                              <button type="button" onClick={() => openEditCommande(commande)}><Edit3 size={14}/> Modifier</button>
+                            </div>
+                          </div>
+                          {livraisons.length > 0 ? (
+                            <>
+                              <div className="commande-structure-deliveries">
+                                {livraisons.map((ligne,index) => (
+                                  <div className="commande-structure-delivery" key={ligne.id || `${commande.id}-${index}`}>
+                                    <MapPin size={16}/>
+                                    <div>
+                                      <strong>{ligne.destinataireNom || 'Destination à définir'}</strong>
+                                      <small>{[ligne.adresse,ligne.cp,ligne.ville].filter(Boolean).join(' · ') || 'Adresse non renseignée'}</small>
+                                    </div>
+                                    <span><CalendarDays size={14}/> {ligne.datePrevue ? formatDateShort(ligne.datePrevue) : 'Date à définir'}</span>
+                                    <strong>{formatNumber(ligne.quantite)} brioches</strong>
+                                    <span className={`commande-structure-status ${ligne.dateLivraison ? 'is-delivered' : ''}`}>{ligne.dateLivraison ? 'Livrée' : 'À planifier'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className={`commande-structure-total ${totalReparti===commande.quantite?'is-valid':'is-invalid'}`}>
+                                Répartition : <strong>{formatNumber(totalReparti)} / {formatNumber(commande.quantite)} brioches</strong>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="commande-structure-single">
+                              {/multi[\s-]*dates?|plusieurs?\s+(?:sites?|lieux)/i.test(`${commande.dateCommande} ${commande.datePrevueLivraison || ''}`)
+                                ? 'Ancienne commande classée multi-sites : les lieux et dates doivent encore être détaillés via « Modifier ».'
+                                : `Livraison unique · ${commande.datePrevueLivraison ? formatDateShort(commande.datePrevueLivraison) : 'Date à préciser'} · ${formatNumber(commande.quantite)} brioches`}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </article>
+            )
+          })}
+        </section>
+      ) : (
       <section className="commandes-days">
 
         {groupes.map(
@@ -1443,12 +1678,15 @@ function Commandes() {
                               getDonateur(
                                 commande.donateurId,
                               )
+                            const destinations = commande.livraisons ?? []
+                            const isExpanded = Boolean(expandedLivraisons[commande.id])
+                            const totalReparti = destinations.reduce(
+                              (sum, livraison) => sum + (Number(livraison.quantite) || 0), 0,
+                            )
 
                             return (
+                              <Fragment key={commande.id}>
                               <tr
-                                key={
-                                  commande.id
-                                }
                                 className={
                                   selectedCommande?.id ===
                                   commande.id
@@ -1463,9 +1701,28 @@ function Commandes() {
                               >
 
                                 <td className="commande-number">
-                                  {
-                                    commande.numero
-                                  }
+                                  <div className="commande-number-with-dispatch">
+                                    <strong>{commande.numero}</strong>
+                                    {destinations.length > 0 && (
+                                      <button
+                                        type="button"
+                                        className="commande-dispatch-toggle"
+                                        aria-expanded={isExpanded}
+                                        aria-controls={`commande-dispatch-${commande.id}`}
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          setExpandedLivraisons(current => ({
+                                            ...current,
+                                            [commande.id]: !current[commande.id],
+                                          }))
+                                        }}
+                                      >
+                                        <Truck size={14} aria-hidden="true" />
+                                        <span>{destinations.length} livraison{destinations.length > 1 ? 's' : ''}</span>
+                                        {isExpanded ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
 
                                 <td className="commande-donor-table">
@@ -1538,6 +1795,8 @@ function Commandes() {
                                     <button
                                       type="button"
                                       className="commande-actions-button"
+                                      disabled={!peutModifierCommande(commande)}
+                                      title={!peutModifierCommande(commande) ? 'Lecture seule : campagne terminée' : undefined}
                                       onClick={() =>
                                         setActionMenuId(
                                           (
@@ -1601,6 +1860,47 @@ function Commandes() {
                                 </td>
 
                               </tr>
+                              {isExpanded && destinations.length > 0 && (
+                                <tr className="commande-dispatch-detail-row" onClick={event => event.stopPropagation()}>
+                                  <td colSpan={9}>
+                                    <section
+                                      id={`commande-dispatch-${commande.id}`}
+                                      className="commande-dispatch-panel"
+                                      aria-label={`Répartition des livraisons de ${commande.numero}`}
+                                    >
+                                      <div className="commande-dispatch-panel-header">
+                                        <div>
+                                          <h4><Truck size={18} aria-hidden="true" /> Répartition des livraisons</h4>
+                                          <p>Une seule commande et un seul payeur : {donateur?.nom || 'Donateur inconnu'}.</p>
+                                        </div>
+                                        <span className={`commande-dispatch-total ${totalReparti === commande.quantite ? 'is-ok' : 'is-warning'}`}>
+                                          {formatNumber(totalReparti)} / {formatNumber(commande.quantite)} brioches réparties
+                                        </span>
+                                      </div>
+                                      <div className="commande-dispatch-items">
+                                        {destinations.map((livraison, index) => (
+                                          <div className="commande-dispatch-item" key={livraison.id || `${commande.id}-${index}`}>
+                                            <span className="commande-dispatch-item-index">{index + 1}</span>
+                                            <div className="commande-dispatch-item-destination">
+                                              <strong>{livraison.destinataireNom || 'Destinataire non renseigné'}</strong>
+                                              <span>{[livraison.adresse, livraison.cp, livraison.ville].filter(Boolean).join(' · ') || 'Adresse non renseignée'}</span>
+                                            </div>
+                                            <div className="commande-dispatch-item-date">
+                                              <CalendarDays size={15} aria-hidden="true" />
+                                              <span>{livraison.datePrevue ? formatDateShort(livraison.datePrevue) : 'Date à définir'}</span>
+                                            </div>
+                                            <strong className="commande-dispatch-item-qty">{formatNumber(livraison.quantite)} brioches</strong>
+                                            <span className={`commande-dispatch-item-status ${livraison.dateLivraison ? 'is-delivered' : ''}`}>
+                                              {livraison.dateLivraison ? 'Livrée' : 'À planifier'}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </section>
+                                  </td>
+                                </tr>
+                              )}
+                              </Fragment>
                             )
                           },
                         )}
@@ -1618,12 +1918,18 @@ function Commandes() {
         )}
 
       </section>
+      )}
+
+      {!vueStructures && groupes.length === 0 && (
+        <div className="commande-structures-empty">Aucune commande classique pour ces filtres.</div>
+      )}
 
       {selectedCommande && (
         <CommandeDetail
           commande={
             selectedCommande
           }
+          canEdit={peutModifierCommande(selectedCommande)}
           onEdit={() =>
             openEditCommande(
               selectedCommande,
@@ -1669,9 +1975,11 @@ function Commandes() {
 function CommandeDetail({
   commande,
   onEdit,
+  canEdit,
 }: {
   commande: Commande
   onEdit: () => void
+  canEdit: boolean
 }) {
   const {
     donateurs,
@@ -1684,42 +1992,98 @@ function CommandeDetail({
         commande.donateurId,
     )
 
+  const [activeDetailTab, setActiveDetailTab] = useState<'details' | 'suivi' | 'documents' | 'historique'>('details')
+  const [jdMessage, setJdMessage] = useState('')
+  const [jdBusy, setJdBusy] = useState(false)
+  const {
+    justificatifs,
+    createJustificatif,
+    markDocumentGenerated,
+  } = useJustificatifs()
+  const memeCampagne = (a: string, b: string) => {
+    if (a === b) return true
+    if (/^TEST[-_ ]/i.test(a) || /^TEST[-_ ]/i.test(b)) return false
+    const aa = a.match(/(?:19|20)\d{2}/)?.[0]
+    const bb = b.match(/(?:19|20)\d{2}/)?.[0]
+    return Boolean(aa && bb && aa === bb)
+  }
+  const documentsCommande = justificatifs.filter((jd) =>
+    (jd.commandeId === String(commande.id) || jd.commandeNumero === commande.numero) &&
+    memeCampagne(jd.campagne, commande.campagne),
+  )
+  const hasJdi = documentsCommande.some((jd) => jd.type === 'JDI' && jd.statut !== 'ARCHIVE')
+  const dateJour = () => {
+    const now = new Date()
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+  }
+  const creerJdi = () => {
+    if (!canEdit || hasJdi || jdBusy) return
+    if (!donateur) {
+      setJdMessage('Impossible de créer le JDI : le donateur lié à cette commande est introuvable.')
+      return
+    }
+    if (commande.quantite <= 0 || commande.prixUnitaire <= 0) {
+      setJdMessage('Complète la quantité et le prix unitaire avant de créer le JDI.')
+      return
+    }
+    createJustificatif({
+      type: 'JDI',
+      campagne: commande.campagne,
+      commandeId: String(commande.id),
+      commandeNumero: commande.numero,
+      donateurId: String(donateur.id),
+      donateurCode: donateur.code,
+      donateurNom: donateur.nom,
+      donateurVille: donateur.ville || '',
+      donateurAdresse: [donateur.numeroVoie, donateur.adresse, donateur.cp, donateur.ville].filter(Boolean).join(' '),
+      donateurEmail: donateur.email || '',
+      donateurTelephone: donateur.telephone || '',
+      dateEmission: dateJour(),
+      nbBrioches: commande.quantite,
+      prixUnitaire: commande.prixUnitaire,
+      statut: 'BROUILLON',
+      paiementStatut: 'EN_ATTENTE',
+      documentStatut: 'A_GENERER',
+      remarque: `Établi à partir de la commande ${commande.numero}.`,
+    })
+    setJdMessage('JDI créé en brouillon et lié à cette commande. Aucun envoi effectué.')
+  }
+  const telechargerJd = async (jd: JustificatifDon) => {
+    if (jdBusy) return
+    setJdBusy(true)
+    setJdMessage('')
+    try {
+      const result = await generateAndDownloadJustificatifPdf(jd)
+      if (canEdit) markDocumentGenerated(jd.id, {
+        modeleNom: result.template.fileName,
+        modeleVersion: result.template.version,
+        modeleCampagneId: jd.campagne,
+        modeReglementGenere: result.donor.modeReglement,
+      })
+      setJdMessage(`PDF ${jd.numero} généré.`)
+    } catch (error) {
+      setJdMessage(error instanceof Error ? `Génération impossible : ${error.message}` : 'Génération impossible : vérifier le modèle PDF et les informations de règlement.')
+    } finally {
+      setJdBusy(false)
+    }
+  }
+
   return (
     <section className="commande-detail-card">
 
       <div className="commande-detail-tabs">
 
-        <button
-          type="button"
-          className="active"
-        >
-          Détails
-        </button>
-
-        <button
-          type="button"
-        >
-          Suivi
-        </button>
-
-        <button
-          type="button"
-        >
-          Documents
-        </button>
-
-        <button
-          type="button"
-        >
-          Historique
-        </button>
+        <button type="button" className={activeDetailTab === 'details' ? 'active' : ''} onClick={() => setActiveDetailTab('details')}>Détails</button>
+        <button type="button" className={activeDetailTab === 'suivi' ? 'active' : ''} onClick={() => setActiveDetailTab('suivi')}>Suivi</button>
+        <button type="button" className={activeDetailTab === 'documents' ? 'active' : ''} onClick={() => setActiveDetailTab('documents')}>Documents {documentsCommande.length > 0 ? `(${documentsCommande.length})` : ''}</button>
+        <button type="button" className={activeDetailTab === 'historique' ? 'active' : ''} onClick={() => setActiveDetailTab('historique')}>Historique</button>
 
         <button
           type="button"
           className="commande-detail-edit"
-          onClick={
-            onEdit
-          }
+          onClick={onEdit}
+          disabled={!canEdit}
+          title={!canEdit ? 'Campagne terminée : lecture seule' : undefined}
         >
           <Edit3 size={17} />
           Modifier
@@ -1727,7 +2091,36 @@ function CommandeDetail({
 
       </div>
 
-      <div className="commande-detail-grid">
+      {activeDetailTab === 'documents' ? (
+        <div className="commande-documents-inline">
+          <div className="commande-documents-header">
+            <div>
+              <h3><FileDown size={19}/> Justificatifs de dons</h3>
+              <p>JDI (impayé) et JDP (payé) rattachés à la commande {commande.numero}. Un seul payeur, même en multi-livraisons.</p>
+            </div>
+            {canEdit && !hasJdi && <button type="button" className="commande-documents-create" onClick={creerJdi} disabled={jdBusy}><Plus size={16}/> Créer un JDI</button>}
+          </div>
+          {documentsCommande.length > 0 ? (
+            <div className="commande-documents-list">
+              {documentsCommande.map((jd) => (
+                <article className="commande-documents-row" key={jd.id}>
+                  <span className={`commande-documents-type ${jd.type.toLowerCase()}`}>{jd.type}</span>
+                  <div className="commande-documents-info">
+                    <strong>{jd.numero}</strong>
+                    <small>{jd.type === 'JDI' ? 'Justificatif de don impayé' : 'Justificatif de don payé'} · {jd.statut.replaceAll('_',' ')} · {jd.documentStatut.replaceAll('_',' ')}</small>
+                    <small>{formatMoney(jd.montant)} · {jd.nbBrioches} brioche(s)</small>
+                  </div>
+                  <button type="button" disabled={jdBusy} className="commande-documents-download" onClick={() => void telechargerJd(jd)}><Download size={16}/> {jdBusy ? 'Génération…' : 'Générer le PDF'}</button>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="commande-documents-empty"><FileDown size={24}/><strong>Aucun justificatif pour cette commande</strong><span>Crée un JDI en brouillon directement ici, puis génère son PDF depuis le modèle de la campagne.</span></div>
+          )}
+          <p className="commande-documents-disclaimer">Un JDP doit uniquement être établi après vérification du règlement. La création d'un JDI ne confirme pas un paiement.</p>
+          {jdMessage && <p className="commande-documents-feedback" role="status">{jdMessage}</p>}
+        </div>
+      ) : <div className="commande-detail-grid">
 
         <div className="commande-detail-section">
 
@@ -1900,7 +2293,21 @@ function CommandeDetail({
 
         </div>
 
-      </div>
+        {(commande.livraisons?.length ?? 0) > 0 && (
+          <div className="commande-detail-section commande-detail-deliveries">
+            <h3>Destinations de livraison ({commande.livraisons?.length})</h3>
+            <p>La commande reste facturée au donateur payeur ; les lignes ci-dessous sont uniquement logistiques.</p>
+            {(commande.livraisons ?? []).map((l, i) => (
+              <div className="commande-detail-delivery" key={l.id}>
+                <strong>{i + 1}. {l.destinataireNom}</strong>
+                <span>{[l.adresse, l.cp, l.ville].filter(Boolean).join(' · ')}</span>
+                <span>{l.datePrevue} · {l.quantite.toLocaleString('fr-FR')} brioches</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </div>}
 
     </section>
   )
@@ -1940,6 +2347,12 @@ function CommandeModal({
     commande: Commande,
   ) => void
 }) {
+  const obData = useObData() as ReturnType<typeof useObData> & {
+    selectedCampagne?: { id: string } | null
+  }
+  const campagneDefaut = obData.selectedCampagne?.id ?? obData.activeCampagne?.id ?? 'OB 2026'
+  const campagnesDisponibles = obData.campagnes
+
   const initialId =
     commande?.donateurId ??
     initialDonateurId ??
@@ -1995,7 +2408,7 @@ function CommandeModal({
               initialId ?? 0,
 
             campagne:
-              'OB 2026',
+              campagneDefaut,
 
             dateCommande:
               getTodayInput(),
@@ -2138,6 +2551,68 @@ function CommandeModal({
     )
   }
 
+  // Les anciennes commandes restent en mode livraison unique tant que
+  // l'utilisateur n'active pas explicitement les destinations multiples.
+  const multiLivraisons = Array.isArray(form.livraisons) && form.livraisons.length > 0
+  const quantiteLivraisons = (form.livraisons ?? []).reduce(
+    (total, livraison) => total + (Number(livraison.quantite) || 0), 0,
+  )
+
+  function nouvelleLivraison(): CommandeLivraison {
+    const payeur = donateurs.find(d => d.id === selectedDonateurId)
+    return {
+      id: typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `liv-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      destinataireId: payeur?.id ?? null,
+      destinataireNom: payeur?.nom ?? '',
+      adresse: payeur?.adresse ?? '',
+      cp: payeur?.cp ?? '',
+      ville: payeur?.ville ?? '',
+      datePrevue: form.datePrevueLivraison || '',
+      quantite: 0,
+    }
+  }
+
+  function activerMultiLivraisons() {
+    setError('')
+    if (multiLivraisons) {
+      // Désactiver ne supprime pas silencieusement des destinations déjà saisies.
+      if (form.livraisons && form.livraisons.length > 1 && !window.confirm(
+        'Revenir à une livraison unique supprimera les lignes de répartition de ce formulaire. Continuer ?',
+      )) return
+      updateField('livraisons', [])
+    } else {
+      setForm(current => ({
+        ...current,
+        livraisons: [{
+          ...nouvelleLivraison(),
+          quantite: Number(current.quantite) || 0,
+        }],
+      }))
+    }
+  }
+
+  function updateLivraison(livraisonId: string, patch: Partial<CommandeLivraison>) {
+    setForm(current => ({
+      ...current,
+      livraisons: (current.livraisons ?? []).map(item =>
+        item.id === livraisonId ? { ...item, ...patch } : item,
+      ),
+    }))
+  }
+
+  function choisirDestinataire(livraisonId: string, donorId: number | null) {
+    const donor = donorId ? donateurs.find(d => d.id === donorId) : undefined
+    updateLivraison(livraisonId, {
+      destinataireId: donor?.id ?? null,
+      destinataireNom: donor?.nom ?? '',
+      adresse: donor?.adresse ?? '',
+      cp: donor?.cp ?? '',
+      ville: donor?.ville ?? '',
+    })
+  }
+
   function submit(
     event:
       FormEvent<HTMLFormElement>,
@@ -2154,7 +2629,7 @@ function CommandeModal({
     }
 
     if (
-      form.quantite <= 0
+      !Number.isSafeInteger(form.quantite) || form.quantite <= 0
     ) {
       setError(
         'La quantité doit être supérieure à 0.',
@@ -2162,10 +2637,39 @@ function CommandeModal({
       return
     }
 
+    if (multiLivraisons) {
+      const lignes = form.livraisons ?? []
+      if (lignes.some(l => !Number.isSafeInteger(l.quantite) || l.quantite <= 0)) {
+        setError('Chaque destination doit avoir une quantité entière supérieure à zéro.')
+        return
+      }
+      if (lignes.some(l => !/^\d{4}-\d{2}-\d{2}$/.test(l.datePrevue))) {
+        setError('Renseigne la date prévue de chaque livraison.')
+        return
+      }
+      if (lignes.some(l => !l.destinataireNom.trim() || !l.ville.trim() || !l.adresse.trim())) {
+        setError('Renseigne le destinataire, la ville et l’adresse de chaque livraison.')
+        return
+      }
+      if (quantiteLivraisons !== form.quantite) {
+        setError(`Répartition incohérente : ${quantiteLivraisons} brioches réparties sur ${form.quantite} commandées.`)
+        return
+      }
+      const ids = lignes.map(l => l.id)
+      if (new Set(ids).size !== ids.length) {
+        setError('Une référence de livraison est en double.')
+        return
+      }
+    }
+
     onSave({
       ...form,
-      donateurId:
-        selectedDonateurId,
+      donateurId: selectedDonateurId,
+      // Le champ legacy représente uniquement les livraisons uniques.
+      // Une date unique serait trompeuse pour des destinations multiples.
+      datePrevueLivraison: multiLivraisons ? '' : form.datePrevueLivraison,
+      dateLivraison: multiLivraisons ? '' : form.dateLivraison,
+      livraisons: multiLivraisons ? form.livraisons : undefined,
     })
   }
 
@@ -2388,31 +2892,7 @@ function CommandeModal({
                 <CommandeField
                   label="Campagne"
                 >
-                  <select
-                    value={
-                      form.campagne
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      updateField(
-                        'campagne',
-                        event.target.value,
-                      )
-                    }
-                  >
-                    <option>
-                      OB 2025
-                    </option>
-
-                    <option>
-                      OB 2026
-                    </option>
-
-                    <option>
-                      OB 2027
-                    </option>
-                  </select>
+                  <input value={campagnesDisponibles.find(c => memeCampagneEntreprise(c.id, form.campagne))?.nom ?? form.campagne} disabled />
                 </CommandeField>
 
                 <CommandeField
@@ -2496,8 +2976,87 @@ function CommandeModal({
 
             </CommandeFormSection>
 
+            <CommandeFormSection number="3" title="Répartition des livraisons">
+              <div className="commande-delivery-intro">
+                <div>
+                  <strong>Un seul payeur, plusieurs destinations possibles</strong>
+                  <p>La maison mère sélectionnée reste responsable de la commande et du règlement.</p>
+                </div>
+                <button type="button" className="commandes-secondary-button"
+                  onClick={activerMultiLivraisons}>
+                  {multiLivraisons ? 'Livraison unique' : 'Plusieurs lieux / dates'}
+                </button>
+              </div>
+              {!multiLivraisons ? (
+                <p className="commande-delivery-hint">Livraison unique : utilise les dates et l'adresse habituelles de la commande. Active « Plusieurs lieux / dates » pour répartir les brioches.</p>
+              ) : (
+                <div className="commande-delivery-lines">
+                  {(form.livraisons ?? []).map((livraison, index) => (
+                    <div className="commande-delivery-line" key={livraison.id}>
+                      <div className="commande-delivery-line-title">
+                        <strong>Livraison {index + 1}</strong>
+                        {(form.livraisons?.length ?? 0) > 1 && (
+                          <button type="button" aria-label={`Supprimer la livraison ${index + 1}`}
+                            onClick={() => setForm(current => ({ ...current,
+                              livraisons: current.livraisons?.filter(l => l.id !== livraison.id),
+                            }))}><X size={17}/> Retirer</button>
+                        )}
+                      </div>
+                      <div className="commande-delivery-fields">
+                        <label>Destinataire enregistré
+                          <select value={livraison.destinataireId ?? ''}
+                            onChange={e => choisirDestinataire(livraison.id, e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">Autre lieu / saisie libre</option>
+                            {donateurs.filter(d => !d.archive).map(d => (
+                              <option value={d.id} key={d.id}>{d.nom} — {d.ville || 'Sans ville'}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>Nom du lieu / destinataire
+                          <input value={livraison.destinataireNom}
+                            onChange={e => updateLivraison(livraison.id, { destinataireNom: e.target.value })}
+                            placeholder="Établissement PPPP1" />
+                        </label>
+                        <label>Adresse complète
+                          <input value={livraison.adresse}
+                            onChange={e => updateLivraison(livraison.id, { adresse: e.target.value })}
+                            placeholder="Rue et numéro" />
+                        </label>
+                        <label>Code postal
+                          <input value={livraison.cp}
+                            onChange={e => updateLivraison(livraison.id, { cp: e.target.value })}
+                            placeholder="54000" />
+                        </label>
+                        <label>Commune
+                          <input value={livraison.ville}
+                            onChange={e => updateLivraison(livraison.id, { ville: e.target.value })}
+                            placeholder="Nancy" />
+                        </label>
+                        <label>Date de livraison prévue
+                          <input type="date" value={livraison.datePrevue}
+                            onChange={e => updateLivraison(livraison.id, { datePrevue: e.target.value })}/>
+                        </label>
+                        <label>Nombre de brioches
+                          <input type="number" min="1" step="1" value={livraison.quantite}
+                            onChange={e => updateLivraison(livraison.id, { quantite: Number(e.target.value) })}/>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" className="commandes-secondary-button"
+                    onClick={() => setForm(current => ({ ...current,
+                      livraisons: [...(current.livraisons ?? []), nouvelleLivraison()],
+                    }))}><Plus size={17}/> Ajouter une destination</button>
+                  <div className={`commande-delivery-total ${quantiteLivraisons === form.quantite ? 'is-valid' : 'is-invalid'}`}>
+                    <span>Total réparti</span>
+                    <strong>{quantiteLivraisons.toLocaleString('fr-FR')} / {form.quantite.toLocaleString('fr-FR')} brioches</strong>
+                  </div>
+                </div>
+              )}
+            </CommandeFormSection>
+
             <CommandeFormSection
-              number="3"
+              number="4"
               title="Règlement & suivi"
             >
 
@@ -2651,6 +3210,8 @@ function CommandeModal({
                   </select>
                 </CommandeField>
 
+                {!multiLivraisons && (
+                  <>
                 <CommandeField
                   label="Date prévue de livraison"
                 >
@@ -2688,6 +3249,9 @@ function CommandeModal({
                     }
                   />
                 </CommandeField>
+
+                  </>
+                )}
 
                 <CommandeField
                   label="Remarque"
@@ -3010,6 +3574,7 @@ function formatNumber(
 function formatDateLong(
   value: string,
 ) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value || 'Date à préciser'
   return new Intl.DateTimeFormat(
     'fr-FR',
     {
@@ -3028,6 +3593,7 @@ function formatDateLong(
 function formatDateShort(
   value: string,
 ) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value || 'Date à préciser'
   return new Intl.DateTimeFormat(
     'fr-FR',
   ).format(

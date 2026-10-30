@@ -37,6 +37,31 @@ const roles = Object.keys(ROLE_LABELS) as UserRole[]
    VALEURS PAR DÉFAUT
    ========================================================= */
 
+/** Règles non négociables des profils : une matrice locale ne peut pas les outrepasser. */
+const DEVELOPER_READ_ONLY = new Set<PermissionModule>([
+  'utilisateurs', 'roles', 'campagnes', 'parametres', 'admin_etablissements',
+  'journal', 'coffre', 'suivi_banque', 'gestion_cheques', 'comptabilite',
+  'fiches_caisse', 'justificatifs', 'recapitulatif',
+])
+
+export function allowedForRole(role: UserRole, module: PermissionModule, action: PermissionAction): boolean {
+  if (role === 'administrateur') return true
+  if (role === 'developpeur') {
+    if (DEVELOPER_READ_ONLY.has(module)) return action === 'consulter'
+    if (action === 'supprimer' || action === 'valider') return false
+    return true
+  }
+  if (role === 'stagiaire_communication') {
+    if (module === 'accueil' || module === 'dashboard' || module === 'communication' || module === 'stands_brioches' || module === 'benevoles' || module === 'geographie') return action === 'consulter'
+    return false
+  }
+  if (role === 'stagiaire_comptabilite') {
+    if (module === 'accueil' || module === 'dashboard' || module === 'comptabilite' || module === 'justificatifs' || module === 'fiches_caisse') return action === 'consulter'
+    return false
+  }
+  return true
+}
+
 function createDefaultMatrix(): PermissionMatrix {
   const matrix = {} as PermissionMatrix
 
@@ -45,8 +70,8 @@ function createDefaultMatrix(): PermissionMatrix {
 
     for (const module of PERMISSION_MODULES) {
       rolePermissions[module.key] =
-        role === 'administrateur'
-          ? [...module.actions]
+        role === 'administrateur' || role === 'developpeur' || role.startsWith('stagiaire_')
+          ? module.actions.filter(action => allowedForRole(role, module.key, action))
           : []
     }
 
@@ -103,7 +128,7 @@ function loadPermissions(): PermissionMatrix {
         if (!Array.isArray(savedActions)) continue
 
         const validActions = module.actions.filter(
-          (action) => savedActions.includes(action),
+          (action) => savedActions.includes(action) && allowedForRole(role, module.key, action),
         )
 
         defaults[role][module.key] =
@@ -180,6 +205,7 @@ export function PermissionsProvider({
     // L'administrateur conserve tous les droits, même pour un module
     // ajouté après la dernière sauvegarde locale des permissions.
     if (role === 'administrateur') return true
+    if (!allowedForRole(role, module, action)) return false
     return permissions[role]?.[module]?.includes(action) ?? false
   }
 
@@ -190,7 +216,7 @@ export function PermissionsProvider({
     moduleKey: PermissionModule,
     action: PermissionAction,
   ) {
-    if (role === 'administrateur') return
+    if (role === 'administrateur' || !allowedForRole(role, moduleKey, action)) return
 
     const moduleDefinition = PERMISSION_MODULES.find(
       (module) => module.key === moduleKey,
@@ -206,7 +232,7 @@ export function PermissionsProvider({
     }
 
     setPermissions((current) => {
-      const existing = current[role][moduleKey]
+      const existing = current[role]?.[moduleKey] ?? []
 
       let updated: PermissionAction[]
 
