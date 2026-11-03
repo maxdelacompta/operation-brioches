@@ -427,33 +427,24 @@ export default function Sidebar() {
   ])
 
   useEffect(() => {
-    if (location.pathname.startsWith('/bdd')) setBddOpen(true)
-    if (activeSection) {
-      setExpandedSections(
-        (current) => ({
-          ...current,
-          [activeSection]: true,
-        }),
-      )
-    }
-
-    setMobileOpen(false)
-
-    /*
-      En mode flottant, la navigation se referme
-      automatiquement après avoir choisi une page.
-    */
-    // Ne ferme le volet flottant qu'en cas de navigation,
-    // pas quand l'utilisateur désépingle avec la punaise.
-    if (previousPathRef.current !== location.pathname && !pinned) {
-      setFloatingOpen(false)
-    }
-    previousPathRef.current = location.pathname
-  }, [
-    activeSection,
-    location.pathname,
-    pinned,
-  ])
+    // Synchronisation avec la navigation au frame suivant pour ne pas
+    // déclencher plusieurs rendus synchrones à l'intérieur de l'effet.
+    const frame = window.requestAnimationFrame(() => {
+      if (location.pathname.startsWith('/bdd')) setBddOpen(true)
+      if (activeSection) {
+        setExpandedSections(current => current[activeSection]
+          ? current
+          : { ...current, [activeSection]: true })
+      }
+      setMobileOpen(false)
+      // Désépingler n'entraîne pas une fermeture immédiate.
+      if (previousPathRef.current !== location.pathname && !pinned) {
+        setFloatingOpen(false)
+      }
+      previousPathRef.current = location.pathname
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [activeSection, location.pathname, pinned])
 
   useEffect(() => {
     if (

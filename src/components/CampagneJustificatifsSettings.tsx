@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -37,7 +36,7 @@ type Props = {
   canManage: boolean
 }
 
-function CampagneJustificatifsSettings({
+function CampagneJustificatifsSettingsInner({
   campagneId,
   annee,
   canManage,
@@ -53,17 +52,6 @@ function CampagneJustificatifsSettings({
   const jdiInputRef = useRef<HTMLInputElement>(null)
   const jdpInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    setSettings(
-      getCampagneJustificatifsSettings(
-        campagneId,
-        annee,
-      ),
-    )
-    setNotice('')
-    setError('')
-    setAdvanced(false)
-  }, [campagneId, annee])
 
   function updateCheque(value: string) {
     setSettings((current) => ({
@@ -583,4 +571,11 @@ function TemplateCard({
   )
 }
 
-export default CampagneJustificatifsSettings
+// Une campagne distincte possède son propre état de formulaire.
+// Le remount évite de synchroniser cet état dans un effet React.
+export default function CampagneJustificatifsSettings(props: Props) {
+  return <CampagneJustificatifsSettingsInner
+    key={`${props.campagneId}:${props.annee ?? 'sans-annee'}`}
+    {...props}
+  />
+}

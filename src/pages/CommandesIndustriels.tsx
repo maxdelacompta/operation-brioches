@@ -279,26 +279,16 @@ export default function CommandesIndustriels() {
   const [recherche, setRecherche] = useState('')
   const [statut, setStatut] = useState<StatutFiltre>('TOUS')
 
-  const fournisseursIndustriels = useMemo(
-    () => fournisseurs.filter(estIndustriel),
-    [fournisseurs],
-  )
+  const fournisseursIndustriels = fournisseurs.filter(estIndustriel)
 
-  const idsIndustriels = useMemo(
-    () => new Set(fournisseursIndustriels.map((item) => item.id)),
-    [fournisseursIndustriels],
-  )
+  const idsIndustriels = new Set(fournisseursIndustriels.map((item) => item.id))
 
-  const commandesIndustriels = useMemo(
-    () =>
-      commandesArtisans.filter((commande) =>
+  const commandesIndustriels = commandesArtisans.filter((commande) =>
         idsIndustriels.has(commande.artisanId) &&
         String(commande.campagne ?? '').match(/(?:19|20)\d{2}/)?.[0] === anneeCampagne,
-      ),
-    [commandesArtisans, idsIndustriels, anneeCampagne],
-  )
+      )
 
-  const resultats = useMemo(() => {
+  const resultats = (() => {
     const motif = recherche.trim().toLocaleLowerCase('fr')
 
     return commandesIndustriels.filter((commande) => {
@@ -331,31 +321,16 @@ export default function CommandesIndustriels() {
         correspondStatut
       )
     })
-  }, [
-    commandesIndustriels,
-    fournisseursIndustriels,
-    recherche,
-    statut,
-  ])
+  })()
 
-  const totalQuantite = useMemo(
-    () =>
-      resultats.reduce(
-        (total, commande) =>
-          total + commande.quantiteCommandee,
-        0,
-      ),
-    [resultats],
+  const totalQuantite = resultats.reduce(
+    (total, commande) => total + commande.quantiteCommandee,
+    0,
   )
 
-  const totalMontant = useMemo(
-    () =>
-      resultats.reduce(
-        (total, commande) =>
-          total + montantCommande(commande),
-        0,
-      ),
-    [resultats],
+  const totalMontant = resultats.reduce(
+    (total, commande) => total + montantCommande(commande),
+    0,
   )
 
   return (

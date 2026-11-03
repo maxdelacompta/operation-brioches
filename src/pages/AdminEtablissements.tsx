@@ -1,3 +1,4 @@
+import { omitKeys } from '../lib/omitKeys'
 import {
   useMemo,
   useState,
@@ -262,12 +263,7 @@ export default function AdminEtablissements() {
     setFormMode('edit')
     setEditingId(etablissement.id)
 
-    const {
-      id: _id,
-      createdAt: _createdAt,
-      updatedAt: _updatedAt,
-      ...editable
-    } = etablissement
+    const editable = omitKeys(etablissement, 'id', 'createdAt', 'updatedAt')
 
     setForm(editable)
     setError('')

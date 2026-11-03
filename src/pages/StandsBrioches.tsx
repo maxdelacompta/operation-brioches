@@ -4,7 +4,7 @@ import { useObData } from '../contexts/ObDataContext'
 import { useUsers } from '../contexts/UsersContext'
 import { livraisonsStands } from '../lib/standsLivraisons'
 import FeuilleStand from './FeuilleStand'
-import { readOperations } from './CompteurStand'
+import { readOperations } from '../lib/standOperations'
 import { Store, CalendarDays, Users, Plus, Pencil, Trash2, Search, Wallet, CreditCard, Package, ClipboardCheck, X, Download, Send, Printer, LockKeyhole } from 'lucide-react'
 import type { MouvementMateriel } from '../types/suiviMateriel'
 import './StandsBrioches.css'
@@ -38,7 +38,7 @@ const COMMUNES_54_SECOURS = ['Baccarat', 'Briey', 'Dombasle-sur-Meurthe', 'Heill
 const normalizeCommune = (s: string) => s.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/œ/g,'oe')
 const DAYS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'] as const
 const dayIndex = (date:string) => { const day=new Date(`${date}T12:00:00`).getDay();return (day+6)%7 }
-const csvCell = (value:unknown) => { const raw=String(value??''); const safe=/^[=+@\-]/.test(raw)?`'${raw}`:raw; return `"${safe.replace(/"/g,'""')}"` } 
+const csvCell = (value:unknown) => { const raw=String(value??''); const safe=/^[=+@-]/.test(raw)?`'${raw}`:raw; return `"${safe.replace(/"/g,'""')}"` } 
 // Rattachement par période administrative, puis par année si les dates ne sont pas renseignées.
 type PeriodeCampagne = { id:string; annee:number|null; dateDebut:string; dateFin:string }
 const campagneDuStand = (stand: {date:string;campagne?:string}, campagnes:PeriodeCampagne[]):string => {
@@ -61,6 +61,14 @@ function loadStands(): Stand[] { return loadArray<Stand>(KEY).filter(s => s && t
 function same(v: string) { return (v || '').trim().toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'') }
 function localDate(d: string) { return d ? new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR') : '—' }
 export default function StandsBrioches() {
+  const { selectedCampagne, activeCampagne } = useObData()
+  const campagneId = (selectedCampagne ?? activeCampagne)?.id ?? ''
+  // Nouvelle instance lors d'un changement de campagne : les paramètres de
+  // verrouillage et les transferts sont initialisés depuis leurs clés dédiées.
+  return <StandsBriochesCampagne key={campagneId} />
+}
+
+function StandsBriochesCampagne() {
   const [communes54,setCommunes54] = useState<string[]>(() => {
     try {
       const cached = JSON.parse(localStorage.getItem(COMMUNES_54_KEY) || '[]')
@@ -113,7 +121,6 @@ export default function StandsBrioches() {
   const [revision, setRevision] = useState(0)
   const [deliveryRevision, setDeliveryRevision] = useState(0)
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(stands)) }, [stands])
-  useEffect(()=>{setLockedWeeks(readRecord<string[]>(lockKey,[]));setTransfers(readRecord<Reattribution[]>(transferKey,[]));setTargetId('')},[lockKey,transferKey])
   const isLocked=(date:string)=>lockedWeeks.includes(weekStart(date))
   const weekLocked=lockedWeeks.includes(week)
   const toggleWeek=()=>{

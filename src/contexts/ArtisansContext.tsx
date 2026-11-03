@@ -1,51 +1,11 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type Dispatch,
-  type ReactNode,
-  type SetStateAction,
-} from 'react'
-import type { Artisan, CommandeArtisan, Fournisseur } from '../types/artisans'
-import { initialArtisans } from '../data/initialArtisans'
-import { initialCommandesArtisans } from '../data/initialCommandesArtisans'
+import { createContext, useContext, type Dispatch, type SetStateAction } from 'react'
+import { type Artisan, type CommandeArtisan, type Fournisseur } from '../types/artisans'
 
-const LEGACY_ARTISANS_KEY = 'ob-artisans-v1'
-const FOURNISSEURS_KEY = 'ob-fournisseurs-v1'
-const COMMANDES_KEY = 'ob-commandes-artisans-v1'
-const RESET_KEY = 'ob-achats-reset-complet-20261013-v1'
-const BACKUP_KEY = 'ob-achats-sauvegarde-avant-reset-20261013-v1'
+export const LEGACY_ARTISANS_KEY = 'ob-artisans-v1'
+export const FOURNISSEURS_KEY = 'ob-fournisseurs-v1'
+export const COMMANDES_KEY = 'ob-commandes-artisans-v1'
 
-/** Remise à zéro demandée : exécutée une fois dans CE navigateur.
- *  Copie de secours non utilisée par les modules, conservée pour restauration manuelle.
- */
-function effectuerResetInitial(): void {
-  try {
-    if (localStorage.getItem(RESET_KEY) === 'ok') return
-    const sauvegarde = {
-      date: new Date().toISOString(),
-      fournisseurs: localStorage.getItem(FOURNISSEURS_KEY),
-      artisansHistoriques: localStorage.getItem(LEGACY_ARTISANS_KEY),
-      commandesAchats: localStorage.getItem(COMMANDES_KEY),
-    }
-    // Ne pas remplacer une sauvegarde existante en cas de rechargement.
-    if (localStorage.getItem(BACKUP_KEY) === null) {
-      localStorage.setItem(BACKUP_KEY, JSON.stringify(sauvegarde))
-    }
-    localStorage.setItem(FOURNISSEURS_KEY, '[]')
-    localStorage.setItem(LEGACY_ARTISANS_KEY, '[]')
-    localStorage.setItem(COMMANDES_KEY, '[]')
-    localStorage.setItem(RESET_KEY, 'ok')
-  } catch (error) {
-    console.error('La remise à zéro des achats a échoué :', error)
-  }
-}
-
-
-function lireTableau<T>(cle: string, initial: T[]): T[] {
+export function lireTableau<T>(cle: string, initial: T[]): T[] {
   try {
     const brut = localStorage.getItem(cle)
     if (brut === null) return initial
@@ -57,7 +17,7 @@ function lireTableau<T>(cle: string, initial: T[]): T[] {
 }
 
 /** Migration non destructive : priorité à la nouvelle base si elle existe. */
-function chargerFournisseurs(): Fournisseur[] {
+export function chargerFournisseurs(): Fournisseur[] {
   try {
     const brut = localStorage.getItem(FOURNISSEURS_KEY)
     if (brut !== null) {
@@ -91,59 +51,9 @@ type ArtisansContextValue = {
   setCommandesArtisans: Dispatch<SetStateAction<CommandeArtisan[]>>
 }
 
-const Context = createContext<ArtisansContextValue | null>(null)
+export const Context = createContext<ArtisansContextValue | null>(null)
 
-export function ArtisansProvider({ children }: { children: ReactNode }) {
-  const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>(chargerFournisseurs)
-  const [commandesArtisans, setCommandesArtisans] = useState<CommandeArtisan[]>(() =>
-    lireTableau(COMMANDES_KEY, []),
-  )
 
-  const artisans = useMemo(
-    () => fournisseurs.filter(fournisseur => fournisseur.type === 'ARTISAN'),
-    [fournisseurs],
-  )
-
-  // Les composants de la V1 qui appellent setArtisans continuent à fonctionner.
-  // La mise à jour ne touche jamais aux fiches GMS ou industrielles.
-  const setArtisans = useCallback<Dispatch<SetStateAction<Artisan[]>>>(miseAJour => {
-    setFournisseurs(anciens => {
-      const anciensArtisans = anciens.filter(f => f.type === 'ARTISAN')
-      const suivants = typeof miseAJour === 'function'
-        ? miseAJour(anciensArtisans)
-        : miseAJour
-      const autresFournisseurs = anciens.filter(f => f.type !== 'ARTISAN')
-      return [...autresFournisseurs, ...suivants.map(a => ({ ...a, type: 'ARTISAN' as const }))]
-    })
-  }, [])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(FOURNISSEURS_KEY, JSON.stringify(fournisseurs))
-      // Maintenir le format historique afin de ne pas casser un éventuel autre module.
-      localStorage.setItem(LEGACY_ARTISANS_KEY, JSON.stringify(artisans))
-    } catch (error) {
-      console.error('Sauvegarde des fournisseurs impossible :', error)
-    }
-  }, [fournisseurs, artisans])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(COMMANDES_KEY, JSON.stringify(commandesArtisans))
-    } catch (error) {
-      console.error('Sauvegarde des commandes artisans impossible :', error)
-    }
-  }, [commandesArtisans])
-
-  return (
-    <Context.Provider value={{
-      fournisseurs, setFournisseurs, artisans, setArtisans,
-      commandesArtisans, setCommandesArtisans,
-    }}>
-      {children}
-    </Context.Provider>
-  )
-}
 
 export function useArtisans() {
   const context = useContext(Context)

@@ -45,7 +45,7 @@ export default function ImportFournisseursExcel({ fournisseurs, onCommit, onClos
       if(!/\.xlsx$/i.test(file.name)) throw Error('Utilise un fichier Excel .xlsx (sans macros).')
       if(file.size>8_000_000) throw Error('Fichier trop volumineux (maximum 8 Mo).')
       const ExcelJS=(await import('exceljs')).default
-      const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer() as any)
+      const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer() as Parameters<typeof wb.xlsx.load>[0])
       const sh=wb.worksheets[0]; if(!sh) throw Error('Le classeur ne contient aucune feuille.')
       const keys=new Map<string,number>(); sh.getRow(1).eachCell((cell,col)=>keys.set(normalize(text(cell.value)),col))
       for(const required of ['Code','Type','Raison sociale']) if(!keys.has(normalize(required))) throw Error(`Colonne obligatoire manquante : ${required}. Télécharge le modèle.`)

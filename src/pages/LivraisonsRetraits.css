@@ -1075,3 +1075,124 @@
 .lr-benevole-today-item span { flex: 1; display: grid; gap: 3px; }
 .lr-benevole-today-item small { color: #6682a2; font-size: 11px; }
 @media(max-width:650px) { .lr-benevole-unknown { display: none; } }
+
+/* Commandes d'affectation directement dans la fiche dépliée du bénévole */
+.lr-benevole-row-actions { display: flex; align-items: center; gap: 7px; }
+.lr-benevole-remove { color: #b84b28; border-color: #f4c8ba; background: #fff8f4; }
+.lr-benevole-remove:hover:not(:disabled) { background: #fff0e8; }
+.lr-benevole-remove:disabled { opacity: .35; cursor: not-allowed; }
+.lr-benevole-toolbar { display:flex; justify-content:flex-start; border-top:1px solid #e4edf6; padding:13px 4px 4px; margin-top:10px; }
+.lr-benevole-add-form { width:100%; align-items:center; }
+.lr-benevole-add-form small { width:100%; color:#71849d; }
+.lr-benevole-groups > .lr-reattribution-alert { margin:0; }
+
+/* Organisation routière des tournées bénévoles */
+.lr-route-planner{padding:16px;margin:12px 0;border:1px solid #c9d9ec;border-radius:12px;background:#f8fbff;color:#173a66}
+.lr-route-heading{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.lr-route-fields{display:grid;grid-template-columns:minmax(240px,2fr) minmax(135px,0.8fr) auto;align-items:end;gap:10px}
+.lr-route-fields label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:650}
+.lr-route-fields input{min-height:39px;border:1px solid #cfdaea;border-radius:8px;padding:8px;background:white;color:#133b6d;width:100%}
+.lr-route-fields button,.lr-route-result button{display:inline-flex;gap:7px;align-items:center;justify-content:center;min-height:39px;border:0;border-radius:8px;padding:8px 13px;background:#ff7a00;color:#fff;font-weight:700;cursor:pointer}
+.lr-route-fields button:disabled{opacity:.55;cursor:not-allowed}
+.lr-route-error{display:flex;align-items:flex-start;gap:8px;margin-top:12px;color:#a33a14;font-size:13px}
+.lr-route-hint{margin:10px 0 0;color:#6a7891;font-size:12px}
+.lr-route-result{display:flex;flex-direction:column;gap:7px;margin-top:12px;padding:12px;background:#fff;border-radius:8px}
+.lr-route-result small{color:#627b95;font-size:12px}
+.lr-route-result ol{padding-left:25px;margin:8px 0}.lr-route-result li{padding:4px 0}.lr-route-result li small{display:block;margin-top:3px}
+.lr-route-result button{align-self:flex-start;background:#1a8058}
+@media(max-width:850px){.lr-route-fields{grid-template-columns:1fr}.lr-route-result button{align-self:stretch}}
+
+/* ============================================================
+   Mode compact — barre d'en-tête et indicateurs (31/10/2026)
+   Objectif : 7 KPI sur une seule ligne en écran large.
+   ============================================================ */
+.lr-page { padding: 16px 20px 22px; }
+.lr-header {
+  padding: 12px 16px;
+  gap: 12px;
+  margin-bottom: 10px;
+  border-radius: 17px;
+}
+.lr-header h1 { font-size: clamp(28px, 2.15vw, 37px); }
+.lr-header p { margin-top: 4px; font-size: 12px; line-height: 1.3; }
+.lr-header .lr-eyebrow { font-size: 10px; margin-bottom: 3px; }
+.lr-header-actions { gap: 8px; }
+.lr-header-actions .lr-primary,
+.lr-header-actions .lr-top-select { min-height: 38px; }
+.lr-tabs { margin-bottom: 10px; }
+.lr-tabs button { min-height: 42px; }
+
+.lr-kpis {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.lr-kpi {
+  min-width: 0;
+  min-height: 70px;
+  padding: 9px 10px;
+  gap: 9px;
+  border-radius: 12px;
+}
+.lr-kpi-icon {
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+  border-radius: 10px;
+}
+.lr-kpi-icon svg { width: 20px; height: 20px; }
+.lr-kpi small {
+  margin-bottom: 3px;
+  font-size: 10px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.lr-kpi strong {
+  font-size: clamp(20px, 1.65vw, 27px);
+  line-height: 1;
+  overflow: visible;
+}
+.lr-unassigned-card { margin-bottom: 10px; }
+.lr-unassigned-summary { padding: 12px 15px; gap: 10px; }
+.lr-unassigned-warning { width: 42px; height: 42px; flex-basis: 42px; border-radius: 11px; }
+.lr-unassigned-warning svg { width: 23px; height: 23px; }
+.lr-unassigned-heading strong { font-size: 20px; }
+.lr-unassigned-metrics > span { min-width: 60px; padding-inline: 10px; }
+.lr-unassigned-metrics b { font-size: 22px; }
+.lr-unassigned-buttons > button { min-height: 37px; }
+
+@media (max-width: 1500px) {
+  .lr-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 1050px) {
+  .lr-page { padding: 14px; }
+  .lr-header { flex-direction: column; }
+  .lr-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .lr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lr-kpi { min-height: 66px; }
+  .lr-unassigned-summary { padding: 11px; }
+  .lr-unassigned-heading strong { font-size: 18px; }
+}
+
+/* Correctif création de tournée : dialogue au-dessus des menus et totalement accessible. */
+.lr-overlay { z-index: 100000; }
+.lr-tour-modal { position: relative; max-height: min(94dvh, 950px); }
+.lr-tour-modal form { min-height: 0; }
+.lr-tour-modal .lr-modal-body { min-height: 0; overscroll-behavior: contain; }
+.lr-tour-modal .lr-modal-footer { position: relative; z-index: 1; }
+.lr-source-info { display:block; margin-top:5px; color:#5f7897; line-height:1.35; font-size:11px; }
+
+/* Retraits : bleu pour les stands, violet pour les établissements. */
+.lr-mode.mode-retrait-stand,
+.lr-retrait-legend-chip.stand,
+.lr-retrait-type-count.stand { background:#e9f4ff; color:#075eb8; border-color:#cbe2ff; }
+.lr-mode.mode-retrait-etablissement,
+.lr-retrait-legend-chip.etablissement,
+.lr-retrait-type-count.etablissement { background:#f2ebff; color:#7141bf; border-color:#dfd2ff; }
+.lr-retrait-legend { display:flex; align-items:center; flex-wrap:wrap; gap:9px; padding:10px 16px 2px; }
+.lr-retrait-legend-label { font-size:12px; font-weight:750; color:#617897; margin-right:3px; }
+.lr-retrait-legend-chip, .lr-retrait-type-count { display:inline-flex; align-items:center; gap:6px; border:1px solid; border-radius:999px; padding:5px 10px; font-size:11px; font-weight:750; white-space:nowrap; }
+.lr-retrait-driver-types { display:flex; flex-wrap:wrap; gap:5px; margin-top:3px; }
+.lr-retrait-type-count { font-size:10px; padding:3px 8px; }

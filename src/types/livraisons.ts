@@ -12,12 +12,16 @@ export type StatutLivraison =
   | 'LIVREE'
   | 'PROBLEME'
 
+export type RetraitType = 'STAND' | 'ETABLISSEMENT'
+
 export type MissionLivraison = {
   id: string
   commandeId: number
   date: string
   heure: string
   mode: ModeLivraison
+  /** Type du retrait, uniquement pour les missions de mode RETRAIT. */
+  retraitType?: RetraitType
   responsable: string
   statut: StatutLivraison
   commentaire: string

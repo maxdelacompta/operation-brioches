@@ -75,7 +75,7 @@ async function detectChequeRects(imageUrl:string, expected?:number):Promise<{rec
 
 // PDFium WebAssembly restitue les caractères et masques noirs du PDF.
 // Le fichier PDF reste local : seul le moteur WASM est téléchargé au premier usage.
-type RenderEngine = InstanceType<typeof PdfEngine>
+type RenderEngine = PdfEngine<Blob>
 let enginePromise:Promise<RenderEngine>|null=null
 function getPdfiumEngine():Promise<RenderEngine>{
  if(!enginePromise){
@@ -87,15 +87,14 @@ function getPdfiumEngine():Promise<RenderEngine>{
    return new PdfEngine(new PdfiumNative(module),{imageConverter:browserImageDataToBlobConverter})
   })().catch(err=>{enginePromise=null;throw err})
  }
- return enginePromise
+ return enginePromise!
 }
 
 export default function ScanCheques({onClose,onSave}:{onClose:()=>void;onSave:(items:ScanCheque[])=>string[]}){
  const [pages,setPages]=useState<Page[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[active,setActive]=useState(0)
  const [drafts,setDrafts]=useState<Draft[]>([]),[photos,setPhotos]=useState<string[]>([]),[saved,setSaved]=useState<string[]>([])
  const [pdfSources,setPdfSources]=useState<(string|null)[]>([])
- const [pdfPageNumbers,setPdfPageNumbers]=useState<number[]>([])
- const [showNativePdf,setShowNativePdf]=useState(false)
+ const [,setPdfPageNumbers]=useState<number[]>([])
  const [capturePage,setCapturePage]=useState(0)
  const [rectangles,setRectangles]=useState<Record<number,Rect[]>>({})
  const [drawing,setDrawing]=useState<Rect|null>(null)

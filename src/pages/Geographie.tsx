@@ -987,10 +987,16 @@ export default function Geographie() {
   const mapRef =
     useRef<MapLibreMap | null>(null)
 
-  const [mapMode, setMapMode] =
-    useState<GeoMapMode>(() =>
-      getInitialMode(location.pathname),
-    )
+  const [mapModeSelection, setMapModeSelection] = useState(() => ({
+    pathname: location.pathname,
+    mode: getInitialMode(location.pathname),
+  }))
+  const mapMode = mapModeSelection.pathname === location.pathname
+    ? mapModeSelection.mode
+    : getInitialMode(location.pathname)
+  const setMapMode = (mode: GeoMapMode) => {
+    setMapModeSelection({ pathname: location.pathname, mode })
+  }
 
   const [metric, setMetric] =
     useState<GeoMetric>('SOLD')
@@ -1074,12 +1080,6 @@ export default function Geographie() {
         : campaigns[0] || 'TOUTES',
     )
 
-  useEffect(() => {
-    setMapMode(
-      getInitialMode(location.pathname),
-    )
-  }, [location.pathname])
-
   const priceByCampaign =
     useMemo(() => {
       const map = new Map<string, number>()
@@ -1111,6 +1111,11 @@ export default function Geographie() {
 
   const rawPoints = useMemo<GeoSalePoint[]>(
     () => {
+      // Ces valeurs invalident volontairement les données lues en cache ou
+      // depuis le stockage local, sans être elles-mêmes affichées sur la carte.
+      void coordinateVersion
+      void standsRevision
+      void location.pathname
       const points: GeoSalePoint[] = []
 
       for (const order of commandesMairiesRs) {
@@ -1427,7 +1432,7 @@ export default function Geographie() {
     )
 
     if (!missing.length) {
-      setGeocodingCount(0)
+      // Le compteur visible est dérivé de la présence de points à géocoder.
       return
     }
 
@@ -2483,7 +2488,7 @@ export default function Geographie() {
               </em>
             )}
 
-            {geocodingCount > 0 && (
+            {rawPoints.some(point => point.longitude === null || point.latitude === null) && geocodingCount > 0 && (
               <em>
                 Géocodage…
               </em>

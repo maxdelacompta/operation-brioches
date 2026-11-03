@@ -97,7 +97,6 @@ export default function SuiviCommandesAchats() {
     }
     setCommandesArtisans(current => current.map(c => {
       if (!memeCampagne(c.campagne, 'OB 2025')) return c
-      const previous = c as CommandeEtendue
       return {
         ...c,
         etablissementId: siege.id,

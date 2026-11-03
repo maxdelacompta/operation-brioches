@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, LockKeyhole, UserRound } from 'lucide-react'
 import { getUserDisplayName, POLE_LABELS, ROLE_LABELS, useUsers } from '../contexts/UsersContext'
@@ -6,23 +6,20 @@ import './GestionMonCompte.css'
 import GestionMonEquipe from './GestionMonEquipe'
 
 export default function GestionMonCompte() {
+  const { currentUser } = useUsers()
+  if (!currentUser) return <main className="ob-account"><p>Compte utilisateur indisponible.</p></main>
+  return <GestionMonCompteForm key={currentUser.id} />
+}
+
+function GestionMonCompteForm() {
   const { currentUser, updateUser } = useUsers()
-  const [prenom, setPrenom] = useState('')
-  const [nom, setNom] = useState('')
-  const [email, setEmail] = useState('')
-  const [poste, setPoste] = useState('')
+  const [prenom, setPrenom] = useState(() => currentUser?.prenom || '')
+  const [nom, setNom] = useState(() => currentUser?.nom || '')
+  const [email, setEmail] = useState(() => currentUser?.email || '')
+  const [poste, setPoste] = useState(() => currentUser?.poste || '')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => {
-    if (!currentUser) return
-    setPrenom(currentUser.prenom || '')
-    setNom(currentUser.nom || '')
-    setEmail(currentUser.email || '')
-    setPoste(currentUser.poste || '')
-    setError('')
-    setSaved(false)
-  }, [currentUser?.id])
 
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

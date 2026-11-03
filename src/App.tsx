@@ -8,17 +8,17 @@ import {
 import './App.css'
 import './styles/index.css'
 
-import { UsersProvider } from './contexts/UsersContext'
-import { PermissionsProvider } from './contexts/PermissionsContext'
-import { GeneralSettingsProvider } from './contexts/GeneralSettingsContext'
-import { ArtisansProvider } from './contexts/ArtisansContext'
-import { JustificatifsProvider } from './contexts/JustificatifsContext'
-import { EtablissementsProvider } from './contexts/EtablissementsContext'
-import { MairiesProvider } from './contexts/MairiesContext'
-import { CommandesMairiesRsProvider } from './contexts/CommandesMairiesRsContext'
+import { UsersProvider } from './contexts/UsersProvider'
+import { PermissionsProvider } from './contexts/PermissionsProvider'
+import { GeneralSettingsProvider } from './contexts/GeneralSettingsProvider'
+import { ArtisansProvider } from "./contexts/ArtisansProvider"
+import { JustificatifsProvider } from "./contexts/JustificatifsProvider"
+import { EtablissementsProvider } from "./contexts/EtablissementsProvider"
+import { MairiesProvider } from "./contexts/MairiesProvider"
+import { CommandesMairiesRsProvider } from "./contexts/CommandesMairiesRsProvider"
 
 import AppLayout from './layouts/AppLayout'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider } from "./contexts/AuthProvider"
 import Connexion from './pages/Connexion'
 import AccesConnexion from './pages/AccesConnexion'
 import ResetOB2026 from './pages/ResetOB2026'

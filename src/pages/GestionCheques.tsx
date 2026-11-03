@@ -5,7 +5,7 @@ import { calculerCoffre } from '../services/coffre'
 import { getCampagneJustificatifsSettings } from '../services/campagneJustificatifs'
 import './GestionCheques.css'
 import ScanCheques, { type ScanCheque } from './ScanCheques'
-import { getChequeScan, storeChequeScan } from './chequeScanStorage'
+import { getChequeScan } from './chequeScanStorage'
 
 type Statut = 'À vérifier' | 'À remettre' | 'Remis en banque' | 'Encaissé' | 'Rejeté'
 type RemiseCategorie = 'Sur place' | 'Hors place'
@@ -50,7 +50,7 @@ export default function GestionCheques() {
   const [selectedRemise, setSelectedRemise] = useState('')
     const [pdfError, setPdfError] = useState('')
   const [creatingPdf, setCreatingPdf] = useState(false)
-  const [scanSaving, setScanSaving] = useState(false)
+  const [scanSaving] = useState(false)
   const [scansWarning, setScansWarning] = useState('')
   const [detailRemise, setDetailRemise] = useState<string>('')
   const [viewTab, setViewTab] = useState<'bordereau'|'compta'>('bordereau')
@@ -65,12 +65,6 @@ export default function GestionCheques() {
     {label:'Hors place',items:detailItems.filter(c=>emplacement(c.departement)==='Hors place')},
     {label:'Sur place',items:detailItems.filter(c=>emplacement(c.departement)==='Sur place')},
   ].filter(g=>g.items.length)
-  function accountingRows(){
-    if (!detail) return []
-    const amount = Math.round(total(detailItems) * 100) / 100
-    const label = `Remise de chèques n° ${detail.chrono || detail.id}`
-    return [{account:getComptaSettings().compteBanque,debit:amount,credit:0,label},{account:getComptaSettings().compteDons,debit:0,credit:amount,label}]
-  }
   function getComptaSettings(){
     const id = detail?.campagneId || detailItems[0]?.campagne || campagneActive
     const year = campagnes.find(c=>c.id===id)?.annee ?? null

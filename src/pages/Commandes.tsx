@@ -265,6 +265,7 @@ function Commandes() {
      ========================================================= */
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
     const donateurParam =
       searchParams.get(
         'donateur',
@@ -328,6 +329,8 @@ function Commandes() {
         setModalOpen(true)
       }
     }
+    })
+    return () => window.cancelAnimationFrame(frame)
   }, [
     commandes,
     donateurs,
@@ -337,10 +340,13 @@ function Commandes() {
   ])
 
   useEffect(() => {
-    setSelectedCommande(null)
-    setModalOpen(false)
-    setEditingCommande(null)
-    setActionMenuId(null)
+    const frame = window.requestAnimationFrame(() => {
+      setSelectedCommande(null)
+      setModalOpen(false)
+      setEditingCommande(null)
+      setActionMenuId(null)
+    })
+    return () => window.cancelAnimationFrame(frame)
   }, [campagneId])
 
   /* =========================================================
@@ -434,13 +440,16 @@ function Commandes() {
     () => filteredCommandes.filter(c => !commandesStructuresIds.has(c.id)),
     [filteredCommandes, commandesStructuresIds],
   )
-  const commandesVue = vueStructures
+  const commandesVue = useMemo(() => vueStructures
     ? filteredCommandes.filter(c => commandesStructuresIds.has(c.id))
-    : commandesClassiques
+    : commandesClassiques, [vueStructures, filteredCommandes, commandesStructuresIds, commandesClassiques])
 
   useEffect(() => {
-    setSelectedCommande(current => current && !commandesVue.some(c=>c.id===current.id) ? null : current)
-  }, [vueStructures, filteredCommandes])
+    const frame = window.requestAnimationFrame(() => {
+      setSelectedCommande(current => current && !commandesVue.some(c => c.id === current.id) ? null : current)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [commandesVue])
 
   /* =========================================================
      GROUPES PAR DATE

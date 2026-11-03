@@ -35,6 +35,7 @@ import './CommandesArtisans.css'
 type StatutFiltre = 'TOUS' | 'CREES' | 'CONFIRMES' | 'LIVRES' | 'PAYES'
 type DestinationArtisans = { id: string; type: 'ETABLISSEMENT' | 'MAIRIE' | 'STAND'; referenceId: string; nom: string; adresse: string; quantite: number; livre: boolean }
 type CommandeArtisansSuivi = CommandeArtisan & { destinations?: DestinationArtisans[]; etablissementId?: string; destinationType?: 'ETABLISSEMENT' | 'MAIRIE' | 'STAND'; destinationId?: string; destinationNom?: string; livre?: boolean; paye?: boolean }
+const creerIdCommande = () => `commande-${crypto.randomUUID()}`
 const nouvelleDestination = (): DestinationArtisans => ({ id: `dest-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, type: 'ETABLISSEMENT', referenceId:'', nom:'', adresse:'', quantite:0, livre:false })
 const destinationsDe = (c: CommandeArtisansSuivi): DestinationArtisans[] => c.destinations?.length ? c.destinations : (c.destinationId || c.etablissementId || c.destinationNom ? [{id:`ancien-${c.id}`,type:c.destinationType ?? 'ETABLISSEMENT',referenceId:c.destinationId || c.etablissementId || '',nom:c.destinationNom || '',adresse:'',quantite:c.quantiteCommandee,livre:!!c.livre}] : [])
 const livraisonsTerminees = (c: CommandeArtisansSuivi) => { const dest=destinationsDe(c); return dest.length > 0 && dest.every(d=>d.livre) }
@@ -99,7 +100,7 @@ export default function CommandesArtisans() {
     const premier = fournisseurs.filter(estArtisan).find(f => f.statut !== 'INACTIF')
     const campagneActuelle = anneeCampagne || String(new Date().getFullYear())
     setEdition({
-      id: `commande-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: creerIdCommande(),
       numero: numeroCommandeSuivant(commandesArtisans, campagneActuelle),
       artisanId: premier?.id ?? '', campagne: campagneActuelle, dateCommande: jourLocal(), dateRetrait: '',
       repartitionJours: '', secteur: premier?.secteur ?? '', responsableSecteur: premier?.responsableSecteur ?? '',
@@ -195,7 +196,7 @@ export default function CommandesArtisans() {
     } else if (cle === 'artisanId') {
       if (!fournisseurs.some(f => f.id === val && estArtisan(f))) return setMessage('Fournisseur invalide.')
       suivant.artisanId = val
-    } else if (cle === 'destinationType' || cle === 'destinationId' || cle === 'destinationNom') { return setMessage('Modifie la répartition avec le bouton destinations.') }
+    } else if (['destinationType', 'destinationId', 'destinationNom'].includes(cle)) { return setMessage('Modifie la répartition avec le bouton destinations.') }
     else if (cle === 'dateCommande' || cle === 'dateRetrait' || cle === 'campagne' || cle === 'secteur') Object.assign(suivant, { [cle]: val })
     else if (cle !== 'livre' && cle !== 'paye') return
     if (cle === 'livre' || cle === 'paye') {
@@ -203,7 +204,7 @@ export default function CommandesArtisans() {
       if (cle === 'paye' && val === 'true' && !livraisonsTerminees(suivant)) return setMessage('Marque d’abord le bon comme livré.')
       suivant[cle] = val === 'true'
     }
-    if ((c as CommandeArtisansSuivi).paye && (cle === 'quantiteCommandee' || cle === 'montant' || (cle === 'destinationType' || cle === 'destinationId' || cle === 'destinationNom') || cle === 'artisanId')) return setMessage('Une commande payée doit d’abord être repassée en non payée avant ces modifications.')
+    if ((c as CommandeArtisansSuivi).paye && (cle === 'quantiteCommandee' || cle === 'montant' || (['destinationType', 'destinationId', 'destinationNom'].includes(cle)) || cle === 'artisanId')) return setMessage('Une commande payée doit d’abord être repassée en non payée avant ces modifications.')
     if (estConfirmee(c) && cle === 'artisanId') return setMessage('Déconfirme le bon avant de changer de fournisseur.')
     const sync = synchroniserReceptionArtisans(suivant, c, etablissements)
     if (!sync.ok) { setMessage(sync.erreur ?? 'Mise à jour refusée.'); return }
@@ -304,26 +305,16 @@ export default function CommandesArtisans() {
   const [recherche, setRecherche] = useState('')
   const [statut, setStatut] = useState<StatutFiltre>('TOUS')
 
-  const fournisseursArtisans = useMemo(
-    () => fournisseurs.filter(estArtisan),
-    [fournisseurs],
-  )
+  const fournisseursArtisans = fournisseurs.filter(estArtisan)
 
-  const idsArtisans = useMemo(
-    () => new Set(fournisseursArtisans.map((item) => item.id)),
-    [fournisseursArtisans],
-  )
+  const idsArtisans = new Set(fournisseursArtisans.map((item) => item.id))
 
-  const commandesArtisanFiltrees = useMemo(
-    () =>
-      commandesArtisans.filter((commande) =>
+  const commandesArtisanFiltrees = commandesArtisans.filter((commande) =>
         idsArtisans.has(commande.artisanId) &&
         String(commande.campagne ?? '').match(/(?:19|20)\d{2}/)?.[0] === anneeCampagne,
-      ),
-    [commandesArtisans, idsArtisans, anneeCampagne],
-  )
+      )
 
-  const resultats = useMemo(() => {
+  const resultats = (() => {
     const motif = recherche.trim().toLocaleLowerCase('fr')
 
     return commandesArtisanFiltrees.filter((commande) => {
@@ -356,31 +347,16 @@ export default function CommandesArtisans() {
         correspondStatut
       )
     })
-  }, [
-    commandesArtisanFiltrees,
-    fournisseursArtisans,
-    recherche,
-    statut,
-  ])
+  })()
 
-  const totalQuantite = useMemo(
-    () =>
-      resultats.reduce(
-        (total, commande) =>
-          total + commande.quantiteCommandee,
-        0,
-      ),
-    [resultats],
+  const totalQuantite = resultats.reduce(
+    (total, commande) => total + commande.quantiteCommandee,
+    0,
   )
 
-  const totalMontant = useMemo(
-    () =>
-      resultats.reduce(
-        (total, commande) =>
-          total + montantCommande(commande),
-        0,
-      ),
-    [resultats],
+  const totalMontant = resultats.reduce(
+    (total, commande) => total + montantCommande(commande),
+    0,
   )
 
   return (

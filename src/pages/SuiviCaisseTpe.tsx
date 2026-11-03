@@ -1,3 +1,4 @@
+import { omitKeys } from '../lib/omitKeys'
 import {
   useMemo,
   useState,
@@ -30,10 +31,8 @@ import {
 } from 'lucide-react'
 
 import { useObData } from '../contexts/ObDataContext'
-import {
-  SuiviMaterielProvider,
-  useSuiviMateriel,
-} from '../contexts/SuiviMaterielContext'
+import { useSuiviMateriel } from '../contexts/SuiviMaterielContext'
+import { SuiviMaterielProvider } from "../contexts/SuiviMaterielProvider"
 import type {
   MouvementMateriel,
   NouveauMouvementMateriel,
@@ -342,7 +341,10 @@ function SuiviCaisseTpeContent() {
     () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
     [weekStart],
   )
-  const visibleDates = planningScope === 'JOUR' ? [focusDate] : weekDays
+  const visibleDates = useMemo(
+    () => planningScope === 'JOUR' ? [focusDate] : weekDays,
+    [planningScope, focusDate, weekDays],
+  )
 
   const planningSource = useMemo(
     () =>
@@ -352,10 +354,9 @@ function SuiviCaisseTpeContent() {
     [mouvements, campagneFilter, visibleDates],
   )
 
-  const tpeAssignmentsFor = (numero: number) =>
-    planningSource.filter((item) => movementUsesTpe(item, numero))
-
   const planningRows = useMemo(() => {
+    const tpeAssignmentsFor = (numero: number) =>
+      planningSource.filter((item) => movementUsesTpe(item, numero))
     const query = normalize(planningSearch)
     const selectedCaisse =
       selectedPlanningCaisse === 'TOUTES' ? null : Number(selectedPlanningCaisse)
@@ -432,14 +433,6 @@ function SuiviCaisseTpeContent() {
     focusDate,
   ])
 
-  const isTpeUnavailableOnDate = (numero: number, date: string) =>
-    mouvements.some(
-      (item) =>
-        item.campagne === campagneFilter &&
-        movementUsesTpe(item, numero) &&
-        movementBlocksDate(item, date),
-    )
-
   const availableCaisses = useMemo(
     () =>
       BASE_CAISSES.filter(
@@ -456,7 +449,12 @@ function SuiviCaisseTpeContent() {
   )
 
   const availableTpes = useMemo(
-    () => BASE_TPES.filter((numero) => !isTpeUnavailableOnDate(numero, focusDate)),
+    () => BASE_TPES.filter((numero) => !mouvements.some(
+      (item) =>
+        item.campagne === campagneFilter &&
+        movementUsesTpe(item, numero) &&
+        movementBlocksDate(item, focusDate),
+    )),
     [mouvements, campagneFilter, focusDate],
   )
 
@@ -483,7 +481,7 @@ function SuiviCaisseTpeContent() {
   }
 
   function openEdit(item: MouvementMateriel) {
-    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...editable } = item
+    const editable = omitKeys(item, 'id', 'createdAt', 'updatedAt')
     setFormMode('edit')
     setEditingId(item.id)
     setForm(editable)
@@ -492,7 +490,7 @@ function SuiviCaisseTpeContent() {
   }
 
   function openReturn(item: MouvementMateriel) {
-    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...editable } = item
+    const editable = omitKeys(item, 'id', 'createdAt', 'updatedAt')
     setFormMode('return')
     setEditingId(item.id)
     setForm({ ...editable, dateRetourReelle: editable.dateRetourReelle || todayInput() })
@@ -603,7 +601,7 @@ function SuiviCaisseTpeContent() {
       return
     }
     const duration = daysBetween(item.dateSortie, plannedEnd(item))
-    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...candidate } = item
+    const candidate = omitKeys(item, 'id', 'createdAt', 'updatedAt')
     const shifted: FormState = {
       ...candidate,
       dateSortie: targetDate,
@@ -636,7 +634,7 @@ function SuiviCaisseTpeContent() {
     if (!payload || payload.kind !== 'material' || payload.type !== 'TPE' || item.type !== 'CAISSE') return
     event.preventDefault()
     event.stopPropagation()
-    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...candidate } = item
+    const candidate = omitKeys(item, 'id', 'createdAt', 'updatedAt')
     const next: FormState = { ...candidate, tpeAssocieNumero: payload.numero }
     const conflict = materialConflict(next, item.id)
     if (conflict) {

@@ -1,5 +1,5 @@
+import { omitKeys } from '../lib/omitKeys'
 import {
-  useEffect,
   useMemo,
   useState,
   type FormEvent,
@@ -218,6 +218,8 @@ export default function CommandesMairiesRs() {
     [campagneCommandes, secteurFilter],
   )
 
+  const sousSecteurActif = sousSecteurs.includes(sousSecteurFilter) ? sousSecteurFilter : 'TOUS'
+
   const filtered = useMemo(() => {
     const query = normalize(search)
 
@@ -229,8 +231,8 @@ export default function CommandesMairiesRs() {
       )
       .filter(
         (item) =>
-          sousSecteurFilter === 'TOUS' ||
-          item.sousSecteur === sousSecteurFilter,
+          sousSecteurActif === 'TOUS' ||
+          item.sousSecteur === sousSecteurActif,
       )
       .filter(
         (item) =>
@@ -269,31 +271,10 @@ export default function CommandesMairiesRs() {
     campagneCommandes,
     search,
     secteurFilter,
-    sousSecteurFilter,
+    sousSecteurActif,
     typeFilter,
     statusFilter,
   ])
-
-  useEffect(() => {
-    setPage(1)
-  }, [
-    search,
-    campagneFilter,
-    secteurFilter,
-    sousSecteurFilter,
-    typeFilter,
-    statusFilter,
-    perPage,
-  ])
-
-  useEffect(() => {
-    if (
-      sousSecteurFilter !== 'TOUS' &&
-      !sousSecteurs.includes(sousSecteurFilter)
-    ) {
-      setSousSecteurFilter('TOUS')
-    }
-  }, [sousSecteurFilter, sousSecteurs])
 
   const totalPages = Math.max(
     1,
@@ -407,13 +388,7 @@ export default function CommandesMairiesRs() {
   }
 
   function openEdit(item: CommandeMairieRs) {
-    const {
-      id: _id,
-      numero: _numero,
-      createdAt: _createdAt,
-      updatedAt: _updatedAt,
-      ...editable
-    } = item
+    const editable = omitKeys(item, 'id', 'numero', 'createdAt', 'updatedAt')
 
     setFormMode('edit')
     setEditingId(item.id)
@@ -660,9 +635,10 @@ export default function CommandesMairiesRs() {
             <span>Campagne</span>
             <select
               value={campagneFilter}
-              onChange={(event) =>
+              onChange={(event) => {
                 setCampagneFilter(event.target.value)
-              }
+                setPage(1)
+              }}
             >
               {campaigns.map((campagne) => (
                 <option
@@ -719,18 +695,21 @@ export default function CommandesMairiesRs() {
             <Search size={17} />
             <input
               value={search}
-              onChange={(event) =>
+              onChange={(event) => {
                 setSearch(event.target.value)
-              }
+                setPage(1)
+              }}
               placeholder="Rechercher une mairie, un RS, une commune..."
             />
           </label>
 
           <select
             value={secteurFilter}
-            onChange={(event) =>
+            onChange={(event) => {
               setSecteurFilter(event.target.value)
-            }
+              setSousSecteurFilter('TOUS')
+              setPage(1)
+            }}
           >
             {secteurs.map((secteur) => (
               <option
@@ -745,10 +724,11 @@ export default function CommandesMairiesRs() {
           </select>
 
           <select
-            value={sousSecteurFilter}
-            onChange={(event) =>
+            value={sousSecteurActif}
+            onChange={(event) => {
               setSousSecteurFilter(event.target.value)
-            }
+              setPage(1)
+            }}
           >
             {sousSecteurs.map((sousSecteur) => (
               <option
@@ -764,13 +744,14 @@ export default function CommandesMairiesRs() {
 
           <select
             value={typeFilter}
-            onChange={(event) =>
+            onChange={(event) => {
               setTypeFilter(
                 event.target.value as
                   | 'TOUS'
                   | TypeCommandeMairieRs,
               )
-            }
+              setPage(1)
+            }}
           >
             <option value="TOUS">Mairies + RS</option>
             <option value="MAIRIE">Mairies</option>
@@ -779,13 +760,14 @@ export default function CommandesMairiesRs() {
 
           <select
             value={statusFilter}
-            onChange={(event) =>
+            onChange={(event) => {
               setStatusFilter(
                 event.target.value as
                   | 'TOUS'
                   | StatutCommandeMairieRs,
               )
-            }
+              setPage(1)
+            }}
           >
             <option value="TOUS">Tous les statuts</option>
             {(
@@ -994,9 +976,10 @@ export default function CommandesMairiesRs() {
 
             <select
               value={perPage}
-              onChange={(event) =>
+              onChange={(event) => {
                 setPerPage(Number(event.target.value))
-              }
+                setPage(1)
+              }}
             >
               <option value={10}>10 par page</option>
               <option value={25}>25 par page</option>

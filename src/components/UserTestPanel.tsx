@@ -6,7 +6,8 @@ import { TEST_MODE_AVAILABLE, TEST_MODE_EVENT, testModeEnabled, setTestModeEnabl
 type Props = { placement?: 'status' }
 
 /** Barre flottante de simulation, uniquement accessible à l'admin authentifié en développement. */
-export default function UserTestPanel({ placement: _placement }: Props) {
+export default function UserTestPanel({ placement }: Props) {
+  void placement
   const { users, currentUser, currentUserId, setCurrentUserId } = useUsers()
   const { userId } = useAuth()
   const [enabled, setEnabled] = useState(testModeEnabled)

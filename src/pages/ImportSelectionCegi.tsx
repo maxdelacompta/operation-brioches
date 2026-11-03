@@ -1,3 +1,4 @@
+import { analyserSelectionCegi } from '../lib/analyserSelectionCegi'
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { FileUp, X, ArrowRight, ArrowLeft, Check, AlertTriangle } from 'lucide-react'
 import type { CommandeArtisan, Fournisseur } from '../types/artisans'
@@ -34,31 +35,8 @@ type Props = {
 const cat: Record<CegiOperation['categorie'], string> = { ACHAT_BRIOCHES: 'Achats de brioches', TRANSPORT: 'Transport / logistique', COMMUNICATION: 'Communication', MATERIEL: 'Matériel', AUTRE: 'Autre dépense' }
 const norm = (v:string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')
 const amount = (v:string) => Number(v.replace(/\s/g,'').replace(',','.'))
-const toISO = (v:string) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); return m ? `${m[3]}-${m[2]}-${m[1]}` : '' }
-const opId = (source:string, row:string) => `${source}:${row}`
 const somme = (items:CegiOperation[]) => Math.round(items.reduce((v,o)=>v+o.montant,0)*100)/100
 const formatMoney = (v:number) => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(v)
-
-// Recherche ciblée sur les sélections de virement CEGI. Chaque ligne est revalidée par l'utilisateur.
-export function analyserSelectionCegi(text:string, source:string): CegiOperation[] {
-  const lines=text.split(/\r?\n/).map(s=>s.replace(/\s+/g,' ').trim()).filter(Boolean)
-  const joined=lines.join('\n')
-  const ref=/Pi[eè]ce\s*n[°o]?\s*([\w\-/]+)/i.exec(joined)?.[1] ?? ''
-  const operations:CegiOperation[]=[]
-  let dernierBeneficiaire=''
-  let dernierCompte=''
-  for(let i=0;i<lines.length;i++) {
-    const line=lines[i]
-    const identity=/^([A-Z]?\d{6,})\s+(.{3,})$/.exec(line)
-    if(identity && !/\bTOTAL\b|\bBANQUE\b/i.test(identity[2])) { dernierCompte=identity[1]; dernierBeneficiaire=identity[2]; continue }
-    // Date pièce, pièce comptable, libellé, référence, date d'échéance, dossier et crédit.
-    const match=/^(\d{2}\/\d{2}\/\d{4})\s+(\S+)\s+(.+?)\s+(\d{2}-[A-Z0-9-]+)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2})\s+([\d\s.,]+)$/.exec(line)
-    if(!match) continue
-    const valeur=amount(match[7]); if(!Number.isFinite(valeur)||valeur<=0) continue
-    operations.push({id:opId(source,`${i}-${match[2]}-${valeur}`),source,beneficiaire:dernierBeneficiaire||'Bénéficiaire à renseigner',compte:dernierCompte,piece:match[2],libelle:match[3],datePiece:toISO(match[1]),echeance:toISO(match[5]),montant:valeur,mode:'Virement',referenceListe:ref,categorie:'AUTRE',fournisseurId:'',commandeIds:[],traitement:'a_verifier'})
-  }
-  return operations
-}
 
 export default function ImportSelectionCegi({fournisseurs,commandes,onClose,onSave,onArchived}:Props){
  const [files,setFiles]=useState<File[]>([])

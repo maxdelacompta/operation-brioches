@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ArrowDownToLine, ArrowUpFromLine, BarChart3, Building2, Download, Gift, Search, TrendingUp, AlertTriangle } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { useEtablissements } from '../contexts/EtablissementsContext'
@@ -43,7 +43,7 @@ export default function RecapBrioches() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [message, setMessage] = useState('')
-  const byPeriod = (date: string) => { const day = date.slice(0,10); return (!dateFrom || day >= dateFrom) && (!dateTo || day <= dateTo) }
+  const byPeriod = useCallback((date: string) => { const day = date.slice(0,10); return (!dateFrom || day >= dateFrom) && (!dateTo || day <= dateTo) }, [dateFrom, dateTo])
   // Le stock est toujours calculé sur l'historique complet, jamais sur la seule période filtrée.
   const rows = useMemo(() => etablissements.map(e => {
     const ms = mouvements.filter(m => m.etablissementId === e.id || m.destinationId === e.id)
@@ -52,7 +52,7 @@ export default function RecapBrioches() {
     const stock = ms.reduce((n,m) => n + change(m,e.id),0)
     const allocatedDons = dons.filter(d => d.etablissementId === e.id && byPeriod(d.date))
     return { id:e.id, name:e.nom, active:e.statut === 'ACTIF', receptions, sorties, stock, donnees:allocatedDons.length, brioches:allocatedDons.reduce((n,d)=>n+d.quantite,0), montant:allocatedDons.reduce((n,d)=>n+d.montant,0) }
-  }), [etablissements,mouvements,dons,dateFrom,dateTo])
+  }), [etablissements,mouvements,dons,byPeriod])
   const visibles = rows.filter(r => r.name.toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr')) && (filter === 'tous' || (filter === 'actifs' && r.active) || (filter === 'avec-stock' && r.stock > 0) || (filter === 'sans-stock' && r.stock <= 0)))
   const totalStock = rows.reduce((n,r)=>n+r.stock,0)
   const filteredDons = dons.filter(d => byPeriod(d.date))

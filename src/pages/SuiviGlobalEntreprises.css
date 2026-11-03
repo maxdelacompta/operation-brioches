@@ -758,3 +758,12 @@
     text-align: left;
   }
 }
+
+/* État du règlement distinct de la progression de livraison. */
+.sge-payment { display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap;background:#eef2f7;color:#65758a; }
+.sge-payment-payee { background:#e5f7ed;color:#167849; }
+.sge-payment-partielle { background:#fff1df;color:#9a5800; }
+.sge-payment-a_confirmer { background:#eef2f7;color:#65758a; }
+.sge-order-badges { display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap; }
+.sge-payment-detail { display:flex;gap:12px;align-items:center;justify-content:space-between;padding:8px 0; }
+.sge-payment-detail > span:first-child { color:#65758a;font-size:12px; }

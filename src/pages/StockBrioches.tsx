@@ -1,5 +1,5 @@
 import { livraisonsStands } from '../lib/standsLivraisons'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Boxes, ClipboardList, Plus, Search, Trash2, AlertTriangle, Store } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { useEtablissements } from '../contexts/EtablissementsContext'
@@ -84,8 +84,8 @@ export default function StockBrioches() {
   const idsAutorises = useMemo(() => new Set(currentUser?.etablissementIds?.length
     ? currentUser.etablissementIds
     : currentUser?.etablissementId ? [currentUser.etablissementId] : []), [currentUser])
-  const estAutorise = (id: string) => Boolean(currentUser?.status === 'actif' && (tousEtablissements || idsAutorises.has(id)))
-  const etablissementsVisibles = useMemo(() => etablissements.filter(e => estAutorise(e.id)), [etablissements, currentUser])
+  const estAutorise = useCallback((id: string) => Boolean(currentUser?.status === 'actif' && (tousEtablissements || idsAutorises.has(id))), [currentUser?.status, tousEtablissements, idsAutorises])
+  const etablissementsVisibles = useMemo(() => etablissements.filter(e => estAutorise(e.id)), [etablissements, estAutorise])
   // Les réceptions livrées au Siège alimentent la bonne campagne.
   // Seuls les bons expressément marqués livrés sont rapprochés :
   // le statut « Payé » seul ne déclenche jamais un mouvement de stock.
@@ -106,6 +106,7 @@ export default function StockBrioches() {
     const attendus = new Map<string, Mouvement>()
     for (const c of commandesLivrees) {
       const x = c as typeof c & {
+        livre?: boolean
         destinationId?: string
         etablissementId?: string
         destinations?: Array<{ type?: string; referenceId?: string; quantite?: number; livre?: boolean }>
@@ -167,7 +168,7 @@ export default function StockBrioches() {
   const [recherche, setRecherche] = useState('')
   const [erreur, setErreur] = useState('')
   const [confirmation, setConfirmation] = useState('')
-  const etablissementsActifs = useMemo(() => etablissementsVisibles.filter(e => e.statut === 'ACTIF'), [etablissements])
+  const etablissementsActifs = useMemo(() => etablissementsVisibles.filter(e => e.statut === 'ACTIF'), [etablissementsVisibles])
   const noms = useMemo(() => new Map(etablissements.map(e => [e.id, e.nom])), [etablissements])
   const stocks = useMemo(() => new Map(etablissementsVisibles.map(e => [e.id, stockFor(e.id, mouvements, dons)])), [etablissementsVisibles, mouvements, dons])
   const total = [...stocks.values()].reduce((a,b) => a+b,0)

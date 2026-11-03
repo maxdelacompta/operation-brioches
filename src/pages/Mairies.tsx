@@ -1,3 +1,4 @@
+import { omitKeys } from '../lib/omitKeys'
 import {
   useMemo,
   useState,
@@ -196,7 +197,7 @@ export default function Mairies() {
   }
 
   function openEdit(mairie: Mairie) {
-    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, historique: _historique, ...editable } = mairie
+    const editable = omitKeys(mairie, 'id', 'createdAt', 'updatedAt', 'historique')
     setFormMode('edit')
     setEditingId(mairie.id)
     setForm(editable)

@@ -417,8 +417,9 @@ export default function SuiviBanque() {
       reference:
         form.reference.trim(),
 
+      // Identifiant technique temporaire, jamais enregistré.
       id:
-        `simulation-${Date.now()}`,
+        'simulation-verification',
 
       date:
         new Date().toISOString(),

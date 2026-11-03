@@ -33,64 +33,77 @@ const WIDGETS: WidgetDefinition[] = [
   { id:'coffre',label:'Coffre',description:'Accéder au coffre',route:'/encaissements/coffre' },
   { id:'etablissements',label:'Établissements',description:'Accéder aux établissements',route:'/administration/etablissements' },
 ]
-const currency = (v:number) => v.toLocaleString('fr-FR',{style:'currency',currency:'EUR'})
 const number = (v:number) => v.toLocaleString('fr-FR')
 const icons: Record<WidgetId, ReactNode> = { commandes:<ShoppingCart/>, encaissements:<Euro/>, livraisons:<Truck/>, alertes:<AlertTriangle/>, activite:<Activity/>, raccourcis:<Zap/>, avancement:<TrendingUp/>, documents:<FileText/>, donateurs:<Users/>, fiches:<FileText/>, campagne:<Activity/>, brioches:<Package/>, mairies:<Landmark/>, benevoles:<Users/>, coffre:<Wallet/>, etablissements:<Building2/> }
 
-function Accueil() {
-  const { currentUser } = useUsers()
-  const { canVisit } = useAccess()
-  const { commandes, fichesCaisse, donateurs, activeCampagne } = useObData()
-  const storageKey = STORAGE_PREFIX + (currentUser?.id || 'anonymous')
-  const [customizing,setCustomizing] = useState(false)
-  const [visible,setVisible] = useState<WidgetId[]>(DEFAULT_WIDGETS)
-  const skipSave = useRef(true)
-  const [widgetSizes,setWidgetSizes] = useState<WidgetSizes>({})
-  const skipSizeSave = useRef(true)
-  const [activity,setActivity] = useState<ActivityEntry[]>(readActivityLog)
-  useEffect(()=>{
-    try {
-      const stored = localStorage.getItem(storageKey)
-      if (stored !== null) {
-        const parsed: unknown = JSON.parse(stored)
-        if (Array.isArray(parsed)) setVisible(Array.from(new Set(parsed.filter((id):id is WidgetId => typeof id==='string' && WIDGETS.some(w=>w.id===id)))))
-        else setVisible(DEFAULT_WIDGETS)
-      } else {
-        // Migration de la personnalisation historique (sans écraser une liste vide enregistrée).
-        const legacy = localStorage.getItem('operation-brioches-accueil-widgets')
-        if (legacy) {
-          const parsed: unknown = JSON.parse(legacy)
-          setVisible(Array.isArray(parsed) ? parsed.filter((id):id is WidgetId => typeof id==='string' && WIDGETS.some(w=>w.id===id)) : DEFAULT_WIDGETS)
-        } else setVisible(DEFAULT_WIDGETS)
-      }
-    } catch { setVisible(DEFAULT_WIDGETS) }
-    skipSave.current = true
-  },[storageKey])
-  useEffect(()=>{ if (skipSave.current) {skipSave.current=false;return} try {localStorage.setItem(storageKey,JSON.stringify(visible))} catch { /* stockage indisponible */ } },[visible,storageKey])
-  useEffect(()=>{
-    skipSizeSave.current = true
-    try {
-      const raw = localStorage.getItem(SIZE_STORAGE_PREFIX + storageKey)
-      const saved: unknown = raw ? JSON.parse(raw) : {}
-      const valid: WidgetSizes = {}
-      if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
-        for (const widget of WIDGETS) {
-          const size = (saved as Record<string,unknown>)[widget.id]
-          if (size && typeof size === 'object' && !Array.isArray(size)) {
-            const value = size as Record<string,unknown>
-            if (typeof value.width === 'number' && Number.isFinite(value.width) && typeof value.height === 'number' && Number.isFinite(value.height)) {
-              valid[widget.id] = {width:clamp(value.width,1,8),height:clamp(value.height,1,3)}
-            }
+// La personnalisation est initialisée depuis le stockage : pas de rendu
+// intermédiaire avec les paramètres d'un autre utilisateur.
+function readVisibleWidgets(storageKey: string): WidgetId[] {
+  try {
+    const stored = localStorage.getItem(storageKey)
+    if (stored !== null) {
+      const parsed: unknown = JSON.parse(stored)
+      return Array.isArray(parsed)
+        ? Array.from(new Set(parsed.filter((id): id is WidgetId => typeof id === 'string' && WIDGETS.some(w => w.id === id))))
+        : DEFAULT_WIDGETS
+    }
+    const legacy = localStorage.getItem('operation-brioches-accueil-widgets')
+    if (!legacy) return DEFAULT_WIDGETS
+    const parsed: unknown = JSON.parse(legacy)
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is WidgetId => typeof id === 'string' && WIDGETS.some(w => w.id === id))
+      : DEFAULT_WIDGETS
+  } catch {
+    return DEFAULT_WIDGETS
+  }
+}
+
+function readWidgetSizes(storageKey: string): WidgetSizes {
+  try {
+    const raw = localStorage.getItem(SIZE_STORAGE_PREFIX + storageKey)
+    const saved: unknown = raw ? JSON.parse(raw) : {}
+    const valid: WidgetSizes = {}
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+      for (const widget of WIDGETS) {
+        const size = (saved as Record<string, unknown>)[widget.id]
+        if (size && typeof size === 'object' && !Array.isArray(size)) {
+          const value = size as Record<string, unknown>
+          if (typeof value.width === 'number' && Number.isFinite(value.width) && typeof value.height === 'number' && Number.isFinite(value.height)) {
+            valid[widget.id] = { width: clamp(value.width, 1, 8), height: clamp(value.height, 1, 3) }
           }
         }
       }
-      setWidgetSizes(valid)
-    } catch {setWidgetSizes({})}
-  },[storageKey])
-  useEffect(()=>{
-    if (skipSizeSave.current) {skipSizeSave.current=false;return}
-    try {localStorage.setItem(SIZE_STORAGE_PREFIX + storageKey,JSON.stringify(widgetSizes))} catch { /* stockage indisponible */ }
-  },[widgetSizes,storageKey])
+    }
+    return valid
+  } catch {
+    return {}
+  }
+}
+
+function Accueil() {
+  const { currentUser } = useUsers()
+  const storageKey = STORAGE_PREFIX + (currentUser?.id || 'anonymous')
+  return <AccueilPersonnalise key={storageKey} storageKey={storageKey} />
+}
+
+function AccueilPersonnalise({ storageKey }: { storageKey: string }) {
+  const { currentUser } = useUsers()
+  const { canVisit } = useAccess()
+  const { commandes, fichesCaisse, donateurs, activeCampagne } = useObData()
+  const [customizing, setCustomizing] = useState(false)
+  const [visible, setVisible] = useState<WidgetId[]>(() => readVisibleWidgets(storageKey))
+  const [widgetSizes, setWidgetSizes] = useState<WidgetSizes>(() => readWidgetSizes(storageKey))
+  const [activity, setActivity] = useState<ActivityEntry[]>(readActivityLog)
+
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, JSON.stringify(visible)) }
+    catch { /* stockage indisponible */ }
+  }, [visible, storageKey])
+
+  useEffect(() => {
+    try { localStorage.setItem(SIZE_STORAGE_PREFIX + storageKey, JSON.stringify(widgetSizes)) }
+    catch { /* stockage indisponible */ }
+  }, [widgetSizes, storageKey])
   const getWidgetSize = (w:WidgetDefinition):WidgetSize => widgetSizes[w.id] ?? {width:w.large?4:2,height:2}
   // Redimensionnement à la souris / au doigt, calé sur la grille CSS réelle.
   const gridRef = useRef<HTMLDivElement>(null)
@@ -124,22 +137,13 @@ function Accueil() {
     })
   }
   const onResizeEnd = () => {resizeRef.current=null;setResizing(null)}
-  const changeWidgetSize = (id:WidgetId,axis:keyof WidgetSize,value:number) => {
-    const widget = WIDGETS.find(w=>w.id===id)
-    if (!widget) return
-    setWidgetSizes(prev=>{
-      const old = prev[id] ?? {width:widget.large?4:2,height:2}
-      return {...prev,[id]:{...old,[axis]:clamp(value,1,axis==='width'?8:3)}}
-    })
-  }
-
   useEffect(()=>{
     const refresh = ()=> setActivity(readActivityLog())
     window.addEventListener(ACTIVITY_EVENT_NAME,refresh)
     window.addEventListener('storage',refresh)
     return ()=>{window.removeEventListener(ACTIVITY_EVENT_NAME,refresh);window.removeEventListener('storage',refresh)}
   },[])
-  const available = useMemo(()=>WIDGETS.filter(w=>!w.route || canVisit(w.route)),[canVisit,currentUser])
+  const available = useMemo(()=>WIDGETS.filter(w=>!w.route || canVisit(w.route)),[canVisit])
   const shown = available.filter(w=>visible.includes(w.id))
   const hidden = available.filter(w=>!visible.includes(w.id))
   const campaignOrders = activeCampagne ? commandes.filter(c=>c.campagne===activeCampagne.id) : commandes

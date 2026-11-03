@@ -46,7 +46,7 @@ function amountFrom(t:string){
  return distinct.length===1?distinct[0]:undefined
 }
 function dateFrom(t:string){
- const m=t.match(/\b([0-3]?\d)[\/.\-]([01]?\d)[\/.\-](20\d\d|\d\d)\b/)
+ const m=t.match(/\b([0-3]?\d)[/.-]([01]?\d)[/.-](20\d\d|\d\d)\b/)
  if(!m)return undefined
  const iso=`${m[3].length===2?'20'+m[3]:m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`
  const d=new Date(`${iso}T12:00:00`)
@@ -61,7 +61,7 @@ function numberFrom(t:string){
 }
 function holderFrom(t:string){
  const lines=normalized(t).split(/\r?\n/).map(s=>s.replace(/\s+/g,' ').trim())
- const re=/^(?:MR|M\.|MME|MLLE|MLE|MONSIEUR|MADAME|M\s|MOU)\s+([A-Z][A-Z\s'\-]{4,})$/
+ const re=/^(?:MR|M\.|MME|MLLE|MLE|MONSIEUR|MADAME|M\s|MOU)\s+([A-Z][A-Z\s'-]{4,})$/
  const possibles=lines.map(s=>s.match(re)?.[1]?.trim()).filter((s):s is string=>!!s&&s.length<=55)
  return [...new Set(possibles)].length===1?possibles[0]:undefined
 }
@@ -69,7 +69,7 @@ function deptFrom(t:string,bank?:string){
  const s=normalized(t)
  // Pour la Banque Postale, le numéro du centre contient parfois le département (64).
  if(bank==='La Banque Postale'){
-  const center=s.match(/CENTRE\s+DE\s+[A-Z\s'\-]{2,35}\s*\((\d{2})\)/)
+  const center=s.match(/CENTRE\s+DE\s+[A-Z\s'-]{2,35}\s*\((\d{2})\)/)
   if(center)return center[1]
  }
  // Seulement la zone de l'agence (« Payable en France »), jamais l'adresse du titulaire.

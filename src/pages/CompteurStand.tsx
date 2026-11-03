@@ -1,10 +1,11 @@
+import { operationsKey, readOperations, type Operation } from '../lib/standOperations'
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Plus, HeartHandshake, PackageCheck, Pencil, Trash2, X } from 'lucide-react'
 import './CompteurStand.css'
 
 type Stand = {id:string;nom:string;lieu:string;date:string;briochesPrevues:number;briochesRemises:number;statut:string}
-type Operation = {id:string;at:string;kind:'brioche'|'don';qty:number;amount:number;method?:string}
+
 type AuditEntry = {id:string;at:string;operationId:string;action:'modification'|'suppression';before:Operation;after?:Operation}
 const auditKey=(id:string)=>`ob-stand-operations-audit-v1-${id}`
 const readAudit=(id:string):AuditEntry[]=>{try{const v:unknown=JSON.parse(localStorage.getItem(auditKey(id))||'[]');return Array.isArray(v)?v:[]}catch{return []}}
@@ -13,8 +14,8 @@ const closeKey=(id:string)=>`ob-stand-cloture-v1-${id}`
 type StandClose={closedAt:string;briochesCompteur:number;briochesFiche:number;briochesTotal:number;donsSansBrioche:number;montantDonsSansBrioche:number}
 const readClose=(id:string):StandClose|null=>{try{return JSON.parse(localStorage.getItem(closeKey(id))||'null') as StandClose|null}catch{return null}}
 const createOperationId=()=>typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `operation-${Date.now()}-${Math.random().toString(36).slice(2)}`
-export const operationsKey=(id:string)=>`ob-stand-operations-v1-${id}`
-export function readOperations(id:string):Operation[]{try {const d:unknown=JSON.parse(localStorage.getItem(operationsKey(id))||'[]');return Array.isArray(d)?d.filter((o):o is Operation=>Boolean(o&&typeof o==='object'&&'kind'in o&&'id'in o)):[]}catch{return []}}
+
+
 const readStand=(id:string):Stand|undefined=>{try{const d:unknown=JSON.parse(localStorage.getItem(STANDS_KEY)||'[]');return Array.isArray(d)?d.find((v:Stand)=>v.id===id):undefined}catch{return undefined}}
 export default function CompteurStand(){
  const {id=''}=useParams()

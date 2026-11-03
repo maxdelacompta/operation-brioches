@@ -1,8 +1,6 @@
 import {
   createContext,
   useContext,
-  useState,
-  type ReactNode,
 } from 'react'
 
 /* =========================================================
@@ -38,13 +36,13 @@ export const DEFAULT_SETTINGS: GeneralSettings = {
   documentFooter: '',
 }
 
-const STORAGE_KEY = 'ob-general-settings-v1'
+export const STORAGE_KEY = 'ob-general-settings-v1'
 
 /* =========================================================
    CHARGEMENT
    ========================================================= */
 
-function loadSettings(): GeneralSettings {
+export function loadSettings(): GeneralSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
 
@@ -100,7 +98,7 @@ type GeneralSettingsContextValue = {
   resetSettings: () => void
 }
 
-const GeneralSettingsContext = createContext<
+export const GeneralSettingsContext = createContext<
   GeneralSettingsContextValue | undefined
 >(undefined)
 
@@ -108,46 +106,7 @@ const GeneralSettingsContext = createContext<
    PROVIDER
    ========================================================= */
 
-export function GeneralSettingsProvider({
-  children,
-}: {
-  children: ReactNode
-}) {
-  const [settings, setSettings] =
-    useState<GeneralSettings>(loadSettings)
 
-  function saveSettings(
-    nextSettings: GeneralSettings,
-  ) {
-    // On écrit d'abord dans le navigateur.
-    // Si l'écriture échoue, on ne confirme pas
-    // à tort une sauvegarde.
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(nextSettings),
-    )
-
-    setSettings({ ...nextSettings })
-  }
-
-  function resetSettings() {
-    localStorage.removeItem(STORAGE_KEY)
-
-    setSettings({ ...DEFAULT_SETTINGS })
-  }
-
-  return (
-    <GeneralSettingsContext.Provider
-      value={{
-        settings,
-        saveSettings,
-        resetSettings,
-      }}
-    >
-      {children}
-    </GeneralSettingsContext.Provider>
-  )
-}
 
 /* =========================================================
    HOOK

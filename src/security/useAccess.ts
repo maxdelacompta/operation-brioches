@@ -1,5 +1,5 @@
 import { useUsers } from '../contexts/UsersContext'
-import { usePermissions } from '../contexts/PermissionsContext'
+import { usePermissions } from '../contexts/permissionsState'
 import { canAccessPath } from './accessPolicy'
 
 export function useAccess() {

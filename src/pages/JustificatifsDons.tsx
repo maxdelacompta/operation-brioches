@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -354,7 +355,17 @@ function JustificatifsDons() {
   ), [commandesOb, donateursOb, fichesCaisse, justificatifs, campagneActive])
   const demandesManquantes = demandes.filter(d => !d.existant)
 
-  function preparerDepuisCommande(id: string) {
+  const [modalMode, setModalMode] = useState<
+    'create' | 'edit' | null
+  >(null)
+  const [editing, setEditing] = useState<JustificatifDon | null>(
+    null,
+  )
+  const [detail, setDetail] = useState<JustificatifDon | null>(
+    null,
+  )
+
+  const preparerDepuisCommande = useCallback((id: string) => {
     const commande = commandesOb.find(c => String(c.id) === id)
     if (!commande) return
     const existant = justificatifs.find(j => j.type === 'JDI' &&
@@ -368,29 +379,37 @@ function JustificatifsDons() {
     setTypeInitial('JDI')
     setEditing(null)
     setModalMode('create')
-  }
+  }, [
+    commandesOb,
+    justificatifs,
+    setDetail,
+    setCommandeInitiale,
+    setTypeInitial,
+    setEditing,
+    setModalMode,
+  ])
 
   useEffect(() => {
     const id = searchParams.get('commande')
-    if (!id) return
-    const commande = commandesOb.find(c => String(c.id) === id)
-    if (!commande) return
-    preparerDepuisCommande(id)
-    setSearchParams(old => {
-      const next = new URLSearchParams(old)
-      next.delete('commande')
-      return next
-    }, { replace: true })
-  // on traite une unique navigation d'entrée ; les changements des justificatifs ne rouvrent pas le formulaire
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, commandesOb, setSearchParams])
+    if (!id || !commandesOb.some(c => String(c.id) === id)) return
+    const frame = window.requestAnimationFrame(() => {
+      preparerDepuisCommande(id)
+      setSearchParams(old => {
+        const next = new URLSearchParams(old)
+        next.delete('commande')
+        return next
+      }, { replace: true })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  // Navigation d'entrée unique : après le traitement, le paramètre disparaît de l'URL.
+  }, [searchParams, commandesOb, setSearchParams, preparerDepuisCommande])
 
   function demanderInfosChorus(demande: DemandeJustificatif) {
     const mail = composerDemandeChorus(demande.commande, demande.donateur)
     setMessageChorus(`Objet : ${mail.objet}\n\n${mail.corps}`)
     const params = `subject=${encodeURIComponent(mail.objet)}&body=${encodeURIComponent(mail.corps)}`
     // Ouverture du client mail : aucune transmission automatique.
-    window.location.href = `mailto:${encodeURIComponent(mail.destinataire)}?${params}`
+    window.location.assign(`mailto:${encodeURIComponent(mail.destinataire)}?${params}`)
   }
 
   const [activeTab, setActiveTab] = useState<MainTab>('ALL')
@@ -401,15 +420,6 @@ function JustificatifsDons() {
   const [pageSize, setPageSize] = useState<PageSize>(20)
   const [currentPage, setCurrentPage] = useState(1)
 
-  const [modalMode, setModalMode] = useState<
-    'create' | 'edit' | null
-  >(null)
-  const [editing, setEditing] = useState<JustificatifDon | null>(
-    null,
-  )
-  const [detail, setDetail] = useState<JustificatifDon | null>(
-    null,
-  )
   const [moreId, setMoreId] = useState<string | null>(null)
   const [chorusIssue, setChorusIssue] = useState<{
     item: JustificatifDon
@@ -504,29 +514,14 @@ function JustificatifsDons() {
     statusFilter,
   ])
 
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [
-    activeTab,
-    campaignFilter,
-    statusFilter,
-    periodFilter,
-    pageSize,
-    search,
-  ])
-
   const totalPages = Math.max(
     1,
     Math.ceil(filtered.length / pageSize),
   )
 
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
-    }
-  }, [currentPage, totalPages])
-
-  const firstIndex = (currentPage - 1) * pageSize
+  // L'index affiché reste valide même si une autre action réduit la liste.
+  const safePage = Math.min(currentPage, totalPages)
+  const firstIndex = (safePage - 1) * pageSize
   const visibleRows = filtered.slice(
     firstIndex,
     firstIndex + pageSize,
@@ -544,21 +539,21 @@ function JustificatifsDons() {
 
     values.push(1)
 
-    if (currentPage > 4) values.push('ellipsis')
+    if (safePage > 4) values.push('ellipsis')
 
-    const start = Math.max(2, currentPage - 1)
-    const end = Math.min(totalPages - 1, currentPage + 1)
+    const start = Math.max(2, safePage - 1)
+    const end = Math.min(totalPages - 1, safePage + 1)
 
     for (let page = start; page <= end; page += 1) {
       values.push(page)
     }
 
-    if (currentPage < totalPages - 3) values.push('ellipsis')
+    if (safePage < totalPages - 3) values.push('ellipsis')
 
     values.push(totalPages)
 
     return values
-  }, [currentPage, totalPages])
+  }, [safePage, totalPages])
 
   const kpis = useMemo(() => {
     const jdiWaiting = justificatifs.filter(
@@ -747,25 +742,25 @@ function JustificatifsDons() {
       <div className="jd-tabs" role="tablist">
         <TabButton
           active={activeTab === 'ALL'}
-          onClick={() => setActiveTab('ALL')}
+          onClick={() => { setActiveTab('ALL'); setCurrentPage(1) }}
         >
           Ensemble des JD
         </TabButton>
         <TabButton
           active={activeTab === 'JDI'}
-          onClick={() => setActiveTab('JDI')}
+          onClick={() => { setActiveTab('JDI'); setCurrentPage(1) }}
         >
           JDI
         </TabButton>
         <TabButton
           active={activeTab === 'JDP'}
-          onClick={() => setActiveTab('JDP')}
+          onClick={() => { setActiveTab('JDP'); setCurrentPage(1) }}
         >
           JDP
         </TabButton>
         <TabButton
           active={activeTab === 'TODO'}
-          onClick={() => setActiveTab('TODO')}
+          onClick={() => { setActiveTab('TODO'); setCurrentPage(1) }}
         >
           <Clock3 size={16} /> JD à créer ({demandesManquantes.length})
         </TabButton>
@@ -855,16 +850,17 @@ function JustificatifsDons() {
             <Search size={19} />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => { setSearch(event.target.value); setCurrentPage(1) }}
               placeholder="Rechercher un justificatif, un donateur, une commande..."
             />
           </div>
 
           <select
             value={campaignFilter}
-            onChange={(event) =>
+            onChange={(event) => {
               setCampaignFilter(event.target.value)
-            }
+              setCurrentPage(1)
+            }}
             className="jd-select"
             aria-label="Filtrer par campagne"
           >
@@ -878,7 +874,7 @@ function JustificatifsDons() {
 
           <select
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}
             className="jd-select"
             aria-label="Filtrer par statut"
           >
@@ -893,7 +889,7 @@ function JustificatifsDons() {
 
           <select
             value={periodFilter}
-            onChange={(event) => setPeriodFilter(event.target.value)}
+            onChange={(event) => { setPeriodFilter(event.target.value); setCurrentPage(1) }}
             className="jd-select"
             aria-label="Filtrer par période"
           >
@@ -1061,9 +1057,10 @@ function JustificatifsDons() {
             <span>Afficher</span>
             <select
               value={pageSize}
-              onChange={(event) =>
+              onChange={(event) => {
                 setPageSize(Number(event.target.value) as PageSize)
-              }
+                setCurrentPage(1)
+              }}
             >
               <option value={20}>20</option>
               <option value={50}>50</option>
@@ -1082,9 +1079,9 @@ function JustificatifsDons() {
           <div className="jd-pagination-buttons">
             <button
               type="button"
-              disabled={currentPage === 1}
+              disabled={safePage === 1}
               onClick={() =>
-                setCurrentPage((page) => Math.max(1, page - 1))
+                setCurrentPage(Math.max(1, safePage - 1))
               }
               aria-label="Page précédente"
             >
@@ -1104,7 +1101,7 @@ function JustificatifsDons() {
                   key={value}
                   type="button"
                   className={
-                    currentPage === value ? 'active' : undefined
+                    safePage === value ? 'active' : undefined
                   }
                   onClick={() => setCurrentPage(value)}
                 >
@@ -1115,11 +1112,9 @@ function JustificatifsDons() {
 
             <button
               type="button"
-              disabled={currentPage === totalPages}
+              disabled={safePage === totalPages}
               onClick={() =>
-                setCurrentPage((page) =>
-                  Math.min(totalPages, page + 1),
-                )
+                setCurrentPage(Math.min(totalPages, safePage + 1))
               }
               aria-label="Page suivante"
             >

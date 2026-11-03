@@ -37,13 +37,13 @@ const SUPPORT_PHONE_LINK = 'tel:+33383443065'
 
 const TEAMS_SUPPORT_URL = 'https://teams.microsoft.com/l/meetup-join/19%3ameeting_NzBiNGIwZDgtMjRhNi00MDI5LTg1YjctNDkxMGZiYWM0OGRi%40thread.v2/0?context=%7b%22Tid%22%3a%225870ff96-e2fc-4628-9f0a-9f5e80294a62%22%2c%22Oid%22%3a%224c8f8dc4-0f92-4ee4-90b4-fd87c473d6c9%22%7d'
 function SheetQR({ value, label }: { value: string; label: string }) {
-  const [src, setSrc] = useState('')
+  const [qrResult, setQrResult] = useState({ value: '', src: '' })
+  const src = qrResult.value === value ? qrResult.src : ''
   useEffect(() => {
     let alive = true
-    setSrc('')
     if (value) void QRCode.toDataURL(value, { width: 240, margin: 2, errorCorrectionLevel: 'M' })
-      .then(uri => { if (alive) setSrc(uri) })
-      .catch(() => { if (alive) setSrc('') })
+      .then(uri => { if (alive) setQrResult({ value, src: uri }) })
+      .catch(() => { if (alive) setQrResult({ value, src: '' }) })
     return () => { alive = false }
   }, [value])
   return <div className="ob-feuille-qr-box">

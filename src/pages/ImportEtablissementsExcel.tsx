@@ -36,7 +36,7 @@ const cellText = (value:unknown):string => {
     const o = value as Record<string,unknown>
     if ('result' in o) return cellText(o.result)
     if ('text' in o) return cellText(o.text)
-    if (Array.isArray(o.richText)) return o.richText.map((p:any)=>cellText(p.text)).join('')
+    if (Array.isArray(o.richText)) return o.richText.map((p: { text?: unknown })=>cellText(p.text)).join('')
   }
   return ''
 }
@@ -78,7 +78,7 @@ export default function ImportEtablissementsExcel({onClose}:{onClose:()=>void}) 
     try {
       const ExcelJS=(await import('exceljs')).default
       const book=new ExcelJS.Workbook()
-      await book.xlsx.load(await file.arrayBuffer() as any)
+      await book.xlsx.load(await file.arrayBuffer() as Parameters<typeof book.xlsx.load>[0])
       const sheet=book.worksheets[0]
       if (!sheet || sheet.rowCount<2) throw new Error('Feuille vide ou sans données.')
       const header=sheet.getRow(1)
@@ -111,20 +111,20 @@ export default function ImportEtablissementsExcel({onClose}:{onClose:()=>void}) 
           if(BOOL_FIELDS.has(field)){
             const parsed=parseBoolean(value)
             if(parsed===null){invalid=`Valeur Oui/Non incorrecte : ${LABELS[field]}`;break}
-            ;(changes as any)[field]=parsed
+            ;(changes as Record<string, unknown>)[field]=parsed
           } else if(field==='type') {
             if(!TYPES.has(value.toUpperCase())){invalid=`Type inconnu : ${value}`;break}
             changes.type=value.toUpperCase() as NouvelEtablissementAEIM['type']
           } else if(field==='statut') {
             if(!['ACTIF','INACTIF'].includes(value.toUpperCase())){invalid='Statut attendu : ACTIF ou INACTIF';break}
             changes.statut=value.toUpperCase() as NouvelEtablissementAEIM['statut']
-          } else (changes as any)[field]=value
+          } else (changes as Record<string, unknown>)[field]=value
         }
         if(invalid){row.reason=invalid;imported.push(row);return}
         row.changes=changes;row.original=original
         if(!original)row.status='creation'
         else {
-          const difference=Object.entries(changes).some(([k,v])=>String((original as any)[k])!==String(v))
+          const difference=Object.entries(changes).some(([k,v])=>String((original as unknown as Record<string, unknown>)[k])!==String(v))
           row.status=difference?'modification':'inchange'
         }
         row.reason=row.status==='creation'?'Nouvel établissement':row.status==='modification'?'Mise à jour par code':'Aucun changement'

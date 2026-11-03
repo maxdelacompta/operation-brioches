@@ -33,14 +33,14 @@ export default function GestionMonEquipe() {
   const [filter, setFilter] = useState('tous')
   const [error, setError] = useState('')
   useEffect(() => { try {localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))} catch { /* browser storage unavailable */ } }, [tasks])
-  useEffect(() => { if (!members.some(m => m.id === assigneeId)) setAssigneeId('') }, [members,assigneeId])
+  const validAssigneeId = members.some(m => m.id === assigneeId) ? assigneeId : ''
   const teamTasks = tasks.filter(t => t.pole === pole)
   const displayed = teamTasks.filter(t => filter === 'tous' || t.assigneeId === filter)
   function createTask(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!isManager || !currentUser || !pole) return
-    if (!title.trim() || !members.some(u=>u.id === assigneeId)) {setError('Indique une alerte et un membre de ton équipe.'); return}
-    setTasks(old => [{id:crypto.randomUUID(), pole, authorId:currentUser.id, assigneeId, title:title.trim(), description:description.trim(), priority, status:'a_faire', createdAt:new Date().toISOString()},...old])
+    if (!title.trim() || !members.some(u=>u.id === validAssigneeId)) {setError('Indique une alerte et un membre de ton équipe.'); return}
+    setTasks(old => [{id:crypto.randomUUID(), pole, authorId:currentUser.id, assigneeId:validAssigneeId, title:title.trim(), description:description.trim(), priority, status:'a_faire', createdAt:new Date().toISOString()},...old])
     setTitle('');setDescription('');setPriority('normale');setError('')
   }
   function updateTask(id:string, change:Partial<Pick<TeamTask,'assigneeId'|'priority'|'status'>>) {
@@ -59,7 +59,7 @@ export default function GestionMonEquipe() {
       <section className="ob-team-panel"><h3><Plus size={18}/> Créer une alerte pour l’équipe</h3>
         <form onSubmit={createTask} className="ob-team-form">
           <label>Objet de l’alerte<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex. Vérifier les stands sans bénévole" maxLength={160} required/></label>
-          <label>Attribuer à<select value={assigneeId} onChange={e=>setAssigneeId(e.target.value)} required><option value="">Choisir un membre</option>{members.map(u=><option key={u.id} value={u.id}>{getUserDisplayName(u)}</option>)}</select></label>
+          <label>Attribuer à<select value={validAssigneeId} onChange={e=>setAssigneeId(e.target.value)} required><option value="">Choisir un membre</option>{members.map(u=><option key={u.id} value={u.id}>{getUserDisplayName(u)}</option>)}</select></label>
           <label>Priorité<select value={priority} onChange={e=>setPriority(e.target.value as Priority)}><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option></select></label>
           <label>Consignes (facultatif)<textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3} placeholder="Informations utiles pour la personne concernée"/></label>
           {error && <p className="ob-team-error" role="alert">{error}</p>}

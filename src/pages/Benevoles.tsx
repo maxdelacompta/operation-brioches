@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Archive, ArrowLeft, Download, Eye, History, Mail, Pencil, Phone, Plus, Search, Users, X } from 'lucide-react'
+import { Archive, ArrowLeft, Download, Eye, History, Mail, Pencil, Phone, Plus, Search, X } from 'lucide-react'
 import './Benevoles.css'
 
 const SECTEURS = ['Lunéville', 'Baccarat', 'Briey', 'Toul', 'Liverdun', 'Vosges', 'Autres'] as const

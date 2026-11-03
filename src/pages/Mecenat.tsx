@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { Download, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import './TableauxComplementaires.css'
 
-type Column = { key: string; label: string; kind?: 'number' | 'date' | 'select' | 'textarea'; options?: string[] }
 type RecordRow = { id: string; [field: string]: string }
 const config = {
     title: 'Mécénat', intro: 'Référentiel des contributions en nature, financières et en compétences. Liaison aux donateurs et aux justificatifs à venir.', key: 'ob-mecenat-table-v1',
@@ -33,7 +32,7 @@ export default function Mecenat() {
   const [rows, setRows] = useState<RecordRow[]>(() => readRows(config.key))
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<RecordRow | null>(null)
-  const filtered = useMemo(() => rows.filter(row => config.columns.some(col => (row[col.key] ?? '').toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr')))), [rows, search, config])
+  const filtered = useMemo(() => rows.filter(row => config.columns.some(col => (row[col.key] ?? '').toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr')))), [rows, search])
 
   const persist = (value: RecordRow[]) => {
     try { localStorage.setItem(config.key, JSON.stringify(value)); setRows(value) }

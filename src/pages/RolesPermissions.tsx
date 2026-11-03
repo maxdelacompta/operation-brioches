@@ -55,7 +55,7 @@ import {
   usePermissions,
   type PermissionAction,
   type PermissionModule,
-} from '../contexts/PermissionsContext'
+} from '../contexts/permissionsState'
 
 /* =========================================================
    JOURNAL D'ACTIVITÉ
@@ -129,7 +129,7 @@ const moduleIcons: Partial<Record<PermissionModule, LucideIcon>> = {
   etablissement: Building2,
   stock_brioches: Building2,
   suivi_brioches: ShoppingCart,
-  recap_brioches: BarChart3,
+  recap_etablissements: BarChart3,
   bdd: Database,
   donateurs: Users,
   administration: Settings,

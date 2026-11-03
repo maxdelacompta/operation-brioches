@@ -27,9 +27,12 @@ import {
 import {
   useObData,
 } from '../contexts/ObDataContext'
+import { useJustificatifs } from '../contexts/JustificatifsContext'
+import type { JustificatifDon } from '../types/justificatifs'
 
 import type {
   Commande,
+  FicheCaisse,
   Donateur,
   StatutCommande,
 } from '../types/ob'
@@ -54,6 +57,7 @@ type EntrepriseSuivi = {
   montantLivre: number
   progression: number
   statut: SuiviStatut
+  paiement: 'PAYEE' | 'PARTIELLE' | 'A_CONFIRMER'
   derniereCommande: string
 }
 
@@ -142,6 +146,79 @@ function statutCommandeLabel(
   return labels[statut]
 }
 
+/** Le paiement est rapproché des fiches de caisse de la même campagne.
+ * Ne jamais attribuer une fiche à plusieurs commandes d'un même donateur.
+ */
+type EtatPaiement = 'PAYEE' | 'PARTIELLE' | 'A_CONFIRMER'
+type RapprochementPaiement = { etat: EtatPaiement; montantEncaisse: number; fiches: string[] }
+
+const campagneAnnee = (value: unknown) => String(value ?? '').match(/20\d{2}/)?.[0] ?? normalize(value)
+const montant = (value: unknown) => Math.max(0, Number(value) || 0)
+
+function totalEncaisseFiche(fiche: FicheCaisse): number {
+  const billets = montant(fiche.billets100) * 100 + montant(fiche.billets50) * 50 +
+    montant(fiche.billets20) * 20 + montant(fiche.billets10) * 10 + montant(fiche.billets5) * 5
+  const pieces = montant(fiche.pieces2) * 2 + montant(fiche.pieces1) +
+    montant(fiche.pieces050) * .5 + montant(fiche.pieces020) * .2 + montant(fiche.pieces010) * .1 +
+    montant(fiche.pieces005) * .05 + montant(fiche.pieces002) * .02 + montant(fiche.pieces001) * .01
+  // Les dons de 3/5 euros et autres dons ne règlent pas une commande de brioches.
+  return Math.round((billets + pieces + montant(fiche.montantCheques) +
+    montant(fiche.montantTpe) + montant(fiche.montantVirement)) * 100) / 100
+}
+
+function rapprocherPaiements(
+  commandes: Commande[],
+  fiches: FicheCaisse[],
+  justificatifs: JustificatifDon[],
+): Map<number, RapprochementPaiement> {
+  const actives = commandes.filter(c => c.statut !== 'ANNULEE')
+  const byDonateur = new Map<string, Commande[]>()
+  for (const commande of actives) {
+    const key = `${campagneAnnee(commande.campagne)}:${commande.donateurId}`
+    byDonateur.set(key, [...(byDonateur.get(key) ?? []), commande])
+  }
+  const encaissements = new Map<number, { montantEncaisse: number; fiches: string[] }>()
+  for (const fiche of fiches) {
+    if (fiche.type !== 'ENTREPRISE') continue
+    const montantFiche = totalEncaisseFiche(fiche)
+    if (montantFiche <= 0) continue
+    const annee = campagneAnnee(fiche.campagne)
+    let commande: Commande | undefined
+    if (fiche.commandeId != null) {
+      commande = actives.find(c => c.id === Number(fiche.commandeId) && campagneAnnee(c.campagne) === annee)
+    } else if (fiche.donateurId != null) {
+      const candidates = byDonateur.get(`${annee}:${fiche.donateurId}`) ?? []
+      if (candidates.length === 1) commande = candidates[0]
+    }
+    // Fiche sans lien explicite ou donateur ayant plusieurs commandes : à rapprocher manuellement.
+    if (!commande) continue
+    const existing = encaissements.get(commande.id) ?? { montantEncaisse: 0, fiches: [] }
+    encaissements.set(commande.id, {
+      montantEncaisse: Math.round((existing.montantEncaisse + montantFiche) * 100) / 100,
+      fiches: [...existing.fiches, fiche.numero],
+    })
+  }
+  return new Map(actives.map(commande => {
+    const result = encaissements.get(commande.id) ?? { montantEncaisse: 0, fiches: [] }
+    const du = Math.round(montant(commande.quantite) * montant(commande.prixUnitaire) * 100) / 100
+    const paiement = commande as Commande & { paiementStatut?: string; paye?: boolean; paiementConfirme?: boolean }
+    const confirmation = paiement.paiementStatut === 'PAYE' || paiement.paye === true || paiement.paiementConfirme === true ||
+      justificatifs.some(jd => jd.commandeId === String(commande.id) && jd.paiementStatut === 'PAYE' &&
+        jd.statut !== 'ARCHIVE' && jd.statut !== 'ERREUR' &&
+        (!jd.campagne || campagneAnnee(jd.campagne) === campagneAnnee(commande.campagne)))
+    const etat: EtatPaiement = confirmation || (du > 0 && result.montantEncaisse >= du - 0.01)
+      ? 'PAYEE' : result.montantEncaisse > 0 ? 'PARTIELLE' : 'A_CONFIRMER'
+    return [commande.id, { ...result, etat }]
+  }))
+}
+
+function PaiementBadge({ etat }: { etat: EntrepriseSuivi['paiement'] }) {
+  return <span className={`sge-payment sge-payment-${etat.toLowerCase()}`}>
+    {etat === 'PAYEE' ? <CheckCircle2 size={13} /> : <Euro size={13} />}
+    {etat === 'PAYEE' ? 'Payée' : etat === 'PARTIELLE' ? 'Partiellement payée' : 'À confirmer'}
+  </span>
+}
+
 function statutEntreprise(
   commandes: Commande[],
 ): SuiviStatut {
@@ -199,10 +276,12 @@ function csvCell(value: unknown) {
 
 export default function SuiviGlobalEntreprises() {
   const navigate = useNavigate()
+  const { justificatifs } = useJustificatifs()
 
   const {
     donateurs,
     commandes,
+    fichesCaisse,
   } = useObData()
 
   const campagnes = useMemo(
@@ -272,6 +351,11 @@ export default function SuiviGlobalEntreprises() {
         campagneFilter,
       ],
     )
+
+  const paiementsParCommande = useMemo(
+    () => rapprocherPaiements(commandes, fichesCaisse, justificatifs),
+    [commandes, fichesCaisse, justificatifs],
+  )
 
   const suivis = useMemo<
     EntrepriseSuivi[]
@@ -402,7 +486,17 @@ export default function SuiviGlobalEntreprises() {
               .filter(Boolean)
               .sort()
 
+          const nbPayees = actives.filter(commande => paiementsParCommande.get(commande.id)?.etat === 'PAYEE').length
+          const aUnReglement = actives.some(commande => {
+            const etat = paiementsParCommande.get(commande.id)?.etat
+            return etat === 'PAYEE' || etat === 'PARTIELLE'
+          })
+          const paiement: EntrepriseSuivi['paiement'] =
+            actives.length > 0 && nbPayees === actives.length ? 'PAYEE'
+            : aUnReglement ? 'PARTIELLE' : 'A_CONFIRMER'
+
           return {
+            paiement,
             donateur,
             commandes:
               commandesDonateur,
@@ -435,6 +529,7 @@ export default function SuiviGlobalEntreprises() {
   }, [
     commandesCampagne,
     donateurs,
+    paiementsParCommande,
   ])
 
   const villes = useMemo(
@@ -572,6 +667,7 @@ export default function SuiviGlobalEntreprises() {
       'Brioches livrées',
       'Progression',
       'Statut',
+      'Paiement',
       'Dernière commande',
     ]
 
@@ -590,6 +686,7 @@ export default function SuiviGlobalEntreprises() {
         STATUS_LABELS[
           item.statut
         ],
+        item.paiement === 'PAYEE' ? 'Payée' : item.paiement === 'PARTIELLE' ? 'Partiellement payée' : 'À confirmer',
         item.derniereCommande,
       ],
     )
@@ -863,7 +960,8 @@ export default function SuiviGlobalEntreprises() {
                 <th>Brioches</th>
                 <th>Montant</th>
                 <th>Livraison</th>
-                <th>Statut</th>
+                <th>Statut livraison</th>
+                <th>Règlement</th>
                 <th>Dernière commande</th>
                 <th>Action</th>
               </tr>
@@ -984,6 +1082,8 @@ export default function SuiviGlobalEntreprises() {
                         }
                       />
                     </td>
+
+                    <td><PaiementBadge etat={item.paiement} /></td>
 
                     <td>
                       {formatDate(
@@ -1158,6 +1258,7 @@ export default function SuiviGlobalEntreprises() {
                     </h3>
                   </header>
 
+                  <div className="sge-payment-detail"><span>État de paiement</span><PaiementBadge etat={selected.paiement} /></div>
                   <InfoLine
                     label="Mode"
                     value={formatPaymentMethod(
@@ -1272,13 +1373,17 @@ export default function SuiviGlobalEntreprises() {
                             </strong>
                           </div>
 
-                          <span
-                            className={`sge-order-status status-${commande.statut.toLowerCase()}`}
-                          >
-                            {statutCommandeLabel(
-                              commande.statut,
+                          <div className="sge-order-badges">
+                            <span className={`sge-order-status status-${commande.statut.toLowerCase()}`}>
+                              {statutCommandeLabel(commande.statut)}
+                            </span>
+                            <PaiementBadge etat={paiementsParCommande.get(commande.id)?.etat ?? 'A_CONFIRMER'} />
+                            {(paiementsParCommande.get(commande.id)?.fiches.length ?? 0) > 0 && (
+                              <small title={paiementsParCommande.get(commande.id)?.fiches.join(', ')}>
+                                Fiches de caisse : {formatMoney(paiementsParCommande.get(commande.id)?.montantEncaisse ?? 0)}
+                              </small>
                             )}
-                          </span>
+                          </div>
                         </article>
                       ),
                     )}
