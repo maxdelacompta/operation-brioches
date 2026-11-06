@@ -1,4 +1,7 @@
 import { useUsers } from '../contexts/UsersContext'
+import { useObData } from '../contexts/ObDataContext'
+import { isCampaignReadOnly } from '../lib/campaignAccess'
+import CampaignReadOnlyBoundary from '../components/CampaignReadOnlyBoundary'
 import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -10,9 +13,12 @@ import Chat from '../components/Chat'
 import UserTestPanel from '../components/UserTestPanel'
 
 function AppLayout() {
-  const { currentUserId } = useUsers()
+  const { currentUserId, currentUser } = useUsers()
+  const { selectedCampagne, selectedCampagneId } = useObData()
   const { authenticated } = useAuth()
   const location = useLocation()
+  const readOnly = isCampaignReadOnly(selectedCampagne, currentUser?.role, location.pathname)
+  const pageKey = `${currentUserId}:${selectedCampagneId}`
   const [chatOpen, setChatOpen] = useState(false)
 
   const [unreadCount, setUnreadCount] = useState(0)
@@ -39,7 +45,13 @@ function AppLayout() {
           onVisibilityChange={setTopbarVisible}
         />
 
-        <Outlet key={currentUserId} />
+        {readOnly ? (
+          <CampaignReadOnlyBoundary campaignName={selectedCampagne?.nom ?? selectedCampagne?.id ?? ''}>
+            <Outlet key={pageKey} />
+          </CampaignReadOnlyBoundary>
+        ) : (
+          <Outlet key={pageKey} />
+        )}
         <UserTestPanel placement="status" />
 
       </main>

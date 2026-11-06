@@ -22,6 +22,7 @@ import {
   FileText,
   Mail,
   MoreHorizontal,
+  ListChecks,
   Pencil,
   Plus,
   Search,
@@ -29,8 +30,11 @@ import {
   X,
 } from 'lucide-react'
 
+import JustificatifsImportButton from '../components/JustificatifsImportButton'
 import { useJustificatifs } from '../contexts/JustificatifsContext'
 import { useObData } from '../contexts/ObDataContext'
+import { useUsers } from '../contexts/UsersContext'
+import { useCampaignWriteAccess } from '../lib/useCampaignWriteAccess'
 import { useSearchParams } from 'react-router-dom'
 import { calculerDemandesJustificatifs, composerDemandeChorus, type DemandeJustificatif } from '../services/demandesJustificatifs'
 import {
@@ -38,6 +42,7 @@ import {
   PaymentModeMissingError,
   TemplateNotConfiguredError,
   generateAndDownloadJustificatifPdf,
+  generateJustificatifPdf,
 } from '../services/justificatifPdf'
 import {
   getCampagneJustificatifsSettings,
@@ -59,7 +64,10 @@ import type {
   PaiementStatut,
 } from '../types/justificatifs'
 
+import { createJustificatifEml, downloadJustificatifEml, prepareJustificatifEmail, type JustificatifEmailDraft } from '../services/justificatifEmail'
+import { microsoftMailConfigured, readMailWorkflow, saveMailWorkflow, sendViaAeimMicrosoftMail, validateMailDraft, type MailWorkflowEntry } from '../services/justificatifMailWorkflow'
 import './JustificatifsDons.css'
+import './JustificatifsEmail.css'
 
 type MainTab = 'ALL' | 'TODO' | JustificatifType
 type PageSize = 20 | 50 | 100
@@ -331,7 +339,21 @@ function downloadText(
 }
 
 
+/** Rattachement des justificatifs à la campagne sélectionnée dans la Topbar.
+ * Les anciens codes OB2025 / OB 2025 / 2025 sont équivalents ;
+ * un identifiant TEST-2025 ou une autre campagne ne l'est pas.
+ */
+function memeCampagne(justificatifCampagne: string, selection: string): boolean {
+  const normaliser = (value: string) => {
+    const code = String(value || '').trim().toUpperCase().replace(/[\s_-]+/g, '')
+    return /^(?:OB)?(?:19|20)\d{2}$/.test(code) ? `OB${code.replace(/^OB/, '')}` : code
+  }
+  return Boolean(selection && justificatifCampagne) && normaliser(justificatifCampagne) === normaliser(selection)
+}
+
 function JustificatifsDons() {
+  const { currentUser } = useUsers()
+  const canWriteCampaign = useCampaignWriteAccess()
   const donneesOb = useObData() as ReturnType<typeof useObData> & { selectedCampagne?: {id:string}|null }
   const { commandes: commandesOb, donateurs: donateursOb, fichesCaisse } = donneesOb
   const campagneActive = donneesOb.selectedCampagne?.id ?? donneesOb.activeCampagne?.id ?? ''
@@ -348,6 +370,13 @@ function JustificatifsDons() {
     archiveJustificatif,
     convertJdiToJdp,
   } = useJustificatifs()
+
+  // Source unique pour le tableau, les compteurs, les exports et les e-mails.
+  // Aucune donnée d'une autre campagne n'est additionnée à l'écran.
+  const justificatifsCampagne = useMemo(
+    () => justificatifs.filter(item => memeCampagne(item.campagne, campagneActive)),
+    [justificatifs, campagneActive],
+  )
 
   const demandes = useMemo(() => calculerDemandesJustificatifs(
     commandesOb, donateursOb, fichesCaisse, justificatifs, campagneActive,
@@ -367,8 +396,8 @@ function JustificatifsDons() {
 
   const preparerDepuisCommande = useCallback((id: string) => {
     const commande = commandesOb.find(c => String(c.id) === id)
-    if (!commande) return
-    const existant = justificatifs.find(j => j.type === 'JDI' &&
+    if (!commande || !memeCampagne(commande.campagne, campagneActive)) return
+    const existant = justificatifsCampagne.find(j => j.type === 'JDI' &&
       (j.commandeId === id || j.commandeNumero === commande.numero) &&
       (j.campagne === commande.campagne || j.campagne.match(/(?:19|20)\d{2}/)?.[0] === commande.campagne.match(/(?:19|20)\d{2}/)?.[0]))
     if (existant) {
@@ -381,7 +410,8 @@ function JustificatifsDons() {
     setModalMode('create')
   }, [
     commandesOb,
-    justificatifs,
+    justificatifsCampagne,
+    campagneActive,
     setDetail,
     setCommandeInitiale,
     setTypeInitial,
@@ -391,7 +421,7 @@ function JustificatifsDons() {
 
   useEffect(() => {
     const id = searchParams.get('commande')
-    if (!id || !commandesOb.some(c => String(c.id) === id)) return
+    if (!id || !commandesOb.some(c => String(c.id) === id && memeCampagne(c.campagne, campagneActive))) return
     const frame = window.requestAnimationFrame(() => {
       preparerDepuisCommande(id)
       setSearchParams(old => {
@@ -402,7 +432,7 @@ function JustificatifsDons() {
     })
     return () => window.cancelAnimationFrame(frame)
   // Navigation d'entrée unique : après le traitement, le paramètre disparaît de l'URL.
-  }, [searchParams, commandesOb, setSearchParams, preparerDepuisCommande])
+  }, [searchParams, commandesOb, campagneActive, setSearchParams, preparerDepuisCommande])
 
   function demanderInfosChorus(demande: DemandeJustificatif) {
     const mail = composerDemandeChorus(demande.commande, demande.donateur)
@@ -414,11 +444,13 @@ function JustificatifsDons() {
 
   const [activeTab, setActiveTab] = useState<MainTab>('ALL')
   const [search, setSearch] = useState('')
-  const [campaignFilter, setCampaignFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [periodFilter, setPeriodFilter] = useState('ALL')
   const [pageSize, setPageSize] = useState<PageSize>(20)
-  const [currentPage, setCurrentPage] = useState(1)
+  // Au changement de campagne, repartir sur la première page sans effet React.
+  const [pageState, setPageState] = useState({ campagne: campagneActive, page: 1 })
+  const currentPage = pageState.campagne === campagneActive ? pageState.page : 1
+  const setCurrentPage = (page: number) => setPageState({ campagne: campagneActive, page })
 
   const [moreId, setMoreId] = useState<string | null>(null)
   const [chorusIssue, setChorusIssue] = useState<{
@@ -433,29 +465,153 @@ function JustificatifsDons() {
     body: string
     itemId: string
   } | null>(null)
+  const [justificatifEmail, setJustificatifEmail] = useState<JustificatifEmailDraft | null>(null)
+  const [preparingEmail, setPreparingEmail] = useState(false)
+  const [emailError, setEmailError] = useState('')
+  const [mailHistory, setMailHistory] = useState<MailWorkflowEntry[]>(readMailWorkflow)
+  const mailHistoryCampagne = useMemo(
+    () => mailHistory.filter(entry => memeCampagne(entry.campagne, campagneActive)),
+    [mailHistory, campagneActive],
+  )
+  const [mailSelection, setMailSelection] = useState<string[]>([])
+  const [mailBatchOpen, setMailBatchOpen] = useState(false)
+  const [mailBatchBusy, setMailBatchBusy] = useState(false)
+  const [mailBatchReport, setMailBatchReport] = useState('')
 
-  const campaigns = useMemo(() => {
-    const values: string[] = Array.from(
-      new Set<string>(justificatifs.map((item) => item.campagne)),
-    ).sort((a, b) => b.localeCompare(a, 'fr'))
+  function trackMail(item: JustificatifDon, draft: JustificatifEmailDraft, status: MailWorkflowEntry['status'], error?: string, messageId?: string) {
+    saveMailWorkflow({
+      itemId: item.id, numero: item.numero, campagne: item.campagne,
+      to: draft.to.trim(), subject: draft.subject, body: draft.body,
+      status, at: new Date().toISOString(),
+      by: currentUser?.name ?? 'Session locale', error, messageId,
+    })
+    setMailHistory(readMailWorkflow())
+  }
 
-    return values
-  }, [justificatifs])
+  function saveMailDraft() {
+    if (!justificatifEmail) return
+    const item = justificatifs.find(j => j.id === justificatifEmail.itemId)
+    if (!item || !memeCampagne(item.campagne, campagneActive)) {
+      setEmailError('Le justificatif ne correspond pas à la campagne sélectionnée.')
+      return
+    }
+    const error = validateMailDraft(justificatifEmail)
+    if (error) { setEmailError(error); return }
+    trackMail(item, justificatifEmail, 'BROUILLON')
+    setEmailError('')
+    setJustificatifEmail(null)
+  }
+
+  async function sendSingleMail() {
+    if (!justificatifEmail || preparingEmail || !microsoftMailConfigured || !canWriteCampaign) return
+    const item = justificatifs.find(j => j.id === justificatifEmail.itemId)
+    if (!item || !memeCampagne(item.campagne, campagneActive)) {
+      setEmailError('Le justificatif ne correspond pas à la campagne sélectionnée.')
+      return
+    }
+    const error = validateMailDraft(justificatifEmail)
+    if (error) { setEmailError(error); return }
+    if (item.documentStatut === 'ENVOYE' || mailHistory.some(e => e.itemId === item.id && e.status === 'ACCEPTE_MICROSOFT')) {
+      if (!window.confirm(`Le justificatif ${item.numero} est déjà signalé comme envoyé. Confirmer un nouvel envoi ?`)) return
+    }
+    if (!window.confirm(`Confirmer l'envoi via Microsoft 365 à ${justificatifEmail.to} avec le PDF ${item.numero} ?`)) return
+    setPreparingEmail(true)
+    setEmailError('')
+    try {
+      const pdf = await generateJustificatifPdf(item)
+      const result = await sendViaAeimMicrosoftMail(justificatifEmail, pdf.blob, pdf.filename)
+      trackMail(item, justificatifEmail, 'ACCEPTE_MICROSOFT', undefined, result.messageId)
+      markSent(item.id)
+      setJustificatifEmail(null)
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Envoi impossible.'
+      setEmailError(message)
+      trackMail(item, justificatifEmail, 'ERREUR', message)
+    } finally { setPreparingEmail(false) }
+  }
+
+  const eligibleForMail = (item: JustificatifDon) => canWriteCampaign &&
+    memeCampagne(item.campagne, campagneActive) &&
+    item.documentStatut !== 'ENVOYE' &&
+    item.statut !== 'ARCHIVE' &&
+    !mailHistory.some(e => e.itemId === item.id && e.status === 'ACCEPTE_MICROSOFT')
+
+  const selectedMailItems = justificatifsCampagne.filter(item => mailSelection.includes(item.id) && eligibleForMail(item))
+
+  async function sendBatchMail() {
+    if (!microsoftMailConfigured || !canWriteCampaign || mailBatchBusy || selectedMailItems.length === 0) return
+    const batch = selectedMailItems.map(item => ({ item, draft: draftForItem(item) }))
+    const invalid = batch.find(({ draft }) => validateMailDraft(draft))
+    if (invalid) { setMailBatchReport(`Vérifier ${invalid.item.numero} : ${validateMailDraft(invalid.draft)}`); return }
+    if (!window.confirm(`Confirmer l'envoi de ${batch.length} justificatif(s) via Microsoft 365 ? Chaque destinataire a son propre PDF.`)) return
+    setMailBatchBusy(true)
+    let successes = 0
+    const errors: string[] = []
+    for (const { item, draft } of batch) {
+      try {
+        const pdf = await generateJustificatifPdf(item)
+        const result = await sendViaAeimMicrosoftMail(draft, pdf.blob, pdf.filename)
+        trackMail(item, draft, 'ACCEPTE_MICROSOFT', undefined, result.messageId)
+        markSent(item.id)
+        successes += 1
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : 'Erreur inconnue'
+        trackMail(item, draft, 'ERREUR', message)
+        errors.push(`${item.numero} : ${message}`)
+      }
+    }
+    setMailBatchBusy(false)
+    setMailSelection(current => current.filter(id => !batch.some(e => e.item.id === id)))
+    setMailBatchReport(`${successes} demande(s) acceptée(s) par Microsoft. ${errors.length} échec(s). ${errors.join(' | ')}`)
+  }
+
+  function draftForItem(item: JustificatifDon): JustificatifEmailDraft {
+    const previous = mailHistory.find(e => e.itemId === item.id && e.status === 'BROUILLON')
+    return previous ? { itemId: item.id, to: previous.to, subject: previous.subject, body: previous.body } : prepareJustificatifEmail(item)
+  }
+
+  function openJustificatifEmail(item: JustificatifDon) {
+    setEmailError('')
+    setJustificatifEmail(draftForItem(item))
+    setMoreId(null)
+  }
+
+  async function downloadEmailWithPdf() {
+    if (!justificatifEmail || preparingEmail) return
+    const item = justificatifs.find(value => value.id === justificatifEmail.itemId)
+    if (!item) {
+      setEmailError('Justificatif introuvable. Recharge la page.')
+      return
+    }
+    setPreparingEmail(true)
+    setEmailError('')
+    try {
+      const pdf = await generateJustificatifPdf(item)
+      const eml = await createJustificatifEml(justificatifEmail, pdf.blob, pdf.filename)
+      downloadJustificatifEml(eml, item.numero)
+      if (item.documentStatut === 'A_GENERER' || item.documentStatut === 'ERREUR') {
+        markDocumentGenerated(item.id, {
+          modeleNom: pdf.template.fileName,
+          modeleVersion: pdf.template.version,
+          modeleCampagneId: item.campagne,
+          modeReglementGenere: pdf.donor.modeReglement,
+        })
+      }
+      // Un .eml préparé n'est pas une preuve d'envoi : pas de markSent ici.
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : "Impossible de préparer l'e-mail.")
+    } finally {
+      setPreparingEmail(false)
+    }
+  }
 
   const filtered = useMemo(() => {
     const normalized = search.trim().toLowerCase()
     const now = new Date()
 
-    return [...justificatifs]
+    return [...justificatifsCampagne]
       .filter((item) => {
         if (activeTab !== 'ALL' && item.type !== activeTab) {
-          return false
-        }
-
-        if (
-          campaignFilter !== 'ALL' &&
-          item.campagne !== campaignFilter
-        ) {
           return false
         }
 
@@ -507,8 +663,7 @@ function JustificatifsDons() {
       })
   }, [
     activeTab,
-    campaignFilter,
-    justificatifs,
+    justificatifsCampagne,
     periodFilter,
     search,
     statusFilter,
@@ -556,43 +711,43 @@ function JustificatifsDons() {
   }, [safePage, totalPages])
 
   const kpis = useMemo(() => {
-    const jdiWaiting = justificatifs.filter(
+    const jdiWaiting = justificatifsCampagne.filter(
       (item) =>
         item.type === 'JDI' &&
         item.paiementStatut === 'EN_ATTENTE' &&
         item.statut !== 'ARCHIVE',
     ).length
 
-    const jdpPaid = justificatifs.filter(
+    // JDP = justificatif de don payé : le type fait déjà foi ici.
+    const jdpPaid = justificatifsCampagne.filter(
       (item) =>
         item.type === 'JDP' &&
-        item.paiementStatut === 'PAYE' &&
         item.statut !== 'ARCHIVE',
     ).length
 
-    const errors = justificatifs.filter(
+    const errors = justificatifsCampagne.filter(
       (item) =>
         item.statut === 'ERREUR' ||
         item.documentStatut === 'ERREUR',
     ).length
 
     return {
-      total: justificatifs.length,
+      total: justificatifsCampagne.length,
       jdiWaiting,
       jdpPaid,
       errors,
-      amount: justificatifs.reduce(
+      amount: justificatifsCampagne.reduce(
         (sum, item) => sum + item.montant,
         0,
       ),
-      generated: justificatifs.filter(
+      generated: justificatifsCampagne.filter(
         (item) => item.documentStatut !== 'A_GENERER',
       ).length,
-      sent: justificatifs.filter(
+      sent: justificatifsCampagne.filter(
         (item) => item.documentStatut === 'ENVOYE',
       ).length,
     }
-  }, [justificatifs])
+  }, [justificatifsCampagne])
 
   function openCreate() {
     setCommandeInitiale('')
@@ -706,7 +861,7 @@ function JustificatifsDons() {
 
     downloadText(
       `\uFEFF${csv}`,
-      `justificatifs-dons-${todayInput()}.csv`,
+      `justificatifs-dons-${campagneActive.replace(/[^a-zA-Z0-9-]/g, '-') || 'aucune-campagne'}-${todayInput()}.csv`,
       'text/csv;charset=utf-8',
     )
   }
@@ -729,6 +884,8 @@ function JustificatifsDons() {
           </div>
         </div>
 
+        <div className="jd-header-actions">
+          <JustificatifsImportButton />
         <button
           type="button"
           className="jd-primary-button"
@@ -737,6 +894,7 @@ function JustificatifsDons() {
           <Plus size={19} />
           Nouveau justificatif
         </button>
+        </div>
       </header>
 
       <div className="jd-tabs" role="tablist">
@@ -819,7 +977,7 @@ function JustificatifsDons() {
         />
         <Kpi
           icon={<CheckCircle2 size={26} />}
-          label="JDP payés"
+          label="JDP"
           value={String(kpis.jdpPaid)}
           tone="green"
         />
@@ -830,6 +988,15 @@ function JustificatifsDons() {
           tone="red"
         />
       </section>
+
+      <details className="jd-mail-history">
+        <summary>Suivi des e-mails préparés · {mailHistoryCampagne.filter(entry => entry.status === 'BROUILLON').length} brouillon(s) · {mailHistoryCampagne.filter(entry => entry.status === 'ACCEPTE_MICROSOFT').length} accepté(s) par Microsoft · {mailHistoryCampagne.filter(entry => entry.status === 'ERREUR').length} erreur(s)</summary>
+        <div className="jd-mail-history-inner">
+          <p className="jd-email-help">Historique local des préparations et réponses du serveur. « Accepté » ne garantit pas la réception par le destinataire.</p>
+          {mailHistoryCampagne.length === 0 ? <p>Aucun e-mail préparé pour cette campagne.</p> :
+            <div className="jd-mail-history-list">{mailHistoryCampagne.slice(0, 30).map(entry => <div key={entry.itemId}><strong>{entry.numero}</strong><span>{entry.to}</span><span>{entry.status === 'BROUILLON' ? 'Brouillon' : entry.status === 'ACCEPTE_MICROSOFT' ? 'Accepté par Microsoft' : 'Erreur'}</span><small>{new Date(entry.at).toLocaleString('fr-FR')}</small>{entry.error && <small className="jd-email-error">{entry.error}</small>}</div>)}</div>}
+        </div>
+      </details>
 
       <section className="jd-card">
         <div className="jd-card-title-row">
@@ -856,20 +1023,13 @@ function JustificatifsDons() {
           </div>
 
           <select
-            value={campaignFilter}
-            onChange={(event) => {
-              setCampaignFilter(event.target.value)
-              setCurrentPage(1)
-            }}
+            value={campagneActive}
+            disabled
             className="jd-select"
-            aria-label="Filtrer par campagne"
+            aria-label="Campagne affichée, sélectionnée dans la Topbar"
+            title="Changez de campagne dans la Topbar pour consulter ses justificatifs"
           >
-            <option value="ALL">Toutes les campagnes</option>
-            {campaigns.map((campaign) => (
-              <option key={campaign} value={campaign}>
-                {campaign}
-              </option>
-            ))}
+            <option value={campagneActive}>{campagneActive || 'Aucune campagne'}</option>
           </select>
 
           <select
@@ -909,10 +1069,21 @@ function JustificatifsDons() {
           </button>
         </div>
 
+        <div className="jd-mail-bulkbar">
+          <label><input type="checkbox" checked={visibleRows.length > 0 && visibleRows.filter(eligibleForMail).every(item => mailSelection.includes(item.id)) && visibleRows.some(eligibleForMail)} onChange={e => {
+            const ids = visibleRows.filter(eligibleForMail).map(item => item.id)
+            setMailSelection(current => e.target.checked ? [...new Set([...current, ...ids])] : current.filter(id => !ids.includes(id)))
+          }} /> Sélectionner les justificatifs éligibles de cette page</label>
+          <span>{selectedMailItems.length} sélectionné(s)</span>
+          <button type="button" className="jd-secondary-button" disabled={selectedMailItems.length === 0} onClick={() => { setMailBatchReport(''); setMailBatchOpen(true) }}>
+            <ListChecks size={16}/> Préparer un envoi groupé
+          </button>
+        </div>
         <div className="jd-table-wrap">
           <table className="jd-table">
             <thead>
               <tr>
+                <th aria-label="Sélection e-mail">Mail</th>
                 <th>N° JD</th>
                 <th>Donateur</th>
                 <th>Type</th>
@@ -927,6 +1098,7 @@ function JustificatifsDons() {
             <tbody>
               {visibleRows.map((item) => (
                 <tr key={item.id}>
+                  <td><input type="checkbox" aria-label={`Sélectionner ${item.numero} pour un e-mail`} disabled={!eligibleForMail(item)} checked={mailSelection.includes(item.id) && eligibleForMail(item)} onChange={e => setMailSelection(current => e.target.checked ? [...new Set([...current, item.id])] : current.filter(id => id !== item.id))}/></td>
                   <td className="jd-number">{item.numero}</td>
                   <td>
                     <div className="jd-donor-cell">
@@ -950,7 +1122,11 @@ function JustificatifsDons() {
                     {formatMoney(item.montant)}
                   </td>
                   <td>
-                    <PaymentBadge value={item.paiementStatut} />
+                    {item.type === 'JDP' ? (
+                      <span title="JDP signifie déjà justificatif de don payé">—</span>
+                    ) : (
+                      <PaymentBadge value={item.paiementStatut} />
+                    )}
                   </td>
                   <td>
                     <DocumentBadge value={item.documentStatut} />
@@ -980,6 +1156,14 @@ function JustificatifsDons() {
                         onClick={() => handleGenerate(item)}
                       >
                         <Download size={17} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Préparer l’e-mail avec PDF joint"
+                        aria-label={`Préparer l’e-mail pour ${item.numero}`}
+                        onClick={() => openJustificatifEmail(item)}
+                      >
+                        <Mail size={17} />
                       </button>
                       <div className="jd-more-wrap">
                         <button
@@ -1165,7 +1349,7 @@ function JustificatifsDons() {
           />
           <Reminder
             tone="blue"
-            text={`${justificatifs.filter((item) => item.documentStatut === 'A_GENERER').length} documents à générer`}
+            text={`${justificatifsCampagne.filter((item) => item.documentStatut === 'A_GENERER').length} documents à générer`}
           />
           <Reminder
             tone="red"
@@ -1183,6 +1367,7 @@ function JustificatifsDons() {
           item={editing}
           initialCommandeId={commandeInitiale}
           initialType={typeInitial}
+          campagneSelectionnee={campagneActive}
           onClose={() => {
             setModalMode(null)
             setEditing(null)
@@ -1217,6 +1402,7 @@ function JustificatifsDons() {
             openEdit(item)
           }}
           onGenerate={handleGenerate}
+          onPrepareEmail={(item) => { setDetail(null); openJustificatifEmail(item) }}
           onMarkSent={(item) => {
             markSent(item.id)
           }}
@@ -1286,6 +1472,44 @@ function JustificatifsDons() {
               )
             }
           }}
+        />
+      )}
+
+      {mailBatchOpen && (
+        <div className="jd-modal-overlay" role="presentation">
+          <section className="jd-chorus-modal jd-mail-modal jd-email-ready" role="dialog" aria-modal="true" aria-label="Préparer un envoi groupé">
+            <header className="jd-chorus-header"><div><span>Microsoft 365 · vérification humaine</span><h2>Envoi groupé ({selectedMailItems.length})</h2></div><button type="button" aria-label="Fermer" onClick={() => setMailBatchOpen(false)}><X size={20}/></button></header>
+            <div className="jd-chorus-body">
+              <p className="jd-email-help">Vérifie chaque destinataire. Un justificatif PDF distinct sera attaché à chaque e-mail. Les documents déjà envoyés sont exclus.</p>
+              <div className="jd-mail-batch-list">
+                {selectedMailItems.map(item => {
+                  const draft = draftForItem(item)
+                  const issue = validateMailDraft(draft)
+                  return <div key={item.id} className="jd-mail-batch-row">
+                    <div><strong>{item.numero}</strong><span>{item.donateurNom} · {draft.to || 'E-mail manquant'}</span><small>{draft.subject}</small>{issue && <small className="jd-email-error">{issue}</small>}</div>
+                    <button type="button" className="jd-secondary-button" onClick={() => { setMailBatchOpen(false); openJustificatifEmail(item) }}>Vérifier / modifier</button>
+                  </div>
+                })}
+              </div>
+              {mailBatchReport && <p className="jd-email-help" role="status">{mailBatchReport}</p>}
+              {!microsoftMailConfigured && <p className="jd-email-attachment">Envoi désactivé : le service informatique doit configurer le serveur Microsoft Graph. Aucun e-mail n'est envoyé depuis le navigateur.</p>}
+            </div>
+            <footer className="jd-chorus-actions"><button type="button" className="jd-secondary-button" onClick={() => setMailBatchOpen(false)}>Fermer</button><button type="button" className="jd-primary-button" disabled={!microsoftMailConfigured || !canWriteCampaign || mailBatchBusy || selectedMailItems.length === 0 || selectedMailItems.some(item => validateMailDraft(draftForItem(item)))} onClick={() => void sendBatchMail()}><Send size={17}/>{mailBatchBusy ? 'Envoi en cours…' : 'Confirmer et envoyer via Microsoft 365'}</button></footer>
+          </section>
+        </div>
+      )}
+
+      {justificatifEmail && (
+        <JustificatifEmailModal
+          draft={justificatifEmail}
+          onChange={setJustificatifEmail}
+          onClose={() => setJustificatifEmail(null)}
+          onDownload={() => void downloadEmailWithPdf()}
+          onSaveDraft={saveMailDraft}
+          onSend={() => void sendSingleMail()}
+          microsoftReady={microsoftMailConfigured && canWriteCampaign}
+          loading={preparingEmail}
+          error={emailError}
         />
       )}
 
@@ -1490,6 +1714,63 @@ function ChorusCompletionModal({
           </button>
         </footer>
       </form>
+    </div>
+  )
+}
+
+function JustificatifEmailModal({
+  draft,
+  onChange,
+  onClose,
+  onDownload,
+  onSaveDraft,
+  onSend,
+  microsoftReady,
+  loading,
+  error,
+}: {
+  draft: JustificatifEmailDraft
+  onChange: (value: JustificatifEmailDraft) => void
+  onClose: () => void
+  onDownload: () => void
+  onSaveDraft: () => void
+  onSend: () => void
+  microsoftReady: boolean
+  loading: boolean
+  error: string
+}) {
+  return (
+    <div className="jd-modal-overlay" role="presentation">
+      <section className="jd-chorus-modal jd-mail-modal jd-email-ready" role="dialog" aria-modal="true" aria-label="Préparer l'e-mail du justificatif">
+        <header className="jd-chorus-header">
+          <div><span>Justificatifs de dons · validation humaine</span><h2>Préparer l'envoi du justificatif</h2></div>
+          <button type="button" onClick={onClose} aria-label="Fermer"><X size={20} /></button>
+        </header>
+        <div className="jd-chorus-body">
+          <label className="jd-chorus-field"><span>Destinataire</span>
+            <input type="email" autoComplete="email" placeholder="adresse@exemple.fr" value={draft.to} onChange={e => onChange({ ...draft, to: e.target.value })} />
+          </label>
+          <label className="jd-chorus-field"><span>Objet</span>
+            <input value={draft.subject} onChange={e => onChange({ ...draft, subject: e.target.value })} />
+          </label>
+          <label className="jd-chorus-field"><span>Corps du mail</span>
+            <textarea rows={10} value={draft.body} onChange={e => onChange({ ...draft, body: e.target.value })} />
+          </label>
+          <p className="jd-email-attachment"><FileText size={17}/> Le PDF du justificatif sera joint automatiquement au fichier e-mail.</p>
+          <p className="jd-email-help">Vérifie le destinataire et le message. Tu peux enregistrer un brouillon ou télécharger un fichier .eml avec le PDF. L'envoi direct nécessite la connexion Microsoft 365 du service informatique.</p>{!microsoftReady && <p className="jd-email-attachment">Microsoft 365 non raccordé : le bouton d'envoi direct est désactivé.</p>}
+          {error && <p className="jd-email-error" role="alert">{error}</p>}
+        </div>
+        <footer className="jd-chorus-actions">
+          <button type="button" className="jd-secondary-button" onClick={onClose}>Fermer</button>
+          <button type="button" className="jd-secondary-button" disabled={loading} onClick={onSaveDraft}>Enregistrer le brouillon</button>
+          <button type="button" className="jd-secondary-button" disabled={loading || !draft.to.trim()} onClick={onDownload}>
+            <Mail size={17}/>{loading ? 'Génération du PDF…' : 'Télécharger .eml + PDF'}
+          </button>
+          <button type="button" className="jd-primary-button" disabled={!microsoftReady || loading || Boolean(validateMailDraft(draft))} onClick={onSend} title={!microsoftReady ? 'Connexion Microsoft 365 requise' : 'Envoi après confirmation'}>
+            <Send size={17}/>{loading ? 'Envoi en cours…' : 'Envoyer via Microsoft 365'}
+          </button>
+        </footer>
+      </section>
     </div>
   )
 }
@@ -1704,6 +1985,7 @@ function JustificatifFormModal({
   item,
   initialCommandeId,
   initialType,
+  campagneSelectionnee,
   onClose,
   onCreate,
   onUpdate,
@@ -1712,6 +1994,7 @@ function JustificatifFormModal({
   item: JustificatifDon | null
   initialCommandeId: string
   initialType: JustificatifType
+  campagneSelectionnee: string
   onClose: () => void
   onCreate: (
     input: NouveauJustificatif,
@@ -1736,16 +2019,17 @@ function JustificatifFormModal({
   const [form, setForm] = useState<FormState>(() => {
     if (!item) {
       const active =
-        campagnes.find((campagne) => campagne.statut === 'ACTIVE') ??
+        campagnes.find(campagne => memeCampagne(campagne.id, campagneSelectionnee)) ??
+        campagnes.find(campagne => campagne.statut === 'ACTIVE') ??
         campagnes[0]
 
       const initialCommande = commandes.find(c => c.id === initialCommandeId)
       if (initialCommande) {
         const donateur = donateurs.find(d => d.id === initialCommande.donateurId)
         return {
-          ...createEmptyForm(initialCommande.campagne || active?.id || DEFAULT_CAMPAIGN),
+          ...createEmptyForm(initialCommande.campagne || campagneSelectionnee || active?.id || DEFAULT_CAMPAIGN),
           type: initialType,
-          paiementStatut: 'EN_ATTENTE', // Règlement à vérifier avant d'émettre un JDP.
+          paiementStatut: initialType === 'JDP' ? 'PAYE' : 'EN_ATTENTE',
           commandeId: initialCommande.id,
           donateurId: initialCommande.donateurId || '',
           donateurNom: donateur?.nom || '',
@@ -1759,7 +2043,11 @@ function JustificatifFormModal({
           prixUnitaire: initialCommande.prixUnitaire || 0,
         }
       }
-      return createEmptyForm(active?.id ?? DEFAULT_CAMPAIGN)
+      return {
+        ...createEmptyForm(campagneSelectionnee || active?.id || DEFAULT_CAMPAIGN),
+        type: initialType,
+        paiementStatut: initialType === 'JDP' ? 'PAYE' : 'EN_ATTENTE',
+      }
     }
 
     return {
@@ -1777,7 +2065,9 @@ function JustificatifFormModal({
       nbBrioches: item.nbBrioches,
       prixUnitaire: item.prixUnitaire,
       statut: item.statut,
-      paiementStatut: item.paiementStatut,
+      // Conserver la cohérence des anciens JDP, même si leur ancien statut
+      // de paiement avait été mal renseigné lors d'un import.
+      paiementStatut: item.type === 'JDP' ? 'PAYE' : item.paiementStatut,
       documentStatut: item.documentStatut,
       datePaiement: item.datePaiement || '',
       referencePaiement: item.referencePaiement || '',
@@ -1833,8 +2123,8 @@ function JustificatifFormModal({
 
   const commandesForDonor = commandes.filter(
     (commande) =>
-      !form.donateurId ||
-      commande.donateurId === form.donateurId,
+      memeCampagne(commande.campagne || '', form.campagne) &&
+      (!form.donateurId || commande.donateurId === form.donateurId),
   )
 
   const amount =
@@ -1946,7 +2236,7 @@ function JustificatifFormModal({
       nbBrioches: Number(form.nbBrioches) || 0,
       prixUnitaire: Number(form.prixUnitaire) || 0,
       statut: form.statut,
-      paiementStatut: form.paiementStatut,
+      paiementStatut: form.type === 'JDP' ? 'PAYE' : form.paiementStatut,
       documentStatut: form.documentStatut,
       datePaiement: form.datePaiement || undefined,
       referencePaiement: form.referencePaiement || undefined,
@@ -2019,6 +2309,8 @@ function JustificatifFormModal({
               <FormField label="Campagne">
                 <select
                   value={form.campagne}
+                  disabled={mode === 'create'}
+                  title={mode === 'create' ? 'La campagne est définie dans la Topbar' : undefined}
                   onChange={(event) =>
                     update('campagne', event.target.value)
                   }
@@ -2216,21 +2508,23 @@ function JustificatifFormModal({
                 />
               </FormField>
 
-              <FormField label="Paiement">
-                <select
-                  value={form.paiementStatut}
-                  onChange={(event) =>
-                    update(
-                      'paiementStatut',
-                      event.target.value as PaiementStatut,
-                    )
-                  }
-                >
-                  <option value="EN_ATTENTE">En attente</option>
-                  <option value="PAYE">Payé</option>
-                  <option value="NON_APPLICABLE">Non applicable</option>
-                </select>
-              </FormField>
+              {form.type === 'JDI' && (
+                <FormField label="Paiement">
+                  <select
+                    value={form.paiementStatut}
+                    onChange={(event) =>
+                      update(
+                        'paiementStatut',
+                        event.target.value as PaiementStatut,
+                      )
+                    }
+                  >
+                    <option value="EN_ATTENTE">En attente</option>
+                    <option value="PAYE">Payé</option>
+                    <option value="NON_APPLICABLE">Non applicable</option>
+                  </select>
+                </FormField>
+              )}
 
               <FormField label="Statut">
                 <select
@@ -2389,6 +2683,7 @@ function JustificatifDetailModal({
   onClose,
   onEdit,
   onGenerate,
+  onPrepareEmail,
   onMarkSent,
   onConvert,
 }: {
@@ -2396,6 +2691,7 @@ function JustificatifDetailModal({
   onClose: () => void
   onEdit: (item: JustificatifDon) => void
   onGenerate: (item: JustificatifDon) => void
+  onPrepareEmail: (item: JustificatifDon) => void
   onMarkSent: (item: JustificatifDon) => void
   onConvert: (item: JustificatifDon) => void
 }) {
@@ -2545,10 +2841,12 @@ function JustificatifDetailModal({
 
           {tab === 'paiement' && (
             <DetailCard title="Paiement lié">
-              <InfoLine
-                label="Statut"
-                value={paymentLabel(item.paiementStatut)}
-              />
+              {item.type === 'JDI' && (
+                <InfoLine
+                  label="Statut"
+                  value={paymentLabel(item.paiementStatut)}
+                />
+              )}
               <InfoLine
                 label="Date"
                 value={formatDate(item.datePaiement)}
@@ -2594,6 +2892,9 @@ function JustificatifDetailModal({
           >
             <Download size={17} />
             Générer / imprimer
+          </button>
+          <button type="button" className="jd-primary-button" onClick={() => onPrepareEmail(item)}>
+            <Mail size={17} /> Préparer l’e-mail + PDF
           </button>
           {item.documentStatut !== 'ENVOYE' && (
             <button

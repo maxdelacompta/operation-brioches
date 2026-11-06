@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { ArrowDownToLine, ArrowUpFromLine, BarChart3, Building2, Download, Gift, Search, TrendingUp, AlertTriangle } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { useEtablissements } from '../contexts/EtablissementsContext'
+import { useObData } from '../contexts/ObDataContext'
 import './RecapBrioches.css'
 
 type MovementType = 'reception' | 'sortie' | 'retour' | 'ajustement' | 'transfert'
@@ -36,8 +37,14 @@ function change(m: Movement, id: string) {
 function csvEscape(value: string | number) { return `"${String(value).replace(/"/g,'""')}"` }
 export default function RecapBrioches() {
   const { etablissements } = useEtablissements()
-  const [mouvements, setMouvements] = useState<Movement[]>(readMovements)
-  const [dons, setDons] = useState<Don[]>(readDons)
+  const { selectedCampagne, activeCampagne } = useObData()
+  const annee = (selectedCampagne ?? activeCampagne)?.annee ?? null
+  const [tousMouvements, setMouvements] = useState<Movement[]>(readMovements)
+  const [tousDons, setDons] = useState<Don[]>(readDons)
+  // Données de démonstration : le seul rattachement disponible est la date.
+  // Il serait incorrect de présenter les données 2026 sous une campagne 2025.
+  const mouvements = useMemo(() => annee === null ? [] : tousMouvements.filter(m => m.date.startsWith(String(annee))), [tousMouvements, annee])
+  const dons = useMemo(() => annee === null ? [] : tousDons.filter(d => d.date.startsWith(String(annee))), [tousDons, annee])
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'tous'|'actifs'|'avec-stock'|'sans-stock'>('tous')
   const [dateFrom, setDateFrom] = useState('')
@@ -75,7 +82,7 @@ export default function RecapBrioches() {
   }
   return <main className="rb-page">
     <PageHeader eyebrow="ÉTABLISSEMENTS / RÉCAP GLOBAL" title="Récap global" description="Vue consolidée des stocks et des dons avec contrepartie" illustration />
-    <div className="rb-notice"><AlertTriangle size={18}/><span><strong>Mode démonstration.</strong> Données disponibles uniquement dans ce navigateur. Les dons du module Suivi Brioches ne sont pas encore associés aux établissements ni déduits automatiquement des stocks.</span></div>
+    <div className="rb-notice"><AlertTriangle size={18}/><span><strong>Mode démonstration · {annee ?? 'campagne non datée'}.</strong> Historique approximé par année, sans rattachement comptable explicite à une campagne. Données disponibles uniquement dans ce navigateur. Les dons du module Suivi Brioches ne sont pas encore associés aux établissements ni déduits automatiquement des stocks.</span></div>
     <section className="rb-actions" aria-label="Période et actions">
       <div className="rb-date"><label>Du <input type="date" value={dateFrom} max={dateTo||undefined} onChange={e=>setDateFrom(e.target.value)}/></label><label>Au <input type="date" value={dateTo} min={dateFrom||undefined} onChange={e=>setDateTo(e.target.value)}/></label></div>
       <div className="rb-action-buttons"><button type="button" className="rb-secondary" onClick={refresh}><TrendingUp size={16}/> Actualiser</button><button type="button" className="rb-primary" onClick={exportCSV}><Download size={17}/> Exporter CSV</button></div>

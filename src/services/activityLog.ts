@@ -9,7 +9,7 @@ export const ACTIVITY_STORAGE_KEY =
 export const ACTIVITY_EVENT_NAME =
   'ob-activity-log-updated'
 
-export const MAX_ACTIVITY_ENTRIES = 500
+export const MAX_ACTIVITY_ENTRIES = 2000
 
 /* =========================================================
    CATÉGORIES
@@ -24,6 +24,16 @@ export const ACTIVITY_CATEGORIES = {
   encaissements: 'Encaissements',
   donateurs: 'Donateurs',
   journal: "Journal d'activité",
+  livraisons: 'Livraisons et retraits',
+  stocks: 'Stocks et brioches',
+  stands: 'Stands et compteurs',
+  factures: 'Factures et règlements',
+  mecanat: 'Mécénat',
+  ecarts: 'Pertes et écarts',
+  justificatifs: 'Justificatifs',
+  fournisseurs: 'Fournisseurs et achats',
+  benevoles: 'Bénévoles',
+  mairies: 'Mairies et RS',
 } as const
 
 export type ActivityCategory =
@@ -43,10 +53,14 @@ export const ACTIVITY_ACTIONS = {
   reinitialisation: 'Réinitialisation',
   export: 'Export',
   suppression: 'Suppression',
+  consultation: 'Consultation',
 } as const
 
 export type ActivityAction =
   keyof typeof ACTIVITY_ACTIONS
+
+// Les anciennes traces sans ce champ restent valides.
+export type ActivitySource = 'metier' | 'automatique' | 'diagnostic'
 
 /* =========================================================
    STRUCTURE D'UN ÉVÉNEMENT
@@ -70,6 +84,7 @@ export type ActivityEntry = {
 
   // Description courte, sans donnée sensible.
   message: string
+  source?: ActivitySource
 }
 
 export type NewActivityEntry = Omit<
@@ -116,7 +131,11 @@ function isActivityEntry(
       item.action,
     ) &&
     typeof item.target === 'string' &&
-    typeof item.message === 'string'
+    typeof item.message === 'string' &&
+    (item.source === undefined ||
+      item.source === 'metier' ||
+      item.source === 'automatique' ||
+      item.source === 'diagnostic')
   )
 }
 
@@ -188,6 +207,7 @@ export function recordActivity(
   try {
     const entry: ActivityEntry = {
       ...data,
+      source: data.source ?? 'metier',
 
       id: createActivityId(),
 

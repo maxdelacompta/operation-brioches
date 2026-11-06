@@ -1,1 +1,36 @@
 .ob-extra{padding:20px 24px;color:#092f65}.ob-extra-header{padding:24px;background:linear-gradient(110deg,#fff,#fff2e5);border-radius:18px;margin-bottom:18px}.ob-extra-eyebrow{font-size:11px;font-weight:800;color:#df6c09;letter-spacing:.08em}.ob-extra h1{margin:6px 0;font-size:29px}.ob-extra-header p{margin:0;color:#607da3}.ob-extra-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0}.ob-extra-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d7e3f0;border-radius:12px;padding:0 12px;min-width:220px;flex:1}.ob-extra-search input{border:0;outline:0;min-height:42px;width:100%;color:#092f65}.ob-extra-count{font-size:13px;color:#6782a2}.ob-extra-btn{border:1px solid #d7e3f0;border-radius:10px;min-height:41px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;cursor:pointer}.ob-extra-btn.primary{color:#fff;background:#fa8317;border-color:#fa8317}.ob-extra-btn.secondary{background:#fff;color:#173c70}.ob-extra-tablewrap{overflow:auto;background:#fff;border:1px solid #d7e3f0;border-radius:15px}.ob-extra table{width:100%;border-collapse:collapse;min-width:1050px;text-align:left}.ob-extra th{background:#f4f8fd;font-size:12px;padding:14px 12px;white-space:nowrap}.ob-extra td{padding:14px 12px;border-top:1px solid #e8edf4;font-size:13px;vertical-align:top}.ob-extra-empty{text-align:center;color:#7890a8;padding:35px!important}.ob-extra-actions{display:flex;gap:6px}.ob-extra-actions button,.ob-extra-modalhead button{border:1px solid #d7e3f0;border-radius:8px;background:#fff;color:#194477;padding:7px;cursor:pointer}.ob-extra-note{color:#8b6c43;font-size:12px;margin-top:14px}.ob-extra-overlay{position:fixed;inset:0;z-index:9999;background:#07192c70;display:flex;align-items:center;justify-content:center;padding:15px}.ob-extra-modal{background:#fff;border-radius:16px;max-width:800px;width:100%;max-height:90vh;overflow:auto;padding:22px}.ob-extra-modalhead{display:flex;align-items:center;justify-content:space-between;gap:15px}.ob-extra-modalhead h2{font-size:20px}.ob-extra-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.ob-extra-form label{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:700}.ob-extra-form input,.ob-extra-form select{padding:10px;border:1px solid #d7e3f0;border-radius:9px;width:100%;background:#fff;color:#092f65}.ob-extra-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}@media(max-width:640px){.ob-extra{padding:12px}.ob-extra-form{grid-template-columns:1fr}}
+
+/* Registres finances : mécénat et pertes / écarts */
+.ob-finance-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.ob-finance-header p{max-width:720px;line-height:1.55}
+.ob-finance-campaign{display:inline-flex;align-items:center;gap:7px;border-radius:99px;margin-top:14px;padding:7px 12px;background:#fff;color:#284b7c;font-weight:700;font-size:12px;border:1px solid #ecdcc8}
+.ob-finance-lock{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;background:#fff7e8;border:1px solid #f4d397;color:#835a18;font-size:12px;font-weight:750;white-space:nowrap}
+.ob-finance-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:0 0 22px}
+.ob-finance-stat{min-height:99px;padding:19px 18px;background:#fff;border:1px solid #dce7f3;border-radius:15px;box-shadow:0 3px 11px #123d7024;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.ob-finance-stat small{color:#6483a6;font-size:12px;font-weight:650}
+.ob-finance-stat strong{font-size:23px;line-height:1.2;color:#12376b;overflow-wrap:anywhere}
+.ob-finance-info,.ob-finance-warning,.ob-finance-error,.ob-finance-success,.ob-finance-legacy{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:11px;margin:0 0 14px;font-size:13px;line-height:1.5}
+.ob-finance-info{background:#edf5fd;border:1px solid #c9e0f7;color:#315e92}
+.ob-finance-warning,.ob-finance-error{background:#fff3ed;border:1px solid #ffd0be;color:#993d25}
+.ob-finance-success{background:#eaf8ed;border:1px solid #c7ead0;color:#26613b}
+.ob-finance-success button{margin-left:auto;display:flex;border:none;background:none;color:inherit;cursor:pointer}
+.ob-finance-legacy{background:#fff9e9;border:1px solid #f2dfad;color:#7d591c;flex-wrap:wrap}
+.ob-finance-legacy span{flex:1}
+.ob-finance-legacy .ob-extra-btn{min-height:34px}
+.ob-finance-toolbar{gap:11px}
+.ob-finance-select{display:flex;flex-direction:column;gap:3px;font-size:11px;color:#607e9f;font-weight:700}
+.ob-finance-select select{min-width:130px;min-height:40px;padding:0 12px;border:1px solid #d7e3f0;border-radius:10px;color:#173d70;background:#fff;cursor:pointer}
+.ob-finance-table{min-width:1020px}
+.ob-finance-table td strong{color:#173d70}
+.ob-finance-description{max-width:250px;overflow-wrap:anywhere}
+.ob-finance-money{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:750}
+.ob-finance-status{display:inline-flex;align-items:center;border-radius:50px;padding:6px 9px;white-space:nowrap;font-weight:700;font-size:11px;background:#fff6e7;color:#8f5b13}
+.ob-finance-status.done{background:#eaf7f0;color:#247a4f}
+.ob-finance-muted{color:#8092a6;font-size:11px;white-space:nowrap}
+.ob-finance-subline{display:block;margin-top:4px;color:#c27c24}
+.ob-finance-modal .ob-extra-modalhead small{color:#da7119;letter-spacing:.08em;font-weight:800}
+.ob-finance-wide{grid-column:1/-1}
+.ob-extra-form textarea{padding:10px;border:1px solid #d7e3f0;border-radius:9px;background:#fff;color:#092f65;min-height:80px;resize:vertical;font:inherit}
+.ob-extra-btn:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:1000px){.ob-finance-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.ob-finance-stats{grid-template-columns:1fr 1fr}.ob-finance-stat{min-height:90px;padding:13px}.ob-finance-stat strong{font-size:18px}.ob-finance-header{flex-direction:column}.ob-finance-wide{grid-column:1}}

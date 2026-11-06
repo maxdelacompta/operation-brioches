@@ -105,6 +105,21 @@ export type FicheCaisse = {
 
   donateurId?: number
   commandeId?: number
+  /** Commande mairie ou responsable de secteur liée à cette fiche. */
+  commandeMairieRsId?: string
+  /** Établissement AEIM choisi dans la BDD (identifiant stable). */
+  etablissementId?: string
+  /** Stand clôturé choisi pour la campagne (identifiant stable). */
+  standId?: string
+
+  /** Nombre de brioches données / remises constatées pour la fiche. */
+  nbBriochesDonnees?: number
+  /** Nombre de dons sans contrepartie lorsqu'il est connu. */
+  nbDonsSansContrepartie?: number
+  /** Permet d'indiquer que le nombre de dons sans contrepartie est inconnu. */
+  donsSansContrepartieInconnu?: boolean
+  /** Utilisé pour les établissements : l'enveloppe a été retournée au siège. */
+  enveloppeRetourSiege?: boolean
 
   /* BILLETS */
 

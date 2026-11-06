@@ -1,0 +1,139 @@
+/* Fenêtre de préparation du justificatif : styles isolés, sans toucher aux autres modales. */
+.jd-modal-overlay > .jd-email-ready {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(700px, calc(100vw - 40px));
+  max-width: 700px;
+  max-height: min(90vh, 820px);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #d9e4f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 65px rgba(8, 33, 65, .28);
+  color: #173c69;
+}
+.jd-email-ready *, .jd-email-ready *::before, .jd-email-ready *::after { box-sizing: border-box; }
+.jd-email-ready .jd-chorus-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2eaf3;
+  background: #f8fbff;
+}
+.jd-email-ready .jd-chorus-header > div { min-width: 0; }
+.jd-email-ready .jd-chorus-header span { display:block; margin-bottom:5px; font-size: 12px; color:#617d9c; }
+.jd-email-ready .jd-chorus-header h2 { margin: 0; font-size: clamp(19px, 2.3vw, 24px); line-height:1.25; color:#083c78; }
+.jd-email-ready .jd-chorus-header > button {
+  display: grid; place-items:center; flex: 0 0 36px;
+  width:36px; height:36px; padding:0;
+  border: 1px solid #dce6f1; border-radius:10px;
+  background:#fff; color:#395b7e; cursor:pointer;
+}
+.jd-email-ready .jd-chorus-header > button:hover { background:#edf4fa; }
+.jd-email-ready .jd-chorus-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 22px 24px;
+  overflow-y: auto;
+}
+.jd-email-ready .jd-chorus-field {
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:7px;
+  width:100%;
+  min-width:0;
+  margin:0;
+  font-size:13px;
+  font-weight:700;
+  color:#254b76;
+}
+.jd-email-ready .jd-chorus-field > span { display:block; line-height:1.4; }
+.jd-email-ready .jd-chorus-field > input,
+.jd-email-ready .jd-chorus-field > textarea {
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  margin:0;
+  padding:11px 13px;
+  border:1px solid #cddcec;
+  border-radius:10px;
+  background:#fff;
+  color:#183854;
+  font: 400 14px/1.5 inherit;
+  font-family:inherit;
+  font-size:14px;
+  font-weight:400;
+  line-height:1.5;
+  outline:none;
+}
+.jd-email-ready .jd-chorus-field > input { min-height:44px; }
+.jd-email-ready .jd-chorus-field > textarea { min-height:200px; resize:vertical; }
+.jd-email-ready .jd-chorus-field > input:focus,
+.jd-email-ready .jd-chorus-field > textarea:focus { border-color:#f68a33; box-shadow:0 0 0 3px rgba(247,126,34,.14); }
+.jd-email-ready .jd-email-attachment {
+  display:flex; align-items:flex-start; gap:9px;
+  margin:0; padding:12px 14px;
+  border:1px solid #c8ddf1; border-radius:10px;
+  background:#f2f7fc; color:#143d6b;
+  font-size:13px; line-height:1.5;
+}
+.jd-email-ready .jd-email-attachment svg { flex-shrink:0; margin-top:1px; }
+.jd-email-ready .jd-email-help { margin:0; font-size:12px; line-height:1.6; color:#617b98; }
+.jd-email-ready .jd-email-error { margin:0; color:#a92c20; font-size:13px; font-weight:650; }
+.jd-email-ready .jd-chorus-actions {
+  display:flex; flex:0 0 auto; align-items:center; justify-content:flex-end;
+  gap:10px; flex-wrap:wrap;
+  padding:16px 24px;
+  border-top:1px solid #e2eaf3;
+  background:#fff;
+}
+.jd-email-ready .jd-chorus-actions > button {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:42px; padding:10px 15px; border-radius:10px;
+  font-family:inherit; font-size:13px; font-weight:700;
+  cursor:pointer; white-space:normal; text-align:center;
+}
+.jd-email-ready .jd-secondary-button { border:1px solid #cbd8e8; background:#fff; color:#123f77; }
+.jd-email-ready .jd-primary-button { border:1px solid #f47b0c; background:#fb790e; color:#fff; }
+.jd-email-ready .jd-primary-button:disabled { opacity:.55; cursor:not-allowed; }
+@media(max-width:600px) {
+  .jd-modal-overlay:has(> .jd-email-ready) { padding:12px; }
+  .jd-modal-overlay > .jd-email-ready { width:100%; max-height:calc(100dvh - 24px); border-radius:14px; }
+  .jd-email-ready .jd-chorus-header { padding:16px; }
+  .jd-email-ready .jd-chorus-body { padding:16px; gap:13px; }
+  .jd-email-ready .jd-chorus-field > textarea { min-height:175px; }
+  .jd-email-ready .jd-chorus-actions { padding:12px 16px; }
+  .jd-email-ready .jd-chorus-actions > button { flex:1 1 160px; }
+}
+
+/* Sélection et historique des envois : classes isolées de la page justificatifs. */
+.jd-mail-bulkbar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:flex-end; padding:10px 16px; background:#f7faff; border-top:1px solid #e0eaf4; border-bottom:1px solid #e0eaf4; color:#173b69; font-size:12px; }
+.jd-mail-bulkbar label {display:flex;align-items:center;gap:8px;margin-right:auto;cursor:pointer}
+.jd-mail-bulkbar input[type=checkbox], .jd-table input[type=checkbox] {width:16px;height:16px; accent-color:#f47b0c;cursor:pointer}
+.jd-mail-bulkbar .jd-secondary-button {display:inline-flex;align-items:center;gap:7px}
+.jd-mail-batch-list {display:flex;flex-direction:column;gap:9px;max-height:46vh;overflow-y:auto}
+.jd-mail-batch-row {border:1px solid #e2eaf3;background:#fafcff;border-radius:11px;padding:12px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.jd-mail-batch-row > div {display:flex;flex-direction:column;gap:4px;min-width:0;overflow-wrap:anywhere;font-size:12px}
+.jd-mail-batch-row strong {color:#103e78;font-size:14px}
+.jd-mail-batch-row span, .jd-mail-batch-row small {color:#577492}
+.jd-mail-batch-row button {flex:none}
+.jd-mail-history {margin:12px 0;border:1px solid #dbe6f1;background:#fff;border-radius:12px;color:#163d6b}
+.jd-mail-history summary {cursor:pointer; padding:14px 18px;font-weight:750}
+.jd-mail-history-inner {padding:0 18px 16px}
+.jd-mail-history-list {display:grid;gap:8px}
+.jd-mail-history-list > div {display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;padding:9px;border-radius:8px;background:#f6f9fd;font-size:12px}
+.jd-mail-history-list strong {color:#0d407a}
+.jd-mail-history-list small {color:#56708d}
+.jd-email-ready .jd-chorus-actions > .jd-secondary-button:disabled {opacity:.5;cursor:not-allowed}
+@media(max-width:650px) {.jd-mail-batch-row {flex-direction:column;align-items:stretch}.jd-mail-bulkbar {justify-content:flex-start}.jd-mail-bulkbar label {width:100%}}

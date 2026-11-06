@@ -958,6 +958,9 @@ export default function Geographie() {
     donateurs,
     fichesCaisse,
     campagnes,
+    selectedCampagne,
+    activeCampagne,
+    setSelectedCampagneId,
   } = useObData()
 
   const { mairies } = useMairies()
@@ -1073,12 +1076,8 @@ export default function Geographie() {
     campagnes,
   ])
 
-  const [campaignFilter, setCampaignFilter] =
-    useState(
-      campaigns.includes('OB 2026')
-        ? 'OB 2026'
-        : campaigns[0] || 'TOUTES',
-    )
+  const campaignFilter = (selectedCampagne ?? activeCampagne)?.id ?? 'TOUTES'
+  const setCampaignFilter = setSelectedCampagneId
 
   const priceByCampaign =
     useMemo(() => {
@@ -2163,10 +2162,6 @@ export default function Geographie() {
               )
             }
           >
-            <option value="TOUTES">
-              Toutes les campagnes
-            </option>
-
             {campaigns.map(
               (campaign) => (
                 <option

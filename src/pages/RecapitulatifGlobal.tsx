@@ -180,6 +180,8 @@ export default function RecapitulatifGlobal() {
   const {
     campagnes,
     activeCampagne,
+    selectedCampagne,
+    setSelectedCampagneId,
     fichesCaisse,
     depotsBanque,
   } = useObData()
@@ -188,10 +190,8 @@ export default function RecapitulatifGlobal() {
      FILTRES
      ======================================================= */
 
-  const [
-    campagneChoisie,
-    setCampagneChoisie,
-  ] = useState('')
+  const campagneChoisie = selectedCampagne?.id ?? ''
+  const setCampagneChoisie = setSelectedCampagneId
 
   const [debut, setDebut] = useState('')
   const [fin, setFin] = useState('')

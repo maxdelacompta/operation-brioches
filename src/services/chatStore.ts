@@ -1,3 +1,4 @@
+import type { ChatAttachment } from './chatAttachments'
 export type ChatMessage = {
   id: string
   senderId: string
@@ -5,6 +6,7 @@ export type ChatMessage = {
   text: string
   createdAt: number
   read: boolean
+  attachments?: ChatAttachment[]
 }
 
 type StorageLike = Pick<Storage, 'length' | 'key' | 'getItem' | 'setItem'>
@@ -17,7 +19,9 @@ function isMessage(value: unknown): value is ChatMessage {
   return typeof item.id === 'string' && Boolean(item.id) &&
     typeof item.senderId === 'string' && Boolean(item.senderId) &&
     typeof item.recipientId === 'string' && Boolean(item.recipientId) &&
-    item.senderId !== item.recipientId && typeof item.text === 'string' && Boolean(item.text.trim()) &&
+    item.senderId !== item.recipientId && typeof item.text === 'string' && (Boolean(item.text.trim()) || (Array.isArray(item.attachments) && item.attachments.length > 0)) &&
+    (item.attachments === undefined || (Array.isArray(item.attachments) && item.attachments.every(file =>
+      file && typeof file.id === 'string' && typeof file.name === 'string' && typeof file.size === 'number' && typeof file.mimeType === 'string'))) &&
     typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) && typeof item.read === 'boolean'
 }
 
@@ -66,12 +70,12 @@ export function createChatStore(getStorage: () => StorageLike) {
       return () => { listeners.delete(listener) }
     },
     refresh,
-    send: (senderId: string, recipientId: string, text: string) => {
-      if (!senderId || !recipientId || senderId === recipientId || !text.trim()) return false
+    send: (senderId: string, recipientId: string, text: string, attachments: ChatAttachment[] = []) => {
+      if (!senderId || !recipientId || senderId === recipientId || (!text.trim() && !attachments.length)) return false
       const stored = readStored()
       const message: ChatMessage = {
         id: crypto.randomUUID(), senderId, recipientId, text: text.trim(), read: false,
-        createdAt: Math.max(Date.now(), (stored.at(-1)?.createdAt ?? 0) + 1),
+        createdAt: Math.max(Date.now(), (stored.at(-1)?.createdAt ?? 0) + 1), attachments,
       }
       getStorage().setItem(CHAT_STORAGE_PREFIX + message.id, JSON.stringify(message))
       refresh()

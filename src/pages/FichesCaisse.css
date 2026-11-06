@@ -1595,3 +1595,101 @@
   font-size: 12px;
   line-height: 1.45;
 }
+
+/* Lien bidirectionnel entre une commande Mairie/RS et ses fiches de caisse. */
+.fiche-mairie-link-info {
+  margin-top: 8px !important;
+  color: #315a83;
+  font-size: 12px;
+}
+.fiche-mairie-link-info button {
+  margin-left: 6px;
+  padding: 3px 7px;
+  border: 1px solid #cddbef;
+  border-radius: 7px;
+  color: #064784;
+  background: white;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* =========================================================
+   DISTRIBUTION ET SUIVI — champs de dons sans contrepartie
+   Corrige la taille native des cases à cocher, qui héritaient
+   des styles des champs de texte, et l'alignement des colonnes.
+   ========================================================= */
+
+/* La section avec une case à cocher possède un contenu plus haut.
+   Les deux colonnes doivent s'aligner par le haut et non par le bas. */
+.fiche-modal .fiche-form-grid.fiche-dons-grid:has(.fiche-inline-checkbox) {
+  align-items: start;
+  gap: 16px 22px;
+}
+
+.fiche-modal .fiche-inline-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px solid #dce5ef;
+  border-radius: 9px;
+  background: #f7faff;
+  color: #315577;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+/* Prioritaire sur la règle générique : .fiche-form-field input */
+.fiche-modal .fiche-form-field .fiche-inline-checkbox input[type='checkbox'] {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  max-width: 18px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #a9bdd4;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: none;
+  accent-color: #ff8614;
+  cursor: pointer;
+}
+
+.fiche-modal .fiche-inline-checkbox span {
+  margin: 0;
+  color: #315577;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.fiche-modal .fiche-inline-checkbox:has(input:checked) {
+  border-color: #ffc18d;
+  background: #fff5ea;
+}
+
+.fiche-modal .fiche-form-field .fiche-inline-checkbox input[type='checkbox']:focus-visible {
+  outline: 2px solid #ff8614;
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+.fiche-modal .fiche-inline-checkbox-block {
+  width: 100%;
+  margin-top: 0;
+  min-height: 44px;
+}
+
+@media (max-width: 600px) {
+  .fiche-modal .fiche-inline-checkbox {
+    width: 100%;
+  }
+}

@@ -1,6 +1,5 @@
 import {
   useMemo,
-  useState,
 } from 'react'
 
 import {
@@ -228,16 +227,16 @@ function Coffre() {
     depotsBanque,
     campagnes,
     activeCampagne,
+    selectedCampagne,
+    setSelectedCampagneId,
   } = useObData()
 
   /* =======================================================
      SÉLECTION DE LA CAMPAGNE
      ======================================================= */
 
-  const [
-    campagneSelection,
-    setCampagneSelection,
-  ] = useState('')
+  const campagneSelection = selectedCampagne?.id ?? ''
+  const setCampagneSelection = setSelectedCampagneId
 
   const campagne =
     campagneSelection ||

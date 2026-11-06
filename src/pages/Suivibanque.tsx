@@ -128,6 +128,8 @@ export default function SuiviBanque() {
   const {
     campagnes,
     activeCampagne,
+    selectedCampagne,
+    setSelectedCampagneId,
     fichesCaisse,
     depotsBanque,
     creerDepotBanque,
@@ -140,10 +142,8 @@ export default function SuiviBanque() {
      CAMPAGNE
      ======================================================= */
 
-  const [
-    campagneChoisie,
-    setCampagneChoisie,
-  ] = useState('')
+  const campagneChoisie = selectedCampagne?.id ?? ''
+  const setCampagneChoisie = setSelectedCampagneId
 
   const campagne =
     campagneChoisie ||

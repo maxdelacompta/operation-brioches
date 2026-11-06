@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCampaignWriteAccess } from '../lib/useCampaignWriteAccess'
+import { useUsers } from './UsersContext'
+import type { JustificatifAImporter } from '../lib/justificatifsImport'
+import { type Dispatch, type SetStateAction } from 'react'
 import { type JustificatifDon, type NouveauJustificatif } from '../types/justificatifs'
 import { STORAGE_KEY, type JustificatifsContextValue, JustificatifsContext, makeId, nowIso, loadJustificatifs, createNumber } from "./JustificatifsContext"
 
@@ -7,8 +11,13 @@ export function JustificatifsProvider({
 }: {
   children: ReactNode
 }) {
-  const [justificatifs, setJustificatifs] =
+  const canWrite = useCampaignWriteAccess()
+  const { currentUser } = useUsers()
+  const [justificatifs, setJustificatifsState] =
     useState<JustificatifDon[]>(loadJustificatifs)
+  const setJustificatifs = useCallback<Dispatch<SetStateAction<JustificatifDon[]>>>(update => {
+    if (canWrite) setJustificatifsState(update)
+  }, [canWrite])
 
   useEffect(() => {
     try {
@@ -27,6 +36,7 @@ export function JustificatifsProvider({
     function createJustificatif(
     input: NouveauJustificatif,
   ): JustificatifDon {
+    if (!canWrite) throw new Error('Campagne inactive : création de justificatif interdite.')
     const id = makeId()
     const date = nowIso()
     const numero = createNumber(
@@ -59,7 +69,37 @@ export function JustificatifsProvider({
     setJustificatifs((current) => [...current, next])
 
     return next
-  }, [justificatifs])
+  }, [justificatifs, setJustificatifs, canWrite])
+
+  const importerJustificatifs = useCallback((documents: JustificatifAImporter[]) => {
+    if (currentUser?.role !== 'administrateur') throw new Error('Import réservé aux administrateurs.')
+    if (!canWrite) throw new Error('La campagne sélectionnée est en consultation seule.')
+    if (!documents.length) return
+    const numeros = new Set(justificatifs.map(j => `${j.campagne}|${j.numero.toLocaleLowerCase('fr')}`))
+    const campagnes = new Set(documents.map(document => document.campagne))
+    if (campagnes.size !== 1) throw new Error('Un lot doit appartenir à une seule campagne.')
+    for (const document of documents) {
+      const cle = `${document.campagne}|${document.numero.toLocaleLowerCase('fr')}`
+      if (numeros.has(cle)) throw new Error(`Numéro de justificatif déjà présent : ${document.numero}`)
+      numeros.add(cle)
+    }
+    const horodatage = nowIso()
+    const nouveaux: JustificatifDon[] = documents.map(document => ({
+      ...document,
+      id: makeId('jd'),
+      montant: Math.round(document.nbBrioches * document.prixUnitaire * 100) / 100,
+      statut: 'A_VERIFIER',
+      documentStatut: 'A_GENERER',
+      version: 1,
+      createdAt: horodatage,
+      updatedAt: horodatage,
+      historique: [{
+        id: makeId('history'), date: horodatage, action: 'Import CSV / Excel',
+        detail: `Importé par ${currentUser.name} · PDF non importé · envoi non confirmé`,
+      }],
+    }))
+    setJustificatifs(current => [...current, ...nouveaux])
+  }, [canWrite, currentUser, justificatifs, setJustificatifs])
 
   const updateJustificatif = useCallback(
     function updateJustificatif(
@@ -67,6 +107,7 @@ export function JustificatifsProvider({
     patch: Partial<JustificatifDon>,
     historyLabel = 'Modification',
   ) {
+    if (!canWrite) throw new Error('Campagne inactive : modification de justificatif interdite.')
     const date = nowIso()
 
     setJustificatifs((current) =>
@@ -98,7 +139,7 @@ export function JustificatifsProvider({
         }
       }),
     )
-  }, [])
+  }, [setJustificatifs, canWrite])
 
   const markDocumentGenerated = useCallback(
     function markDocumentGenerated(
@@ -155,6 +196,7 @@ export function JustificatifsProvider({
 
   const convertJdiToJdp = useCallback(
     function convertJdiToJdp(id: string): string {
+    if (!canWrite) throw new Error('Campagne inactive : conversion de justificatif interdite.')
     const source = justificatifs.find(
       (item) => item.id === id,
     )
@@ -221,19 +263,20 @@ export function JustificatifsProvider({
     ])
 
     return newId
-  }, [justificatifs])
+  }, [justificatifs, setJustificatifs, canWrite])
 
   const value = useMemo<JustificatifsContextValue>(
     () => ({
       justificatifs,
       createJustificatif,
+      importerJustificatifs,
       updateJustificatif,
       markDocumentGenerated,
       markSent,
       archiveJustificatif,
       convertJdiToJdp,
     }),
-    [justificatifs, createJustificatif, updateJustificatif, markDocumentGenerated, markSent, archiveJustificatif, convertJdiToJdp],
+    [justificatifs, createJustificatif, importerJustificatifs, updateJustificatif, markDocumentGenerated, markSent, archiveJustificatif, convertJdiToJdp],
   )
 
   return (

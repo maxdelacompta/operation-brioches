@@ -28,7 +28,9 @@ import {
 } from '../contexts/GeneralSettingsContext'
 
 import { useAuth } from '../contexts/AuthContext'
+import { useObData } from '../contexts/ObDataContext'
 
+import { ALERTS_EVENT, readUserAlerts, type UserAlert } from '../services/userAlerts'
 import './Topbar.css'
 
 /* =========================================================
@@ -84,6 +86,13 @@ function Topbar({
 
   const navigate = useNavigate()
   const { signOut } = useAuth()
+  const {
+    campagnes,
+    activeCampagne,
+    selectedCampagne,
+    selectedCampagneId,
+    setSelectedCampagneId,
+  } = useObData()
 
   const {
     settings,
@@ -107,6 +116,19 @@ function Topbar({
     notificationsOpen,
     setNotificationsOpen,
   ] = useState(false)
+
+  const [myAlerts, setMyAlerts] = useState<UserAlert[]>(readUserAlerts)
+  useEffect(() => {
+    const refresh = () => setMyAlerts(readUserAlerts())
+    window.addEventListener(ALERTS_EVENT, refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener(ALERTS_EVENT, refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
+  const pendingAlerts = myAlerts.filter(alert =>
+    alert.assigneeId === currentUser?.id && alert.status !== 'terminee')
 
   /* =======================================================
      INFORMATIONS UTILISATEUR
@@ -290,7 +312,7 @@ function Topbar({
         <div className="ob-topbar-brand-text">
 
           <span className="ob-topbar-eyebrow">
-            CAMPAGNE
+            CAMPAGNE · {selectedCampagne?.annee ?? selectedCampagne?.id ?? 'Aucune'}
           </span>
 
           <strong>
@@ -301,15 +323,38 @@ function Topbar({
 
       </Link>
 
+      {/* Choix de la campagne consultée : ne change pas son statut administratif. */}
+      <div className="ob-topbar-campaign-picker">
+        <label htmlFor="ob-campagne-travail">Campagne de travail</label>
+        <select
+          id="ob-campagne-travail"
+          aria-label="Choisir la campagne de travail"
+          title="Changer de campagne de travail"
+          value={campagnes.some(c => c.id === selectedCampagneId) ? selectedCampagneId : ''}
+          onChange={event => setSelectedCampagneId(event.target.value)}
+        >
+          <option value="">
+            {activeCampagne
+              ? `Active · ${activeCampagne.annee ?? activeCampagne.id}`
+              : 'Aucune campagne active'}
+          </option>
+          {campagnes.map(campagne => (
+            <option key={campagne.id} value={campagne.id}>
+              {`${campagne.statut === 'ACTIVE' ? 'Active' : campagne.statut === 'PREPARATION' ? 'Prépa' : campagne.statut === 'TERMINEE' ? 'Terminée' : 'À configurer'} · ${campagne.annee ?? campagne.id}`}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <button
         type="button"
         className="ob-topbar-global-search"
         onClick={() => navigate('/recherche')}
         aria-label="Ouvrir la recherche globale"
-        title="Rechercher dans OB2026 (Ctrl + K)"
+        title="Rechercher dans Opération Brioche (Ctrl + K)"
       >
         <Search size={19} aria-hidden="true" />
-        <span>Rechercher dans OB2026...</span>
+        <span>Rechercher dans Opération Brioche...</span>
         <kbd>Ctrl K</kbd>
       </button>
 
@@ -345,6 +390,9 @@ function Topbar({
           >
 
             <Bell size={20} />
+            {pendingAlerts.length > 0 && (
+              <span className="ob-topbar-alert-count">{pendingAlerts.length > 9 ? '9+' : pendingAlerts.length}</span>
+            )}
 
           </button>
 
@@ -384,25 +432,26 @@ function Topbar({
 
               </div>
 
-              <div className="ob-topbar-notification-empty">
-
-                <div className="ob-topbar-empty-icon">
-
-                  <Bell size={23} />
-
+              {pendingAlerts.length > 0 ? (
+                <div className="ob-topbar-alert-preview">
+                  {pendingAlerts.slice(0, 4).map(alert => (
+                    <div key={alert.id} className="ob-topbar-alert-preview-item">
+                      <strong>{alert.title}</strong>
+                      <span>{alert.module}{alert.dueDate ? ` · ${alert.dueDate}` : ''}</span>
+                    </div>
+                  ))}
+                  {pendingAlerts.length > 4 && <p>+ {pendingAlerts.length - 4} autre(s) alerte(s)</p>}
                 </div>
-
-                <strong>
-                  Aucune notification
-                </strong>
-
-                <p>
-                  Les alertes des différents
-                  modules apparaîtront ici
-                  lorsqu'elles seront connectées.
-                </p>
-
-              </div>
+              ) : (
+                <div className="ob-topbar-notification-empty">
+                  <div className="ob-topbar-empty-icon"><Bell size={23} /></div>
+                  <strong>Aucune alerte en attente</strong>
+                  <p>Les alertes qui te sont attribuées apparaîtront ici.</p>
+                </div>
+              )}
+              <Link to="/mes-alertes" className="ob-topbar-alert-manage" onClick={() => setNotificationsOpen(false)}>
+                Je crée mes alertes
+              </Link>
 
             </div>
 

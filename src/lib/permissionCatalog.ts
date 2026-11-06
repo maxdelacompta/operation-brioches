@@ -170,6 +170,8 @@ export const PERMISSION_MODULES = [
   { key: 'suivi_brioches', label: 'Suivi Brioches', path: '/etablissements/suivi-brioches', actions: ['consulter'] },
   { key: 'recap_etablissements', label: 'Récap global établissements', path: '/etablissements/recap-global', actions: ['consulter'] },
   { key: 'factures_paiements', label: 'Factures & Paiements', path: '/finance/factures-paiements', actions: ['consulter'] },
+  { key: 'mecenat', label: 'Mécénat', path: '/finance/mecenat', actions: ['consulter', 'creer', 'modifier', 'exporter', 'supprimer'] },
+  { key: 'pertes_ecarts', label: 'Pertes / Écarts', path: '/finance/pertes-ecarts', actions: ['consulter', 'creer', 'modifier', 'exporter', 'supprimer'] },
   { key: 'geo_carte', label: 'Carte des ventes', path: '/geographie/carte', actions: ['consulter'] },
   { key: 'geo_secteurs', label: 'Analyse par secteur', path: '/geographie/secteurs', actions: ['consulter'] },
   { key: 'geo_comparaison', label: 'Comparaison des canaux', path: '/geographie/comparaison', actions: ['consulter'] },

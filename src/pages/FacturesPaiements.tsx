@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Banknote, CheckCircle2, Download, FileText, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2, X, UploadCloud } from 'lucide-react'
 import { useArtisans } from '../contexts/ArtisansContext'
+import { useObData } from '../contexts/ObDataContext'
+import { useUsers } from '../contexts/UsersContext'
+import { isCampaignReadOnly } from '../lib/campaignAccess'
+import { samePurchaseCampaign } from '../lib/dashboardMetrics'
 import { argent, montantCommande, type CommandeArtisan } from '../types/artisans'
 import ImportSelectionCegi, { type CegiOperation } from './ImportSelectionCegi'
 import './FacturesPaiements.css'
@@ -20,6 +24,10 @@ function garderCSV(value:unknown) { let v=String(value ?? ''); if (/^\s*[=+@-]/.
 function exporter(factures:Facture[], reglements:Reglement[]) { const rows=[['Numéro de pièce','Fournisseur','Catégorie','Campagne','Commandes','Montant TTC','Payé confirmé','Solde','Échéance','Statut'],...factures.map(f=>{const paye=arrondi(reglements.filter(r=>r.factureId===f.id&&r.confirme).reduce((a,r)=>a+r.montant,0));return [f.numero,f.fournisseurNom,labels[f.categorie],f.campagne,f.commandeIds.join(' / '),f.montantTtc,paye,arrondi(f.montantTtc-paye),f.echeance,paye>=f.montantTtc-0.005?'Payée':paye>0?'Partielle':'À payer']})]; const csv='\ufeff'+rows.map(r=>r.map(garderCSV).join(';')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='OB2026-factures-paiements.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000) }
 export default function FacturesPaiements(){
  const {fournisseurs,commandesArtisans,setCommandesArtisans}=useArtisans()
+ const {selectedCampagne,activeCampagne}=useObData()
+ const campagneSelectionnee=(selectedCampagne??activeCampagne)?.id??''
+ const {currentUser}=useUsers()
+ const readOnly=isCampaignReadOnly(selectedCampagne??activeCampagne,currentUser?.role,'/finance/factures-paiements')
  const [factures,setFactures]=useState<Facture[]>(()=>lire(FACTURES_KEY))
  const [reglements,setReglements]=useState<Reglement[]>(()=>lire(REGLEMENTS_KEY))
  const [archives,setArchives]=useState<CegiDocument[]>([])
@@ -36,12 +44,13 @@ export default function FacturesPaiements(){
  const totalCommandes=arrondi(commandesArtisans.filter(c=>commandeIds.includes(c.id)).reduce((s,c)=>s+montantCommande(c),0))
  const montant=commandeIds.length?totalCommandes:Math.max(0,Number(montantManuel)||0)
  const facturePaiements=(id:string)=>arrondi(reglements.filter(r=>r.factureId===id&&r.confirme).reduce((sum,r)=>sum+r.montant,0))
- const dejaPayees=arrondi(factures.reduce((sum,f)=>sum+facturePaiements(f.id),0));const totalFacture=arrondi(factures.reduce((sum,f)=>sum+f.montantTtc,0))
+ const facturesCampagne=factures.filter(f=>f.campagne===campagneSelectionnee)
+ const dejaPayees=arrondi(facturesCampagne.reduce((sum,f)=>sum+facturePaiements(f.id),0));const totalFacture=arrondi(facturesCampagne.reduce((sum,f)=>sum+f.montantTtc,0))
  useEffect(()=>{localStorage.setItem(FACTURES_KEY,JSON.stringify(factures))},[factures]);useEffect(()=>{localStorage.setItem(REGLEMENTS_KEY,JSON.stringify(reglements))},[reglements])
  // Une commande n'est soldée automatiquement que si toutes les factures auxquelles elle est liée sont intégralement réglées.
  // Ne pas effacer un paiement déjà marqué manuellement dans les modules d'achats.
  useEffect(()=>{
-  if(!factures.length) return
+  if(readOnly || !factures.length) return
   setCommandesArtisans(prev=>{
    let change=false
    const next=prev.map(c=>{
@@ -54,7 +63,7 @@ export default function FacturesPaiements(){
    return change?next:prev
   })
  // eslint-disable-next-line react-hooks/exhaustive-deps
- },[factures,reglements,setCommandesArtisans])
+ },[factures,reglements,setCommandesArtisans,readOnly])
  const facturesAffichees=useMemo(()=>{
    const term=recherche.trim().toLocaleLowerCase('fr');
    const paiements=new Map<string,number>();
@@ -74,7 +83,7 @@ export default function FacturesPaiements(){
        default:return '';
      }
    };
-   return factures.filter(f=>(filtreCategorie==='TOUTES'||f.categorie===filtreCategorie)&&(!term||[
+   return factures.filter(f=>f.campagne===campagneSelectionnee && (filtreCategorie==='TOUTES'||f.categorie===filtreCategorie)&&(!term||[
      f.numero,f.fournisseurNom,labels[f.categorie]||f.categorie,f.date,f.pieceNom,f.note,f.campagne,
      ...f.commandeIds.map(id=>commandesArtisans.find(c=>c.id===id)?.numero||id),
      ...reglements.filter(r=>r.factureId===f.id).map(r=>r.reference)
@@ -83,14 +92,15 @@ export default function FacturesPaiements(){
      const comparaison=typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),'fr',{numeric:true,sensitivity:'base'});
      return (triSens==='asc'?comparaison:-comparaison)||a.numero.localeCompare(b.numero,'fr',{numeric:true});
    });
- },[factures,reglements,commandesArtisans,recherche,filtreCategorie,triColonne,triSens]);
+ },[factures,reglements,commandesArtisans,campagneSelectionnee,recherche,filtreCategorie,triColonne,triSens]);
  const enteteTri=(cle:string,libelle:string)=><button type="button" className="fpai-sort" onClick={()=>changerTri(cle)} aria-label={`Trier par ${libelle}`} aria-sort={undefined}>{libelle}{triColonne!==cle?<ArrowUpDown size={12}/>:triSens==='asc'?<ArrowUp size={12}/>:<ArrowDown size={12}/>}</button>;
  function creer(event:FormEvent){event.preventDefault();setErreur('');const nom=fournisseurId==='AUTRE' ? autreBeneficiaire.trim() : fournisseurs.find(f=>f.id===fournisseurId)?.nom ?? ''
   if(!numero.trim()||!nom){setErreur('Renseigne une référence et un fournisseur.');return}
   if(factures.some(f=>f.numero.trim().toLowerCase()===numero.trim().toLowerCase()&&f.fournisseurId===(fournisseurId==='AUTRE'?`AUTRE:${nom}`:fournisseurId))){setErreur('Cette référence existe déjà pour ce fournisseur.');return}
   if(!Number.isFinite(montant)||montant<=0){setErreur('Le montant TTC doit être supérieur à zéro.');return}
+  if(commandeIds.some(id=>{const commande=commandesArtisans.find(c=>c.id===id);return !commande||!samePurchaseCampaign(commande.campagne,campagneSelectionnee)})){setErreur('Les commandes de la facture doivent appartenir à la campagne sélectionnée.');return}
   if(commandeIds.some(id=>factures.some(f=>f.commandeIds.includes(id)))){setErreur('Une commande est déjà rattachée à une autre facture.');return}
-  setFactures(old=>[...old,{id:uid(),numero:numero.trim(),fournisseurId:fournisseurId==='AUTRE'?`AUTRE:${nom}`:fournisseurId,fournisseurNom:nom,date,echeance,campagne:commandeIds.length?commandesArtisans.find(c=>c.id===commandeIds[0])?.campagne??'':'',categorie,commandeIds,montantTtc:arrondi(montant),note,pieceNom,creeLe:new Date().toISOString()}]);setCreation(false);setNumero('');setCommandeIds([]);setMontantManuel('');setPieceNom('');setNote('')
+  setFactures(old=>[...old,{id:uid(),numero:numero.trim(),fournisseurId:fournisseurId==='AUTRE'?`AUTRE:${nom}`:fournisseurId,fournisseurNom:nom,date,echeance,campagne:campagneSelectionnee,categorie,commandeIds,montantTtc:arrondi(montant),note,pieceNom,creeLe:new Date().toISOString()}]);setCreation(false);setNumero('');setCommandeIds([]);setMontantManuel('');setPieceNom('');setNote('')
  }
  function ajouterReglement(event:FormEvent){event.preventDefault();setErreur('');const facture=factures.find(f=>f.id===payementId);if(!facture)return
   const n=arrondi(Number(montantReglement));const restant=arrondi(facture.montantTtc-facturePaiements(facture.id));if(!Number.isFinite(n)||n<=0||n>restant+.005){setErreur('Montant incorrect ou supérieur au solde de la facture.');return}
@@ -134,8 +144,8 @@ export default function FacturesPaiements(){
  }
  function confirmerReglement(id:string){if(!window.confirm('Confirmer que ce paiement a réellement été exécuté ou constaté ?'))return;setReglements(prev=>prev.map(r=>r.id===id?{...r,confirme:true}:r))}
  function supprimerFacture(f:Facture){if(reglements.some(r=>r.factureId===f.id)){alert('Supprime d’abord les règlements associés après vérification comptable.');return}if(window.confirm(`Supprimer la facture ${f.numero} ?`))setFactures(v=>v.filter(x=>x.id!==f.id))}
- return <main className="fpai-page"><header className="fpai-header"><div><span className="fpai-eyebrow">DOCUMENTS · COMPTABILITÉ</span><h1>Factures & Paiements</h1><p>Rapprocher les factures, les commandes et les règlements, sans compter deux fois une dépense.</p></div><div className="fpai-actions"><button type="button" className="fpai-secondary" onClick={()=>exporter(factures,reglements)}><Download size={16}/> Export Excel (CSV)</button><button type="button" className="fpai-secondary" onClick={()=>setCegiOpen(true)}><UploadCloud size={16}/> Importer listes CEGI</button><button type="button" className="fpai-primary" onClick={()=>{setErreur('');setCreation(true)}}><Plus size={16}/> Nouvelle facture</button></div></header>
- <section className="fpai-kpis"><article><small>Factures TTC</small><strong>{argent(totalFacture)}</strong></article><article><small>Payé déclaré / confirmé</small><strong>{argent(dejaPayees)}</strong></article><article><small>Reste à payer</small><strong>{argent(Math.max(0,arrondi(totalFacture-dejaPayees)))}</strong></article><article><small>Factures</small><strong>{factures.length}</strong></article></section>
+ return <main className="fpai-page"><header className="fpai-header"><div><span className="fpai-eyebrow">DOCUMENTS · COMPTABILITÉ</span><h1>Factures & Paiements</h1><p>Rapprocher les factures, les commandes et les règlements, sans compter deux fois une dépense.</p></div><div className="fpai-actions"><button type="button" className="fpai-secondary" onClick={()=>exporter(facturesCampagne,reglements)}><Download size={16}/> Export Excel (CSV)</button><button type="button" className="fpai-secondary" onClick={()=>setCegiOpen(true)}><UploadCloud size={16}/> Importer listes CEGI</button><button type="button" className="fpai-primary" onClick={()=>{setErreur('');setCreation(true)}}><Plus size={16}/> Nouvelle facture</button></div></header>
+ <section className="fpai-kpis"><article><small>Factures TTC</small><strong>{argent(totalFacture)}</strong></article><article><small>Payé déclaré / confirmé</small><strong>{argent(dejaPayees)}</strong></article><article><small>Reste à payer</small><strong>{argent(Math.max(0,arrondi(totalFacture-dejaPayees)))}</strong></article><article><small>Factures</small><strong>{facturesCampagne.length}</strong></article></section>
  <section className="fpai-card">
  <div className="fpai-filterbar"><label className="fpai-search"><Search size={17}/><input type="search" placeholder="Rechercher une pièce, un fournisseur, une commande, une référence…" value={recherche} onChange={e=>setRecherche(e.target.value)}/></label>
  <select aria-label="Filtrer par catégorie" value={filtreCategorie} onChange={e=>setFiltreCategorie(e.target.value as Categorie|'TOUTES')}><option value="TOUTES">Toutes les catégories</option>{Object.entries(labels).map(([id,libelle])=><option key={id} value={id}>{libelle}</option>)}</select>

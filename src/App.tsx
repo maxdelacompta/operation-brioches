@@ -9,6 +9,7 @@ import './App.css'
 import './styles/index.css'
 
 import { UsersProvider } from './contexts/UsersProvider'
+import { ObDataProvider } from './contexts/ObDataProvider'
 import { PermissionsProvider } from './contexts/PermissionsProvider'
 import { GeneralSettingsProvider } from './contexts/GeneralSettingsProvider'
 import { ArtisansProvider } from "./contexts/ArtisansProvider"
@@ -26,6 +27,7 @@ import ResetOB2026 from './pages/ResetOB2026'
 import ThemeShowcase from './pages/ThemeShowcase'
 
 import Accueil from './pages/Accueil'
+import VuesEnsembleRubriques from './pages/VuesEnsembleRubriques'
 import Dashboard from './pages/Dashboard'
 import SuiviCaisseTpe from './pages/SuiviCaisseTpe'
 import Communication from './pages/Communication'
@@ -61,6 +63,8 @@ import RecapitulatifGlobal from './pages/RecapitulatifGlobal'
 
 import JustificatifsDons from './pages/JustificatifsDons'
 import FacturesPaiements from './pages/FacturesPaiements'
+import Mecenat from './pages/Mecenat'
+import PertesEcarts from './pages/PertesEcarts'
 
 import Administration from './pages/Administration'
 import Utilisateurs from './pages/Utilisateurs'
@@ -69,12 +73,15 @@ import RolesPermissions from './pages/RolesPermissions'
 import Campagnes from './pages/Campagnes'
 import ParametresGeneraux from './pages/ParametresGeneraux'
 import JournalActivite from './pages/JournalActivite'
+import MesAlertes from './pages/MesAlertes'
 import AdminEtablissements from './pages/AdminEtablissements'
 
 function App() {
   return (
     <UsersProvider>
       <AuthProvider>
+      <BrowserRouter>
+      <ObDataProvider>
       <PermissionsProvider>
         <GeneralSettingsProvider>
           <ArtisansProvider>
@@ -82,14 +89,15 @@ function App() {
               <MairiesProvider>
                 <CommandesMairiesRsProvider>
                 <JustificatifsProvider>
-                <BrowserRouter>
                 <Routes>
                   <Route path="/connexion" element={<Connexion />} />
                   <Route element={<AppLayout />}>
                     <Route path="/administration/acces-connexion" element={<AccesConnexion />} />
                     <Route path="/" element={<Accueil />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/rubriques/:rubrique" element={<VuesEnsembleRubriques />} />
                     <Route path="/mon-compte" element={<GestionMonCompte />} />
+                    <Route path="/mes-alertes" element={<MesAlertes />} />
                     <Route path="/recherche" element={<Recherche />} />
                     <Route
                       path="/gestion/suivi-caisse-tpe"
@@ -176,6 +184,8 @@ function App() {
                     />
 
                     <Route path="/finance/factures-paiements" element={<FacturesPaiements />} />
+                    <Route path="/finance/mecenat" element={<Mecenat />} />
+                    <Route path="/finance/pertes-ecarts" element={<PertesEcarts />} />
                     <Route
                       path="/finance/justificatifs-dons"
                       element={<JustificatifsDons />}
@@ -242,7 +252,6 @@ function App() {
                     />
                   </Route>
                 </Routes>
-                </BrowserRouter>
               </JustificatifsProvider>
                 </CommandesMairiesRsProvider>
               </MairiesProvider>
@@ -250,6 +259,8 @@ function App() {
           </ArtisansProvider>
         </GeneralSettingsProvider>
       </PermissionsProvider>
+      </ObDataProvider>
+      </BrowserRouter>
       </AuthProvider>
     </UsersProvider>
   )

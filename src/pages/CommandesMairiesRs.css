@@ -795,3 +795,14 @@
     grid-column: auto;
   }
 }
+
+/* Les dons calculés depuis les fiches contrôlées sont identifiables au premier regard. */
+.cmr-caisse-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: #176a52;
+  font-size: 10px;
+  font-weight: 750;
+}

@@ -1,38 +1,38 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Opération Brioche — favicon</title>
+  <desc id="desc">Une brioche dorée stylisée, avec sucre perlé, sur fond bleu nuit.</desc>
   <defs>
-    <linearGradient id="gMain" x1="136" y1="88" x2="374" y2="402" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFD45E"/>
-      <stop offset="0.45" stop-color="#FFAB15"/>
-      <stop offset="0.78" stop-color="#FF8B08"/>
-      <stop offset="1" stop-color="#F56B09"/>
+    <linearGradient id="brioche" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#FFD46E"/>
+      <stop offset=".5" stop-color="#F99B1A"/>
+      <stop offset="1" stop-color="#DC6106"/>
     </linearGradient>
-    <linearGradient id="gHighlight" x1="177" y1="138" x2="315" y2="309" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFF2BF"/>
-      <stop offset="1" stop-color="#FFD06C" stop-opacity="0.15"/>
+    <linearGradient id="base" x1="0" y1="0" x2="0.15" y2="1">
+      <stop offset="0" stop-color="#FFBB48"/>
+      <stop offset="1" stop-color="#D9650B"/>
     </linearGradient>
-    <linearGradient id="gCut" x1="187" y1="117" x2="311" y2="355" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFF5D5"/>
-      <stop offset="1" stop-color="#FFEAB5"/>
+    <linearGradient id="top" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#FFE7A4"/>
+      <stop offset=".42" stop-color="#FFB53C"/>
+      <stop offset="1" stop-color="#E77811"/>
     </linearGradient>
-    <filter id="shadow" x="74" y="69" width="364" height="359" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#E5710F" flood-opacity="0.18"/>
-    </filter>
   </defs>
-
-  <g filter="url(#shadow)">
-    <path d="M118 359C108 334 111 302 128 281C79 252 79 194 117 158C146 130 185 124 217 137C240 93 289 73 332 85C348 89 362 97 372 108C406 82 458 87 486 129C516 174 506 234 463 260C467 269 469 279 468 290C465 329 436 364 398 369C386 401 358 423 323 423C304 423 287 417 274 406C256 420 236 429 213 429C165 429 130 399 118 359Z" fill="url(#gMain)"/>
-    <path d="M118 359C108 334 111 302 128 281C79 252 79 194 117 158C146 130 185 124 217 137C240 93 289 73 332 85C348 89 362 97 372 108C406 82 458 87 486 129C516 174 506 234 463 260C467 269 469 279 468 290C465 329 436 364 398 369C386 401 358 423 323 423C304 423 287 417 274 406C256 420 236 429 213 429C165 429 130 399 118 359Z" fill="url(#gHighlight)" opacity="0.45"/>
-
-    <!-- soft cream separations between lobes -->
-    <path d="M184 103C217 124 252 172 275 234C273 208 275 177 282 144C291 104 307 80 330 68C304 69 279 78 258 95C236 113 219 141 209 174C203 156 195 129 184 103Z" fill="url(#gCut)"/>
-    <path d="M130 223C180 230 225 255 265 311C258 279 259 247 267 220C242 197 211 181 176 173C157 168 138 167 121 169C121 188 124 206 130 223Z" fill="url(#gCut)"/>
-    <path d="M298 233C337 181 377 153 425 140C433 138 439 137 446 136C438 111 425 93 406 80C360 99 323 138 298 233Z" fill="url(#gCut)"/>
-
-    <!-- lower warm grooves -->
-    <path d="M168 277C190 288 208 307 221 333C234 359 239 387 247 411C234 419 219 423 203 423C182 413 164 395 153 373C136 338 142 303 168 277Z" fill="#E66B0B" opacity="0.2"/>
-    <path d="M261 271C274 261 286 260 295 270C307 282 301 301 293 317C280 342 274 364 272 408H248C247 369 251 319 261 271Z" fill="#E66B0B" opacity="0.18"/>
-    <path d="M377 286C403 300 418 329 425 359C428 375 429 391 429 406C417 412 404 416 391 417C385 393 377 361 360 334C354 323 346 315 338 308C348 296 361 289 377 286Z" fill="#E66B0B" opacity="0.16"/>
-
-    <circle cx="171" cy="166" r="8" fill="#FFF3D7" opacity="0.78"/>
+  <!-- Contrast is maintained at 16 × 16 px as well as larger sizes. -->
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="#082F62"/>
+  <path d="M13 34c-4-2-6-6-5-11 1-6 6-10 12-10 3 0 6 1 8 4 2-5 7-8 12-7 6 1 9 5 10 10 6 0 10 5 9 11 0 5-4 9-9 10L13 34Z" fill="url(#brioche)" stroke="#A84509" stroke-width="1.45" stroke-linejoin="round"/>
+  <!-- Brioche à tête: soft raised crown -->
+  <path d="M24 21c0-7 4-13 10-13s11 5 11 12c0 5-4 9-10 10-5 0-11-3-11-9Z" fill="url(#top)" stroke="#BC5C0C" stroke-width="1.3"/>
+  <path d="M28 16c2-3 5-4 8-4" fill="none" stroke="#FFF0B8" stroke-width="2.7" stroke-linecap="round" opacity=".85"/>
+  <path d="M12 30c-2-7 1-11 6-12m33 8c4 1 5 4 4 7" fill="none" stroke="#FFE6A1" stroke-width="2.2" stroke-linecap="round" opacity=".75"/>
+  <!-- Lower fluted brioche base -->
+  <path d="M12 35c5 3 14 5 20 5s16-2 20-5l-5 17c-1 4-8 6-15 6s-14-2-15-6L12 35Z" fill="url(#base)" stroke="#9F450E" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M21 40l3 15m8-14v15m10-16-3 15" stroke="#FFE2A0" stroke-width="2.1" stroke-linecap="round" opacity=".65"/>
+  <path d="M14 35c9 5 27 8 36 0" fill="none" stroke="#FFF1BC" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+  <!-- Simple pearl sugar accents, legible at favicon size -->
+  <g fill="#FFF8EB" stroke="#FCE2BB" stroke-width=".45">
+    <rect x="28" y="14" width="5" height="4" rx="1.5" transform="rotate(-19 30.5 16)"/>
+    <rect x="36" y="18" width="4.5" height="4" rx="1.4" transform="rotate(20 38 20)"/>
+    <rect x="19" y="24" width="4.5" height="4" rx="1.3" transform="rotate(15 21 26)"/>
+    <rect x="44" y="29" width="4.5" height="4" rx="1.3" transform="rotate(-15 46 31)"/>
   </g>
 </svg>

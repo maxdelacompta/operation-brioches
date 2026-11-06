@@ -1,4 +1,10 @@
 import { useSearchParams } from 'react-router-dom'
+import FichesCaisseImportButton from '../components/FichesCaisseImportButton'
+import { useCampaignWriteAccess } from '../lib/useCampaignWriteAccess'
+import { useCommandesMairiesRs } from '../contexts/CommandesMairiesRsContext'
+import { useEtablissements } from '../contexts/EtablissementsContext'
+import { lireClotureStand, lireStandsClotures, standsCloturesDeCampagne } from '../lib/ficheCaisseReferenceLists'
+import type { CommandeMairieRs } from '../types/commandesMairiesRs'
 import {
   useEffect,
   useMemo,
@@ -269,15 +275,44 @@ const PIECES: {
    ========================================================= */
 
 function FichesCaisse() {
-  const [globalSearchParams] = useSearchParams()
+  const [globalSearchParams, setGlobalSearchParams] = useSearchParams()
+  const { commandes: commandesMairiesRs } = useCommandesMairiesRs()
+  const canWriteCampaign = useCampaignWriteAccess()
+  const commandeMairieRsFiltre = globalSearchParams.get('mairieRs')
+  const commandeMairieRsSelectionnee = commandesMairiesRs.find(item => item.id === commandeMairieRsFiltre)
+
   const {
     fichesCaisse,
     setFichesCaisse,
     depotsBanque,
     commandes,
     getDonateurById,
-    activeCampagne,
+    activeCampagne: campagneActiveAdministrativement,
+    selectedCampagne,
   } = useObData()
+  const activeCampagne = selectedCampagne ?? campagneActiveAdministrativement
+
+  // Accès direct depuis une commande mairie/RS. Ouvre la saisie seulement pour
+  // une commande de la campagne sélectionnée et modifiable.
+  const demandeCreationMairieRs = globalSearchParams.get('creation') === '1'
+  useEffect(() => {
+    if (!demandeCreationMairieRs || !commandeMairieRsFiltre) return
+    const frame = window.requestAnimationFrame(() => {
+      const next = new URLSearchParams(globalSearchParams)
+      next.delete('creation')
+      setGlobalSearchParams(next, { replace: true })
+      if (canWriteCampaign && commandeMairieRsSelectionnee &&
+          commandeMairieRsSelectionnee.statut !== 'ANNULEE' &&
+          commandeMairieRsSelectionnee.campagne === activeCampagne?.id) {
+        setEditingFiche(null)
+        setModalMode('create')
+        setModalOpen(true)
+      }
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [demandeCreationMairieRs, commandeMairieRsFiltre, commandeMairieRsSelectionnee,
+      globalSearchParams, setGlobalSearchParams, activeCampagne?.id, canWriteCampaign])
+
 
   /* =======================================================
      INTÉGRATION AUTOMATIQUE DES ANCIENNES FICHES
@@ -495,6 +530,8 @@ function FichesCaisse() {
       const filtered =
         fichesCaisse.filter(
           (fiche) => {
+            if (activeCampagne && fiche.campagne !== activeCampagne.id) return false
+            if (commandeMairieRsFiltre && fiche.commandeMairieRsId !== commandeMairieRsFiltre) return false
             const searchable =
               [
                 fiche.numero,
@@ -572,6 +609,8 @@ function FichesCaisse() {
       )
     }, [
       fichesCaisse,
+      activeCampagne,
+      commandeMairieRsFiltre,
       search,
       typeFilter,
       secteurFilter,
@@ -799,6 +838,7 @@ const pageButtons = Array.from(
      ======================================================= */
 
   function openCreateModal() {
+    if (!canWriteCampaign) return
     setEditingFiche(
       null,
     )
@@ -845,6 +885,15 @@ const pageButtons = Array.from(
 
   function saveFiche(fiche: FicheCaisse) {
     try {
+      if (!canWriteCampaign) throw new Error('Campagne en consultation seule : enregistrement interdit.')
+      if (fiche.commandeMairieRsId) {
+        const commandeMR = commandesMairiesRs.find(item => item.id === fiche.commandeMairieRsId)
+        if (!commandeMR || commandeMR.statut === 'ANNULEE' ||
+            commandeMR.campagne !== fiche.campagne || fiche.type !== 'MAIRIE') {
+          throw new Error('Le rattachement à la commande Mairie/RS est invalide ou appartient à une autre campagne.')
+        }
+      }
+
       if (modalMode === 'edit') {
         const originale = fichesCaisse.find(item => item.id === fiche.id)
 
@@ -2620,6 +2669,22 @@ const pageButtons = Array.from(
           <p>
             Chaque fiche enregistrée est automatiquement intégrée au coffre de l'Opération Brioches.
           </p>
+          {commandeMairieRsFiltre && (
+            <p className="fiche-mairie-link-info">
+              Fiches liées à {commandeMairieRsSelectionnee
+                ? `${commandeMairieRsSelectionnee.numero} · ${commandeMairieRsSelectionnee.quiPasseCommande}`
+                : 'une commande Mairie/RS inconnue'}.
+              {' '}
+              <button type="button" onClick={() => {
+                const next = new URLSearchParams(globalSearchParams)
+                next.delete('mairieRs')
+                next.delete('creation')
+                setGlobalSearchParams(next)
+              }}>
+                Afficher toutes les fiches
+              </button>
+            </p>
+          )}
 
         </div>
 
@@ -2706,9 +2771,14 @@ const pageButtons = Array.from(
 
           </div>
 
+          {/* Import CSV / Excel, visible exclusivement aux administrateurs. */}
+          <FichesCaisseImportButton />
+
           <button
             type="button"
             className="fiches-caisse-primary-button"
+            disabled={!canWriteCampaign}
+            title={!canWriteCampaign ? 'Campagne en consultation seule' : 'Créer une fiche'}
             onClick={
               openCreateModal
             }
@@ -3757,6 +3827,9 @@ const pageButtons = Array.from(
             fichesCaisse
           }
           commandes={commandes}
+          commandesMairiesRs={commandesMairiesRs}
+          commandeMairieRsInitiale={commandeMairieRsSelectionnee?.campagne === activeCampagne?.id
+            ? commandeMairieRsSelectionnee.id : undefined}
           getDonateurById={getDonateurById}
           campagneActive={activeCampagne?.id ?? ''}
           onClose={() => {
@@ -4356,6 +4429,8 @@ function FicheCaisseModal({
   fiche,
   fiches,
   commandes,
+  commandesMairiesRs,
+  commandeMairieRsInitiale,
   getDonateurById,
   campagneActive,
   onClose,
@@ -4365,29 +4440,112 @@ function FicheCaisseModal({
   fiche: FicheCaisse | null
   fiches: FicheCaisse[]
   commandes: ReturnType<typeof useObData>['commandes']
+  commandesMairiesRs: CommandeMairieRs[]
+  commandeMairieRsInitiale?: string
   getDonateurById: ReturnType<typeof useObData>['getDonateurById']
   campagneActive: string
   onClose: () => void
   onSave: (fiche: FicheCaisse) => void
 }) {
-  const [
-    form,
-    setForm,
-  ] =
-    useState<FicheCaisse>(
-      fiche
-        ? {
-            ...fiche,
-          }
-        : createEmptyFiche(
-            fiches,
-          ),
+  const { etablissements } = useEtablissements()
+  const { campagnes } = useObData()
+  const [standsClotures] = useState(lireStandsClotures)
+
+  const [form, setForm] = useState<FicheCaisse>(() => {
+    if (fiche) return { ...fiche }
+    const initial = createEmptyFiche(fiches)
+    const preselect = commandesMairiesRs.find(item =>
+      item.id === commandeMairieRsInitiale &&
+      item.campagne === campagneActive &&
+      item.statut !== 'ANNULEE',
     )
+    return {
+      ...initial,
+      campagne: campagneActive || initial.campagne,
+      ...(preselect ? {
+        type: 'MAIRIE' as const,
+        commandeMairieRsId: preselect.id,
+        libelle: preselect.quiPasseCommande,
+        secteur: preselect.secteur,
+      } : {}),
+    }
+  })
 
   const [
     error,
     setError,
   ] = useState('')
+
+  const etablissementsDisponibles = useMemo(
+    () => [...etablissements].sort((a, b) =>
+      (a.statut === b.statut ? 0 : a.statut === 'ACTIF' ? -1 : 1) ||
+      a.nom.localeCompare(b.nom, 'fr'),
+    ),
+    [etablissements],
+  )
+
+  const standsDisponibles = useMemo(() =>
+    standsCloturesDeCampagne(standsClotures, campagnes, form.campagne),
+  [standsClotures, campagnes, form.campagne])
+
+  const standClotureSelectionnee = useMemo(
+    () => (form.standId ? lireClotureStand(form.standId) : null),
+    [form.standId],
+  )
+
+  function choisirEtablissement(id: string) {
+    const etablissement = etablissementsDisponibles.find(item => item.id === id)
+    setForm(current => ({
+      ...current,
+      etablissementId: etablissement?.id,
+      standId: undefined,
+      libelle: etablissement?.nom ?? '',
+      cp: etablissement?.codePostal ?? '',
+      ville: etablissement?.ville ?? '',
+      secteur: etablissement?.secteur ?? '',
+    }))
+  }
+
+  function choisirStand(id: string) {
+    const stand = standsDisponibles.find(item => item.id === id)
+    const cloture = stand ? lireClotureStand(stand.id) : null
+    setForm(current => ({
+      ...current,
+      standId: stand?.id,
+      etablissementId: undefined,
+      libelle: stand?.nom ?? '',
+      ville: stand?.lieu ?? '',
+      cp: '',
+      secteur: '',
+      nbBriochesDonnees:
+        cloture?.briochesTotal ??
+        cloture?.briochesCompteur ??
+        current.nbBriochesDonnees ??
+        0,
+      nbDonsSansContrepartie:
+        cloture?.donsSansBrioche ??
+        current.nbDonsSansContrepartie ??
+        0,
+      donsSansContrepartieInconnu:
+        cloture?.donsSansBrioche != null
+          ? false
+          : current.donsSansContrepartieInconnu ?? false,
+    }))
+  }
+
+  function choisirType(type: TypeFicheCaisse) {
+    setForm(current => ({
+      ...current,
+      type,
+      commandeId: type === 'ENTREPRISE' ? current.commandeId : undefined,
+      donateurId: type === 'ENTREPRISE' ? current.donateurId : undefined,
+      commandeMairieRsId: type === 'MAIRIE' ? current.commandeMairieRsId : undefined,
+      etablissementId: type === 'ETABLISSEMENT' ? current.etablissementId : undefined,
+      standId: type === 'STAND' ? current.standId : undefined,
+      enveloppeRetourSiege: type === 'ETABLISSEMENT' ? current.enveloppeRetourSiege : false,
+      ...(current.type !== type ? { libelle: '', ville: '', cp: '', secteur: '' } : {}),
+    }))
+  }
 
   // Les références de commande sont liées à la fiche de caisse (commandeId).
   // On normalise OB2026 / OB 2026 / 2026 pour ne pas mélanger les campagnes.
@@ -4404,6 +4562,29 @@ function FicheCaisseModal({
       .sort((a, b) => a.numero.localeCompare(b.numero, 'fr', { numeric: true }))
   }, [commandes, form.campagne, campagneActive])
 
+  const bonsMairiesRs = useMemo(() => commandesMairiesRs
+    .filter(item => item.campagne === form.campagne && item.statut !== 'ANNULEE')
+    .sort((a, b) => a.numero.localeCompare(b.numero, 'fr', { numeric: true })),
+  [commandesMairiesRs, form.campagne])
+
+  function choisirCommandeMairieRs(id: string) {
+    const commande = bonsMairiesRs.find(item => item.id === id)
+    if (!commande) {
+      setForm(current => ({ ...current, commandeMairieRsId: undefined }))
+      return
+    }
+    setForm(current => ({
+      ...current,
+      type: 'MAIRIE',
+      campagne: commande.campagne,
+      commandeMairieRsId: commande.id,
+      commandeId: undefined,
+      donateurId: undefined,
+      libelle: commande.quiPasseCommande,
+      secteur: commande.secteur,
+    }))
+  }
+
   function choisirBonDeCommande(value: string) {
     const id = Number(value)
     const commande = bonsDeCommande.find(item => item.id === id)
@@ -4416,6 +4597,7 @@ function FicheCaisseModal({
       ...current,
       type: 'ENTREPRISE',
       commandeId: commande.id,
+      commandeMairieRsId: undefined,
       donateurId: commande.donateurId,
       campagne: commande.campagne,
       libelle: donateur?.nom ?? current.libelle,
@@ -4460,6 +4642,18 @@ function FicheCaisseModal({
           number,
       }),
     )
+  }
+
+
+  function updateOptionalCount(
+    key: 'nbBriochesDonnees' | 'nbDonsSansContrepartie',
+    value: string,
+  ) {
+    const number = Math.max(0, Number(value) || 0)
+    setForm(current => ({
+      ...current,
+      [key]: number,
+    }))
   }
 
   function submit(
@@ -4617,24 +4811,14 @@ function FicheCaisseModal({
                     value={
                       form.type
                     }
-                    onChange={(
-                      event,
-                    ) =>
-                      setForm(current => ({
-                        ...current,
-                        type: event.target.value as TypeFicheCaisse,
-                        ...(event.target.value === 'ENTREPRISE'
-                          ? {}
-                          : { commandeId: undefined, donateurId: undefined }),
-                      }))
-                    }
+                    onChange={event => choisirType(event.target.value as TypeFicheCaisse)}
                   >
                     <option value="ENTREPRISE">
                       Entreprise
                     </option>
 
                     <option value="MAIRIE">
-                      Mairie
+                      Mairie / RS
                     </option>
 
                     <option value="ETABLISSEMENT">
@@ -4666,10 +4850,36 @@ function FicheCaisseModal({
                         campagne: event.target.value,
                         commandeId: undefined,
                         donateurId: undefined,
+                        commandeMairieRsId: undefined,
+                        standId: undefined,
+                        ...(current.type === 'STAND' ? { libelle: '', ville: '', cp: '', secteur: '' } : {}),
                       }))
                     }
                   />
                 </FormField>
+
+                {form.type === 'MAIRIE' && (
+                  <FormField label="Commande Mairie / RS" wide>
+                    <select
+                      value={form.commandeMairieRsId ?? ''}
+                      onChange={event => choisirCommandeMairieRs(event.target.value)}
+                      aria-label="Lier la fiche à une commande Mairie ou RS"
+                    >
+                      <option value="">— Aucune commande liée —</option>
+                      {bonsMairiesRs.map(item => (
+                        <option key={item.id} value={item.id}>
+                          {item.numero} · {item.quiPasseCommande} · {item.quantite} brioches
+                          · prévu {item.donPrevu.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="fiche-commande-hint">
+                      La somme des fiches contrôlées liées alimentera automatiquement le don reçu
+                      et l’écart de cette commande. Plusieurs fiches peuvent être rattachées.
+                      La saisie historique ne sera pas ajoutée une deuxième fois.
+                    </small>
+                  </FormField>
+                )}
 
                 {form.type === 'ENTREPRISE' && (
                   <FormField label="Bon de commande entreprise" wide>
@@ -4697,23 +4907,65 @@ function FicheCaisseModal({
                   </FormField>
                 )}
 
-                <FormField
-                  label="Structure / Nom"
-                  wide
-                >
-                  <input
-                    value={
-                      form.libelle
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      updateField(
-                        'libelle',
-                        event.target.value,
-                      )
-                    }
-                  />
+                <FormField label="Structure / Nom" wide>
+                  {form.type === 'ETABLISSEMENT' ? (
+                    <>
+                      <select
+                        value={form.etablissementId ?? ''}
+                        onChange={event => choisirEtablissement(event.target.value)}
+                        aria-label="Choisir un établissement AEIM"
+                      >
+                        <option value="">
+                          {form.libelle && !form.etablissementId
+                            ? `Ancienne saisie : ${form.libelle} — sélectionner un établissement`
+                            : '— Sélectionner un établissement —'}
+                        </option>
+                        {form.etablissementId && !etablissementsDisponibles.some(e => e.id === form.etablissementId) && (
+                          <option value={form.etablissementId}>Établissement précédemment lié (introuvable)</option>
+                        )}
+                        {etablissementsDisponibles.map(etablissement => (
+                          <option key={etablissement.id} value={etablissement.id}>
+                            {etablissement.nom} · {etablissement.ville}
+                            {etablissement.statut !== 'ACTIF' ? ' (inactif)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <small className="fiche-commande-hint">
+                        Liste issue d'Administration → Établissements. Les coordonnées se complètent automatiquement.
+                      </small>
+                    </>
+                  ) : form.type === 'STAND' ? (
+                    <>
+                      <select
+                        value={form.standId ?? ''}
+                        onChange={event => choisirStand(event.target.value)}
+                        aria-label="Choisir un stand clôturé"
+                      >
+                        <option value="">
+                          {form.libelle && !form.standId
+                            ? `Ancienne saisie : ${form.libelle} — sélectionner un stand fermé`
+                            : '— Sélectionner un stand fermé —'}
+                        </option>
+                        {form.standId && !standsDisponibles.some(stand => stand.id === form.standId) && (
+                          <option value={form.standId}>Stand précédemment lié (hors campagne ou introuvable)</option>
+                        )}
+                        {standsDisponibles.map(stand => (
+                          <option key={stand.id} value={stand.id}>
+                            {stand.nom} · {stand.lieu} · {stand.date.split('-').reverse().join('/')}
+                          </option>
+                        ))}
+                      </select>
+                      <small className="fiche-commande-hint">
+                        Seuls les stands avec un décompte clôturé pour {form.campagne} sont proposés.
+                        {standsDisponibles.length === 0 ? ' Aucun stand fermé disponible.' : ''}
+                      </small>
+                    </>
+                  ) : (
+                    <input
+                      value={form.libelle}
+                      onChange={event => updateField('libelle', event.target.value)}
+                    />
+                  )}
                 </FormField>
 
                 <FormField
@@ -5050,6 +5302,76 @@ function FicheCaisseModal({
                   </FormField>
 
                 </PaymentCard>
+
+              </div>
+
+            </FormSection>
+
+            <FormSection
+              title="Distribution et suivi"
+            >
+
+              <div className="fiche-form-grid fiche-dons-grid">
+
+                <FormField label="Nombre de brioches données">
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.nbBriochesDonnees ?? 0}
+                    onChange={event => updateOptionalCount('nbBriochesDonnees', event.target.value)}
+                    disabled={form.type === 'STAND' && Boolean(standClotureSelectionnee?.briochesTotal ?? standClotureSelectionnee?.briochesCompteur)}
+                  />
+                  {form.type === 'STAND' && (
+                    <small className="fiche-commande-hint">
+                      {standClotureSelectionnee?.briochesTotal != null || standClotureSelectionnee?.briochesCompteur != null
+                        ? `Valeur reprise du compteur / décompte du stand : ${standClotureSelectionnee?.briochesTotal ?? standClotureSelectionnee?.briochesCompteur} brioches.`
+                        : 'Aucune valeur reprise du compteur : renseigner le compteur manuel si nécessaire.'}
+                    </small>
+                  )}
+                </FormField>
+
+                <FormField label="Dons sans contrepartie">
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.donsSansContrepartieInconnu ? '' : (form.nbDonsSansContrepartie ?? 0)}
+                    onChange={event => updateOptionalCount('nbDonsSansContrepartie', event.target.value)}
+                    disabled={Boolean(form.donsSansContrepartieInconnu)}
+                    placeholder={form.donsSansContrepartieInconnu ? 'Non renseigné' : undefined}
+                  />
+                  <label className="fiche-inline-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.donsSansContrepartieInconnu)}
+                      onChange={event =>
+                        setForm(current => ({
+                          ...current,
+                          donsSansContrepartieInconnu: event.target.checked,
+                          nbDonsSansContrepartie: event.target.checked ? undefined : current.nbDonsSansContrepartie ?? 0,
+                        }))
+                      }
+                    />
+                    <span>Je ne connais pas le nombre exact</span>
+                  </label>
+                  {form.type === 'STAND' && standClotureSelectionnee?.donsSansBrioche != null && (
+                    <small className="fiche-commande-hint">
+                      Valeur reprise du compteur du stand : {standClotureSelectionnee.donsSansBrioche} don(s) sans contrepartie.
+                    </small>
+                  )}
+                </FormField>
+
+                {form.type === 'ETABLISSEMENT' && (
+                  <FormField label="Retour au siège">
+                    <label className="fiche-inline-checkbox fiche-inline-checkbox-block">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(form.enveloppeRetourSiege)}
+                        onChange={event => updateField('enveloppeRetourSiege', event.target.checked)}
+                      />
+                      <span>Enveloppe « retour au siège » reçue</span>
+                    </label>
+                  </FormField>
+                )}
 
               </div>
 
@@ -5799,6 +6121,11 @@ function createEmptyFiche(
     nbDons3: 0,
 
     montantDonsAutres: 0,
+
+    nbBriochesDonnees: 0,
+    nbDonsSansContrepartie: 0,
+    donsSansContrepartieInconnu: false,
+    enveloppeRetourSiege: false,
 
     remarque: '',
     statutCoffre: 'A_CONTROLER',

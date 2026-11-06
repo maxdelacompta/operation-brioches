@@ -1,4 +1,7 @@
 import { omitKeys } from '../lib/omitKeys'
+import { useNavigate } from 'react-router-dom'
+import { useCampaignWriteAccess } from '../lib/useCampaignWriteAccess'
+import { bilanCaisseMairieRs } from '../lib/mairiesRsCaisse'
 import {
   useMemo,
   useState,
@@ -23,11 +26,16 @@ import {
   Search,
   Trash2,
   Truck,
+  WalletCards,
+  Upload,
   UserRound,
   X,
 } from 'lucide-react'
 
 import { useMairies } from '../contexts/MairiesContext'
+import { useObData } from '../contexts/ObDataContext'
+import { useUsers } from '../contexts/UsersContext'
+import ImportCommandesMairiesRs from './ImportCommandesMairiesRs'
 import { useCommandesMairiesRs } from '../contexts/CommandesMairiesRsContext'
 import type {
   CommandeMairieRs,
@@ -123,21 +131,37 @@ function emptyCommande(
   }
 }
 
-function getGap(item: CommandeMairieRs) {
-  if (item.donRecu === null) return null
-  return item.donRecu - item.donPrevu
-}
-
 
 export default function CommandesMairiesRs() {
+  const navigate = useNavigate()
+  const canWrite = useCampaignWriteAccess()
   const {
     commandes,
     createCommande,
     updateCommande,
     deleteCommande,
+    importCommandes,
   } = useCommandesMairiesRs()
+  const { currentUser } = useUsers()
+  const isAdmin = currentUser?.role === 'administrateur'
 
   const { mairies } = useMairies()
+  const { selectedCampagne, activeCampagne, setSelectedCampagneId, fichesCaisse } = useObData()
+
+  // Calcul de lecture seule : une fiche contrôlée fait foi, sinon le don historique reste affiché.
+  // Ne jamais additionner donRecu historique et fiches de caisse : ce serait un double comptage.
+  const bilans = useMemo(() => new Map(
+    commandes.map(commande => [commande.id, bilanCaisseMairieRs(commande, fichesCaisse)]),
+  ), [commandes, fichesCaisse])
+  const bilanPour = (commande: CommandeMairieRs) => bilans.get(commande.id) ?? bilanCaisseMairieRs(commande, [])
+
+  function allerAuxFiches(commande: CommandeMairieRs, nouvelle = false) {
+    const params = new URLSearchParams({ mairieRs: commande.id })
+    if (nouvelle) params.set('creation', '1')
+    setDetailId(null)
+    navigate(`/encaissements/fiches-caisse?${params.toString()}`)
+  }
+
 
   const campaigns = useMemo(
     () =>
@@ -153,8 +177,8 @@ export default function CommandesMairiesRs() {
     [commandes],
   )
 
-  const [campagneFilter, setCampagneFilter] =
-    useState(campaigns[0] || `OB ${new Date().getFullYear()}`)
+  const campagneFilter = (selectedCampagne ?? activeCampagne)?.id ?? `OB ${new Date().getFullYear()}`
+  const setCampagneFilter = setSelectedCampagneId
 
   const [search, setSearch] = useState('')
   const [secteurFilter, setSecteurFilter] = useState('TOUS')
@@ -167,6 +191,7 @@ export default function CommandesMairiesRs() {
 
   const [detailId, setDetailId] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [formMode, setFormMode] = useState<FormMode>('create')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] =
@@ -304,11 +329,11 @@ export default function CommandesMairiesRs() {
         0,
       ),
       donsRecus: active.reduce(
-        (sum, item) => sum + (item.donRecu ?? 0),
+        (sum, item) => sum + (bilans.get(item.id)?.recu ?? 0),
         0,
       ),
     }
-  }, [campagneCommandes])
+  }, [campagneCommandes, bilans])
 
   const repartition = useMemo(() => {
     const map = new Map<
@@ -353,7 +378,7 @@ export default function CommandesMairiesRs() {
     ).length
 
     const ecartsNegatifs = campagneCommandes.filter((item) => {
-      const gap = getGap(item)
+      const gap = bilans.get(item.id)?.ecart ?? null
       return gap !== null && gap < 0
     }).length
 
@@ -363,7 +388,7 @@ export default function CommandesMairiesRs() {
       sansContact,
       ecartsNegatifs,
     }
-  }, [campagneCommandes])
+  }, [campagneCommandes, bilans])
 
   const detail = detailId
     ? commandes.find((item) => item.id === detailId) ?? null
@@ -526,8 +551,12 @@ export default function CommandesMairiesRs() {
 
     if (!ok) return
 
-    deleteCommande(item.id)
-    setDetailId(null)
+    try {
+      deleteCommande(item.id)
+      setDetailId(null)
+    } catch (cause) {
+      window.alert(cause instanceof Error ? cause.message : 'Suppression impossible.')
+    }
   }
 
   function exportCsv() {
@@ -580,8 +609,8 @@ export default function CommandesMairiesRs() {
         item.nombreBriochesVendues ?? '',
         item.personneRapportantDons,
         item.lieuDepotDons,
-        item.donRecu ?? '',
-        getGap(item) ?? '',
+        bilanPour(item).recu ?? '',
+        bilanPour(item).ecart ?? '',
         STATUS_LABELS[item.statut],
       ]),
     ]
@@ -640,6 +669,9 @@ export default function CommandesMairiesRs() {
                 setPage(1)
               }}
             >
+              {!campaigns.includes(campagneFilter) && (
+                <option value={campagneFilter}>{campagneFilter} · aucune commande</option>
+              )}
               {campaigns.map((campagne) => (
                 <option
                   key={campagne}
@@ -651,6 +683,18 @@ export default function CommandesMairiesRs() {
             </select>
           </label>
 
+          {isAdmin && (
+            <button
+              type="button"
+              className="cmr-secondary"
+              onClick={() => setImportOpen(true)}
+              title="Importer des commandes CSV ou Excel — administrateurs uniquement"
+            >
+              <Upload size={17} />
+              Importer
+            </button>
+          )}
+
           <button
             type="button"
             className="cmr-primary"
@@ -661,6 +705,16 @@ export default function CommandesMairiesRs() {
           </button>
         </div>
       </header>
+
+      {isAdmin && importOpen && (
+        <ImportCommandesMairiesRs
+          key={campagneFilter}
+          campagne={campagneFilter}
+          commandes={commandes}
+          onImport={importCommandes}
+          onClose={() => setImportOpen(false)}
+        />
+      )}
 
       <section className="cmr-kpis">
         <Kpi
@@ -816,7 +870,8 @@ export default function CommandesMairiesRs() {
 
             <tbody>
               {paged.map((item) => {
-                const gap = getGap(item)
+                const bilan = bilanPour(item)
+                const gap = bilan.ecart
 
                 return (
                   <tr
@@ -863,9 +918,12 @@ export default function CommandesMairiesRs() {
                     <td>{money(item.donPrevu)}</td>
 
                     <td>
-                      {item.donRecu === null
-                        ? '—'
-                        : money(item.donRecu)}
+                      {bilan.recu === null ? '—' : money(bilan.recu)}
+                      {bilan.source === 'fiches' && (
+                        <small className="cmr-caisse-link" title={`${bilan.nombreFiches} fiche(s) de caisse contrôlée(s)`}>
+                          <WalletCards size={12} /> {bilan.nombreFiches} fiche(s)
+                        </small>
+                      )}
                     </td>
 
                     <td>
@@ -895,6 +953,13 @@ export default function CommandesMairiesRs() {
 
                     <td>
                       <div className="cmr-actions">
+                        <button
+                          type="button"
+                          title="Consulter les fiches de caisse liées"
+                          onClick={() => allerAuxFiches(item)}
+                        >
+                          <WalletCards size={15} />
+                        </button>
                         <button
                           type="button"
                           title="Voir"
@@ -1229,17 +1294,26 @@ export default function CommandesMairiesRs() {
                   <Detail
                     label="Don reçu"
                     value={
-                      detail.donRecu === null
+                      bilanPour(detail).recu === null
                         ? '—'
-                        : money(detail.donRecu)
+                        : money(bilanPour(detail).recu as number)
                     }
                   />
                   <Detail
+                    label="Source du don reçu"
+                    value={bilanPour(detail).source === 'fiches'
+                      ? `${bilanPour(detail).nombreFiches} fiche(s) de caisse contrôlée(s)`
+                      : bilanPour(detail).source === 'historique' ? 'Saisie historique' : 'Non renseigné'}
+                  />
+                  {bilanPour(detail).source === 'fiches' && detail.donRecu !== null && (
+                    <Detail label="Montant historique conservé (non cumulé)" value={money(detail.donRecu)} />
+                  )}
+                  <Detail
                     label="Écart"
                     value={
-                      getGap(detail) === null
+                      bilanPour(detail).ecart === null
                         ? '—'
-                        : money(getGap(detail) as number)
+                        : money(bilanPour(detail).ecart as number)
                     }
                   />
                 </DetailCard>
@@ -1264,6 +1338,25 @@ export default function CommandesMairiesRs() {
               </button>
 
               <span />
+
+              <button
+                type="button"
+                className="cmr-secondary"
+                onClick={() => allerAuxFiches(detail)}
+              >
+                <WalletCards size={16} />
+                Voir les fiches
+              </button>
+              {canWrite && detail.statut !== 'ANNULEE' && (
+                <button
+                  type="button"
+                  className="cmr-primary"
+                  onClick={() => allerAuxFiches(detail, true)}
+                >
+                  <Plus size={16} />
+                  Saisir un encaissement
+                </button>
+              )}
 
               <button
                 type="button"
@@ -1676,7 +1769,7 @@ export default function CommandesMairiesRs() {
                     />
                   </Field>
 
-                  <Field label="Don reçu">
+                  <Field label="Don reçu (saisie historique)">
                     <input
                       type="number"
                       min="0"

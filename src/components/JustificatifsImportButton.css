@@ -1,0 +1,329 @@
+/* Opération Brioche — Import JDI / JDP
+   Style autonome : seules la fenêtre d'import et sa commande sont concernées.
+*/
+
+.jd-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.jd-import-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 17px;
+  border: 1px solid #cbdcf0;
+  border-radius: 11px;
+  background: #fff;
+  color: #0b3b77;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(20, 54, 98, 0.035);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.jd-import-trigger:hover {
+  border-color: #fb8a31;
+  background: #fff9f3;
+  box-shadow: 0 3px 10px rgba(242, 112, 18, .09);
+}
+.jd-import-trigger:focus-visible,
+.jd-import-dialog button:focus-visible,
+.jd-import-dialog input:focus-visible {
+  outline: 3px solid rgba(249, 131, 43, .36);
+  outline-offset: 2px;
+}
+
+.jd-import-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 3vw, 28px);
+  background: rgba(13, 34, 62, .57);
+  backdrop-filter: blur(3px);
+}
+
+.jd-import-dialog {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 100%);
+  max-height: min(850px, calc(100dvh - 32px));
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid #dde8f4;
+  border-radius: 18px;
+  background: #fff;
+  color: #173b6e;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 24px 80px rgba(10, 31, 58, .28), 0 3px 15px rgba(10, 31, 58, .08);
+}
+.jd-import-dialog,
+.jd-import-dialog * { box-sizing: border-box; }
+
+.jd-import-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  flex: 0 0 auto;
+  padding: 25px 28px 20px;
+  border-bottom: 1px solid #e4ecf6;
+  background: linear-gradient(105deg, #f4f8ff 0%, #fbfdff 64%, #fff4e8 100%);
+}
+.jd-import-header > div { flex: 1; min-width: 0; }
+.jd-import-eyebrow {
+  display: block;
+  color: #ed7519;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .095em;
+  line-height: 1.5;
+}
+.jd-import-header h2 {
+  margin: 5px 0 6px;
+  color: #0b3167;
+  font-size: clamp(20px, 2vw, 24px);
+  font-weight: 800;
+  line-height: 1.25;
+}
+.jd-import-header p {
+  margin: 0;
+  color: #627c9b;
+  font-size: 13px;
+}
+.jd-import-header p strong { color: #0c3d7c; font-weight: 800; }
+.jd-import-close {
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #dae5f1;
+  border-radius: 10px;
+  background: #fff;
+  color: #335983;
+  cursor: pointer;
+}
+.jd-import-close:hover { background: #fff4ed; color: #d65a0a; border-color: #f9c9a5; }
+
+.jd-import-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 23px 28px 25px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.jd-import-notice {
+  margin: 0 0 19px;
+  padding: 14px 16px;
+  border: 1px solid #ffdbb7;
+  border-left: 4px solid #ff8a20;
+  border-radius: 10px;
+  background: #fff8f0;
+  color: #76532f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.jd-import-notice strong { color: #76400d; font-weight: 800; }
+.jd-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 5px;
+}
+.jd-import-actions button,
+.jd-import-footer button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 43px;
+  padding: 10px 15px;
+  border: 1px solid #cadcf0;
+  border-radius: 10px;
+  background: #fff;
+  color: #153e73;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.jd-import-actions button:hover:not(:disabled),
+.jd-import-footer button:hover:not(:disabled) { background: #f2f7ff; border-color: #8bb0dc; }
+.jd-import-actions button:nth-of-type(2) {
+  border-color: #f9b985;
+  background: #fff6ed;
+  color: #b74c09;
+}
+.jd-import-actions button:nth-of-type(2):hover:not(:disabled) {
+  border-color: #f68b34;
+  background: #ffebd9;
+}
+.jd-import-actions button:disabled,
+.jd-import-footer button:disabled { opacity: .45; cursor: not-allowed; }
+.jd-import-actions input[hidden] { display: none !important; }
+.jd-import-filename {
+  margin: 14px 0 8px;
+  overflow-wrap: anywhere;
+  color: #496889;
+  font-size: 13px;
+}
+.jd-import-filename strong { color: #143d71; }
+.jd-import-error,
+.jd-import-errors {
+  padding: 12px 15px;
+  border: 1px solid #f8c1bb;
+  border-radius: 10px;
+  background: #fff3f1;
+  color: #aa342b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.jd-import-errors { max-height: 152px; overflow-y: auto; }
+.jd-import-errors p { margin: 4px 0; }
+.jd-import-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 17px 0 13px;
+}
+.jd-import-summary > * {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid #dceafa;
+  border-radius: 9px;
+  background: #f0f6fd;
+  color: #174371;
+  font-size: 12px;
+  font-weight: 750;
+}
+.jd-import-table-wrap {
+  max-width: 100%;
+  max-height: 290px;
+  overflow: auto;
+  margin: 13px 0;
+  border: 1px solid #dce6f2;
+  border-radius: 11px;
+  background: #fff;
+}
+.jd-import-table-wrap table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: #173d70;
+  font-size: 12px;
+}
+.jd-import-table-wrap th,
+.jd-import-table-wrap td {
+  padding: 10px 13px;
+  border-bottom: 1px solid #e7eef7;
+  text-align: left;
+  white-space: nowrap;
+}
+.jd-import-table-wrap th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eaf2fb;
+  color: #143c73;
+  font-weight: 850;
+}
+.jd-import-table-wrap tbody tr:nth-child(even) { background: #fbfdff; }
+.jd-import-table-wrap tbody tr:hover { background: #fff9f3; }
+.jd-import-table-wrap p { padding: 0 12px; color: #627d9c; font-size: 12px; }
+.jd-import-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border: 1px solid #caddec;
+  border-radius: 10px;
+  background: #f5f9ff;
+  color: #204d7c;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.55;
+  cursor: pointer;
+}
+.jd-import-confirm input[type='checkbox'] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  padding: 0;
+  accent-color: #f6801b;
+  cursor: pointer;
+}
+.jd-import-confirm span { flex: 1; min-width: 0; }
+
+.jd-import-footer {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 28px;
+  border-top: 1px solid #e0eaf5;
+  background: #f9fbfe;
+}
+.jd-import-footer .jd-import-validate {
+  border-color: #f87f17;
+  background: linear-gradient(180deg, #ff9b3a, #fa7c0d);
+  color: #fff;
+  box-shadow: 0 4px 11px rgba(239, 116, 20, .15);
+}
+.jd-import-footer .jd-import-validate:hover:not(:disabled) {
+  border-color: #e86b08;
+  background: #e96f08;
+}
+.jd-import-footer .jd-import-validate:disabled {
+  border-color: #f7b783;
+  background: #f8ad75;
+  color: #fff;
+  box-shadow: none;
+}
+
+@media (max-width: 700px) {
+  .jd-header-actions { justify-content: flex-start; }
+  .jd-import-overlay { align-items: center; padding: 10px; }
+  .jd-import-dialog { width: 100%; max-height: calc(100dvh - 20px); border-radius: 14px; }
+  .jd-import-header { padding: 17px 16px 15px; gap: 10px; }
+  .jd-import-header h2 { font-size: 19px; }
+  .jd-import-body { padding: 16px; }
+  .jd-import-footer { padding: 14px 16px; }
+  .jd-import-table-wrap { max-height: 200px; }
+}
+@media (max-width: 440px) {
+  .jd-import-actions { align-items: stretch; flex-direction: column; }
+  .jd-import-actions button { width: 100%; }
+  .jd-import-footer { display: grid; grid-template-columns: 1fr; }
+  .jd-import-footer button { width: 100%; }
+  .jd-import-trigger { min-height: 41px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jd-import-trigger, .jd-import-actions button, .jd-import-footer button { transition: none; }
+}

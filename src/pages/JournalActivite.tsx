@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 
 import {
+  getUserDisplayName,
   useUsers,
 } from '../contexts/UsersContext'
 
@@ -37,6 +38,12 @@ import {
   type ActivityCategory,
   type ActivityEntry,
 } from '../services/activityLog'
+
+import {
+  getAutomaticAuditDiagnostics,
+  isAutomaticAuditInstalled,
+  probeAutomaticAudit,
+} from '../services/automaticAudit'
 
 import './JournalActivite.css'
 
@@ -103,9 +110,18 @@ function escapeCsv(
    PAGE
    ========================================================= */
 
+function isTechnicalTrace(entry: ActivityEntry): boolean {
+  return entry.source === 'automatique' ||
+    entry.source === 'diagnostic' ||
+    entry.message.startsWith('TEST TECHNIQUE') ||
+    entry.message.includes('Nature exacte de l\'action à confirmer') ||
+    entry.message.startsWith('Suppression d\'un enregistrement local')
+}
+
 function JournalActivite() {
   const {
     currentUser,
+    users,
   } = useUsers()
 
   /* =======================================================
@@ -126,11 +142,16 @@ function JournalActivite() {
   const [search, setSearch] =
     useState('')
 
+  const [actorFilter, setActorFilter] =
+    useState('TOUS')
+
   const [categoryFilter, setCategoryFilter] =
     useState('TOUTES')
 
   const [actionFilter, setActionFilter] =
     useState('TOUTES')
+
+  const [sourceFilter, setSourceFilter] = useState('TOUTES')
 
   const [dateFrom, setDateFrom] =
     useState('')
@@ -140,6 +161,8 @@ function JournalActivite() {
 
   const [notice, setNotice] =
     useState('')
+
+  const [auditDiagnostic, setAuditDiagnostic] = useState(getAutomaticAuditDiagnostics)
 
   /* =======================================================
      SYNCHRONISATION DU JOURNAL
@@ -189,6 +212,32 @@ function JournalActivite() {
     }
   }, [])
 
+  // Les anciens comptes restent sélectionnables tant que leurs
+  // événements figurent dans le journal local.
+  const actorOptions = useMemo(() => {
+    const registered = users.map(user => ({
+      id: user.id,
+      label: getUserDisplayName(user),
+    }))
+    const known = new Set(registered.map(user => user.id))
+    const historical = entries
+      .filter(entry => entry.actorId && !known.has(entry.actorId))
+      .map(entry => ({
+        id: entry.actorId as string,
+        label: `${entry.actorName} (ancien compte)`,
+      }))
+    const uniqueHistorical = Array.from(
+      new Map(historical.map(user => [user.id, user])).values(),
+    )
+    return [...registered, ...uniqueHistorical]
+      .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+  }, [users, entries])
+
+  const selectedActor = actorOptions.find(user => user.id === actorFilter)
+  const actorEntries = actorFilter === 'TOUS'
+    ? entries
+    : entries.filter(entry => entry.actorId === actorFilter)
+
   /* =======================================================
      RÉSULTATS FILTRÉS
      ======================================================= */
@@ -201,6 +250,9 @@ function JournalActivite() {
 
       return entries.filter(
         (entry) => {
+          const matchesActor =
+            actorFilter === 'TOUS' || entry.actorId === actorFilter
+
           const matchesCategory =
             categoryFilter === 'TOUTES' ||
             entry.category === categoryFilter
@@ -208,6 +260,11 @@ function JournalActivite() {
           const matchesAction =
             actionFilter === 'TOUTES' ||
             entry.action === actionFilter
+
+          const technicalTrace = isTechnicalTrace(entry)
+          const matchesSource =
+            sourceFilter === 'TOUTES' ||
+            (sourceFilter === 'TECHNIQUE' ? technicalTrace : !technicalTrace)
 
           const entryDate =
             getLocalDate(entry.at)
@@ -240,8 +297,10 @@ function JournalActivite() {
             searchable.includes(query)
 
           return (
+            matchesActor &&
             matchesCategory &&
             matchesAction &&
+            matchesSource &&
             matchesFrom &&
             matchesTo &&
             matchesSearch
@@ -251,9 +310,11 @@ function JournalActivite() {
     },
     [
       entries,
+      actorFilter,
       search,
       categoryFilter,
       actionFilter,
+      sourceFilter,
       dateFrom,
       dateTo,
     ],
@@ -262,6 +323,15 @@ function JournalActivite() {
   /* =======================================================
      INDICATEURS
      ======================================================= */
+
+  const technicalCount = filteredEntries.filter(isTechnicalTrace).length
+  const businessCount = filteredEntries.length - technicalCount
+  const actorModuleCounts = Object.entries(
+    actorEntries.reduce<Record<string, number>>((counts, entry) => {
+      counts[entry.category] = (counts[entry.category] || 0) + 1
+      return counts
+    }, {}),
+  ).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const today = getLocalDate(
     new Date().toISOString(),
@@ -290,8 +360,10 @@ function JournalActivite() {
 
   function resetFilters() {
     setSearch('')
+    setActorFilter('TOUS')
     setCategoryFilter('TOUTES')
     setActionFilter('TOUTES')
+    setSourceFilter('TOUTES')
     setDateFrom('')
     setDateTo('')
   }
@@ -318,6 +390,7 @@ function JournalActivite() {
       'Action',
       'Élément',
       'Description',
+      'Type de trace',
     ]
 
     const rows = filteredEntries.map(
@@ -333,6 +406,7 @@ function JournalActivite() {
         ],
         entry.target,
         entry.message,
+        isTechnicalTrace(entry) ? 'Automatique (technique)' : 'Action métier',
       ],
     )
 
@@ -369,7 +443,7 @@ function JournalActivite() {
       link.href = url
 
       link.download =
-        `journal-activite-${today}.csv`
+        `journal-activite-${actorFilter === 'TOUS' ? 'tous' : actorFilter.replace(/[^a-zA-Z0-9_-]/g, '_')}-${today}.csv`
 
       document.body.appendChild(link)
 
@@ -528,6 +602,75 @@ function JournalActivite() {
 
       </div>
 
+      <div className="activity-warning" role="status">
+        <Info size={19} />
+        <span>
+          Collecte automatique : <strong>{isAutomaticAuditInstalled() ? 'installée' : 'non installée'}</strong>.
+          {' '}Les événements automatiques apparaissent uniquement après de nouvelles sauvegardes locales.
+          {' '}Ils ne couvrent pas les simples consultations ni les actions non sauvegardées.
+          {' '}Si les nouvelles traces apparaissent sous « Session locale non identifiée », vérifiez la connexion de l’utilisateur.
+        </span>
+      </div>
+
+      <div className="activity-warning" role="group" aria-label="Diagnostic du journal">
+        <Info size={19} />
+        <span>
+          <strong>Diagnostic de la source :</strong> crée une entrée de test clairement
+          identifiée, sans modifier les données métier. Si elle s'affiche, le stockage
+          et la lecture du journal fonctionnent ; il reste à tester une vraie modification.
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setActorFilter('TOUS')
+            setCategoryFilter('TOUTES')
+            setActionFilter('TOUTES')
+            setSourceFilter('TOUTES')
+            setDateFrom('')
+            setDateTo('')
+            setSearch('')
+            const ok = recordActivity({
+              actorId: currentUser?.id ?? null,
+              actorName: currentUser ? getUserDisplayName(currentUser) : 'Session locale non identifiée',
+              category: 'journal',
+              source: 'diagnostic',
+              action: 'consultation',
+              target: 'Diagnostic du journal',
+              message: 'TEST TECHNIQUE — Vérification explicite de la collecte et de l’affichage du journal.',
+            })
+            setNotice(ok ? 'Test enregistré. La nouvelle ligne « Diagnostic du journal » doit apparaître ci-dessous.' : 'Test impossible : écriture du journal local refusée.')
+          }}
+        >
+          Tester le journal
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActorFilter('TOUS')
+            setCategoryFilter('TOUTES')
+            setActionFilter('TOUTES')
+            setSourceFilter('TOUTES')
+            setDateFrom('')
+            setDateTo('')
+            setSearch('')
+            const result = probeAutomaticAudit()
+            setAuditDiagnostic(getAutomaticAuditDiagnostics())
+            setEntries(readActivityLog())
+            setNotice(`Test de capture : ${result.message}`)
+          }}
+        >
+          Tester la capture des sauvegardes
+        </button>
+        <span>
+          Capture active : <strong>{auditDiagnostic.installed ? 'oui' : 'non'}</strong> ;
+          {' '}écritures interceptées : <strong>{auditDiagnostic.interceptedWrites}</strong> ;
+          {' '}écritures surveillées : <strong>{auditDiagnostic.matchedWrites}</strong>.
+          {auditDiagnostic.lastError && (
+            <span> Dernière erreur : {auditDiagnostic.lastError}</span>
+          )}
+        </span>
+      </div>
+
       {/* CONFIRMATION */}
 
       {notice && (
@@ -543,6 +686,71 @@ function JournalActivite() {
         </div>
 
       )}
+
+      <section className="activity-card activity-person-report">
+        <div className="activity-section-heading">
+          <div>
+            <h2>Rapport par utilisateur</h2>
+            <p>Sélectionnez un compte pour examiner les opérations enregistrées à son nom.</p>
+          </div>
+        </div>
+        <label className="activity-person-picker">
+          <span>Personne à consulter</span>
+          <select value={actorFilter} onChange={event => setActorFilter(event.target.value)}>
+            <option value="TOUS">Tous les utilisateurs</option>
+            {actorOptions.map(user => (
+              <option key={user.id} value={user.id}>{user.label}</option>
+            ))}
+          </select>
+        </label>
+        {actorFilter !== 'TOUS' && (
+          <div className="activity-person-summary" role="status">
+            <div>
+              <strong>{selectedActor?.label ?? 'Compte non retrouvé'}</strong>
+              <span>{actorEntries.length} événement(s) conservé(s)</span>
+            </div>
+            <div>
+              <strong>{new Set(actorEntries.map(entry => entry.category)).size}</strong>
+              <span>Module(s) concerné(s)</span>
+            </div>
+            <div>
+              <strong>{actorEntries[0] ? formatDate(actorEntries[0].at) : '—'}</strong>
+              <span>Dernière activité conservée</span>
+            </div>
+          </div>
+        )}
+        {actorFilter !== 'TOUS' && actorModuleCounts.length > 0 && (
+          <div className="activity-person-modules">
+            <strong>Modules les plus concernés</strong>
+            <div className="activity-module-chips">
+              {actorModuleCounts.map(([category, count]) => (
+                <span key={category}>
+                  {ACTIVITY_CATEGORIES[category as ActivityCategory] ?? category} · {count}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        <p className="activity-person-caution">
+          Ce rapport contient uniquement les opérations déjà journalisées dans ce navigateur.
+          L'absence d'événement ne prouve pas qu'une personne n'a effectué aucune action.
+        </p>
+      </section>
+
+      <section className="activity-audit-overview" aria-label="Nature des événements affichés">
+        <div>
+          <span>Événements correspondant aux filtres</span>
+          <strong>{filteredEntries.length}</strong>
+        </div>
+        <div>
+          <span>Actions métier journalisées</span>
+          <strong>{businessCount}</strong>
+        </div>
+        <div>
+          <span>Traces automatiques techniques</span>
+          <strong>{technicalCount}</strong>
+        </div>
+      </section>
 
       {/* ===================================================
           INDICATEURS
@@ -787,6 +995,15 @@ function JournalActivite() {
 
           </label>
 
+          <label>
+            <span>Type de trace</span>
+            <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+              <option value="TOUTES">Toutes les traces</option>
+              <option value="METIER">Actions métier</option>
+              <option value="TECHNIQUE">Traces automatiques</option>
+            </select>
+          </label>
+
           {/* DATE DE DÉBUT */}
 
           <label>
@@ -895,6 +1112,10 @@ function JournalActivite() {
                   Description
                 </th>
 
+                <th>
+                  Source
+                </th>
+
               </tr>
 
             </thead>
@@ -980,6 +1201,12 @@ function JournalActivite() {
 
                       {entry.message}
 
+                    </td>
+
+                    <td>
+                      <span className={`activity-trace-label ${isTechnicalTrace(entry) ? 'technical' : ''}`}>
+                        {isTechnicalTrace(entry) ? 'Automatique' : 'Métier'}
+                      </span>
                     </td>
 
                   </tr>

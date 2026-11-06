@@ -1,0 +1,27 @@
+.ob-campaign-readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 20px 8px;
+  padding: 12px 15px;
+  border: 1px solid #f7d397;
+  border-radius: 10px;
+  background: #fff8e8;
+  color: #774c0a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ob-campaign-readonly-banner > svg { flex: none; }
+.ob-campaign-readonly-banner > span { flex: 1; }
+.ob-campaign-readonly-banner button {
+  flex: none;
+  border: 1px solid #e5c38b;
+  border-radius: 6px;
+  padding: 4px 9px;
+  background: white;
+  cursor: pointer;
+  color: inherit;
+}
+@media (max-width: 800px) {
+  .ob-campaign-readonly-banner { margin: 10px; align-items: flex-start; }
+}

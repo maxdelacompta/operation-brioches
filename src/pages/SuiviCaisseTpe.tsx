@@ -232,13 +232,14 @@ function movementUsesTpe(mouvement: MouvementMateriel, tpeNumero: number) {
 }
 
 function SuiviCaisseTpeContent() {
-  const { fichesCaisse } = useObData()
+  const { fichesCaisse, selectedCampagne, activeCampagne, setSelectedCampagneId } = useObData()
   const { mouvements, createMouvement, updateMouvement, deleteMouvement } =
     useSuiviMateriel()
 
   const [activeTab, setActiveTab] = useState<MainTab>('PLANNING')
   const [search, setSearch] = useState('')
-  const [campagneFilter, setCampagneFilter] = useState(getCurrentCampaign())
+  const campagneFilter = (selectedCampagne ?? activeCampagne)?.id ?? getCurrentCampaign()
+  const setCampagneFilter = setSelectedCampagneId
   const [statusFilter, setStatusFilter] = useState<'TOUS' | StatutSuiviMateriel>('TOUS')
   const [weekStart, setWeekStart] = useState(startOfWeek(todayInput()))
   const [planningViewMode, setPlanningViewMode] = useState<PlanningMode>('MIXTE')
@@ -687,6 +688,7 @@ function SuiviCaisseTpeContent() {
         </div>
         <div className="sct-header-actions">
           <select value={campagneFilter} onChange={(e) => setCampagneFilter(e.target.value)}>
+            {!campaigns.includes(campagneFilter) && <option value={campagneFilter}>{campagneFilter}</option>}
             {campaigns.map((campagne) => <option key={campagne}>{campagne}</option>)}
           </select>
           {activeTab !== 'PLANNING' && (

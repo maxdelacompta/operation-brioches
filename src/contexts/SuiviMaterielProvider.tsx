@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction, type ReactNode } from 'react'
+import { useCampaignWriteAccess } from '../lib/useCampaignWriteAccess'
 import { type MouvementMateriel } from '../types/suiviMateriel'
 import { STORAGE_KEY, type SuiviMaterielContextValue, SuiviMaterielContext, loadMouvements, createId } from "./SuiviMaterielContext"
 
@@ -7,12 +8,16 @@ export function SuiviMaterielProvider({
 }: {
   children: ReactNode
 }) {
+  const canWrite = useCampaignWriteAccess()
   const [
     mouvements,
-    setMouvements,
+    setMouvementsState,
   ] = useState<
     MouvementMateriel[]
   >(loadMouvements)
+  const setMouvements = useCallback<Dispatch<SetStateAction<MouvementMateriel[]>>>(next => {
+    if (canWrite) setMouvementsState(next)
+  }, [canWrite])
 
   useEffect(() => {
     localStorage.setItem(
@@ -31,6 +36,7 @@ export function SuiviMaterielProvider({
       createMouvement: (
         input,
       ) => {
+        if (!canWrite) throw new Error('Campagne inactive : mouvement interdit.')
         const id = createId()
         const now =
           new Date().toISOString()
@@ -54,6 +60,7 @@ export function SuiviMaterielProvider({
         id,
         input,
       ) => {
+        if (!canWrite) throw new Error('Campagne inactive : modification interdite.')
         setMouvements(
           (current) =>
             current.map(
@@ -73,6 +80,7 @@ export function SuiviMaterielProvider({
       deleteMouvement: (
         id,
       ) => {
+        if (!canWrite) throw new Error('Campagne inactive : suppression interdite.')
         setMouvements(
           (current) =>
             current.filter(
@@ -82,7 +90,7 @@ export function SuiviMaterielProvider({
         )
       },
     }),
-    [mouvements],
+    [mouvements, canWrite, setMouvements],
   )
 
   return (

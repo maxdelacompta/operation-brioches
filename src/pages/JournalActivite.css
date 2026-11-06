@@ -792,3 +792,25 @@
     width: 100%;
   }
 }
+/* Rapport nominatif : compatible avec la grille des filtres existante. */
+.activity-person-report { margin-bottom: 18px; }
+.activity-person-picker { display: flex; flex-direction: column; gap: 8px; max-width: 440px; font-size: 13px; font-weight: 700; }
+.activity-person-picker select { width: 100%; min-height: 42px; padding: 9px 12px; border: 1px solid #cbd8e6; border-radius: 9px; background: #fff; color: #17365d; font: inherit; }
+.activity-person-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.activity-person-summary > div { display: flex; flex-direction: column; gap: 5px; padding: 14px; background: #f4f8fc; border-radius: 10px; }
+.activity-person-summary strong { color: #083e7d; font-size: 16px; }
+.activity-person-summary span { color: #637c99; font-size: 12px; }
+.activity-person-caution { color: #7b6170; font-size: 12px; margin: 16px 0 0; line-height: 1.5; }
+@media (max-width: 760px) { .activity-person-summary { grid-template-columns: 1fr; } }
+
+/* Tableau de bord des traces : ajout sans modifier la charte existante. */
+.activity-audit-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.activity-audit-overview > div { background: #fff; border: 1px solid #dce6f0; border-radius: 12px; padding: 17px; display: flex; flex-direction: column; gap: 8px; }
+.activity-audit-overview span { color: #607690; font-size: 12px; }
+.activity-audit-overview strong { font-size: 25px; color: #083e7d; }
+.activity-person-modules { margin-top: 16px; display: grid; gap: 8px; color: #17365d; font-size: 13px; }
+.activity-module-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.activity-module-chips span { background: #eaf2fc; color: #16477b; border-radius: 20px; padding: 6px 10px; font-size: 12px; }
+.activity-trace-label { font-size: 11px; border-radius: 20px; padding: 5px 9px; display: inline-block; white-space: nowrap; background: #e9f3ed; color: #18603a; }
+.activity-trace-label.technical { background: #fff3e4; color: #905011; }
+@media(max-width:760px) { .activity-audit-overview { grid-template-columns: 1fr; } }

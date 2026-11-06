@@ -1,12 +1,14 @@
 import { createContext, useContext } from 'react'
 
 import { type JustificatifDon, type NouveauJustificatif } from '../types/justificatifs'
+import type { JustificatifAImporter } from '../lib/justificatifsImport'
 
 export const STORAGE_KEY = 'ob-justificatifs-dons-v1'
 
 export type JustificatifsContextValue = {
   justificatifs: JustificatifDon[]
   createJustificatif: (input: NouveauJustificatif) => JustificatifDon
+  importerJustificatifs: (documents: JustificatifAImporter[]) => void
   updateJustificatif: (
     id: string,
     patch: Partial<JustificatifDon>,

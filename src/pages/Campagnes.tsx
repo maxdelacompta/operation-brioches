@@ -660,6 +660,14 @@ function Campagnes() {
 
   ] = useState(false)
 
+  // Les objectifs sont éditables séparément, y compris pour une campagne clôturée.
+  const [goalsEditing, setGoalsEditing] = useState(false)
+  const [goalsDraft, setGoalsDraft] = useState({
+    objectifBrioches: null as number | null,
+    objectifDonateurs: null as number | null,
+    budgetPrevisionnel: null as number | null,
+  })
+
 
 
   const [
@@ -1195,6 +1203,41 @@ function Campagnes() {
   }
 
 
+
+  function startEditingGoals() {
+    if (!canManage || !selected) return
+    setGoalsDraft({
+      objectifBrioches: selected.objectifBrioches,
+      objectifDonateurs: selected.objectifDonateurs,
+      budgetPrevisionnel: selected.budgetPrevisionnel,
+    })
+    setError('')
+    setNotice('')
+    setGoalsEditing(true)
+  }
+
+  function saveGoals(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!canManage || !selected) return
+    const next = { ...getDetails(selected), ...goalsDraft }
+    const validationError = validateDetails(next)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    try {
+      updateCampagne(selected.id, next)
+      setGoalsEditing(false)
+      const logged = logCampagne(
+        'modification',
+        selected.id,
+        `Objectifs actualisés : ${goalsDraft.objectifBrioches ?? 'non défini'} brioches, ${goalsDraft.objectifDonateurs ?? 'non défini'} donateurs, budget ${goalsDraft.budgetPrevisionnel ?? 'non défini'} €.`,
+      )
+      showSuccess('Objectifs de campagne enregistrés.', logged)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Impossible de modifier les objectifs.')
+    }
+  }
 
   function cancelEditing() {
 
@@ -3210,6 +3253,13 @@ function Campagnes() {
 
             <div className="campagnes-actions">
 
+              {canManage && !editing && (
+                <button type="button" className="campagnes-primary" onClick={startEditingGoals}>
+                  <Target size={17} /> Modifier les objectifs
+                </button>
+              )}
+
+
 
 
               {canManage &&
@@ -4979,6 +5029,44 @@ function Campagnes() {
       =================================================== */}
 
 
+
+      {canManage && goalsEditing && selected && (
+        <div className="campagnes-modal-overlay" role="presentation">
+          <section className="campagnes-modal" role="dialog" aria-modal="true" aria-labelledby="objectifs-campagne-titre">
+            <div className="campagnes-modal-header">
+              <div>
+                <h2 id="objectifs-campagne-titre">Modifier les objectifs · {selected.id}</h2>
+                <p>Seuls les objectifs prévisionnels changent. Les opérations, montants réels et le statut restent inchangés.</p>
+              </div>
+              <button type="button" className="campagnes-secondary" aria-label="Fermer" onClick={() => setGoalsEditing(false)}><X size={18} /></button>
+            </div>
+            <form onSubmit={saveGoals}>
+              <div className="campagnes-modal-content campagnes-objectifs-form">
+                <Field label="Objectif de brioches">
+                  <input type="number" min="0" step="1" placeholder="Non défini"
+                    value={goalsDraft.objectifBrioches ?? ''}
+                    onChange={event => setGoalsDraft(current => ({...current, objectifBrioches: optionalNumber(event.target.value)}))} />
+                </Field>
+                <Field label="Objectif de donateurs">
+                  <input type="number" min="0" step="1" placeholder="Non défini"
+                    value={goalsDraft.objectifDonateurs ?? ''}
+                    onChange={event => setGoalsDraft(current => ({...current, objectifDonateurs: optionalNumber(event.target.value)}))} />
+                </Field>
+                <Field label="Budget prévisionnel (€)">
+                  <input type="number" min="0" step="0.01" placeholder="Non défini"
+                    value={goalsDraft.budgetPrevisionnel ?? ''}
+                    onChange={event => setGoalsDraft(current => ({...current, budgetPrevisionnel: optionalNumber(event.target.value)}))} />
+                </Field>
+                {error && <p role="alert" className="campagnes-objectifs-error">{error}</p>}
+              </div>
+              <div className="campagnes-modal-actions">
+                <button type="button" className="campagnes-secondary" onClick={() => {setGoalsEditing(false); setError('')}}>Annuler</button>
+                <button type="submit" className="campagnes-primary"><Check size={17} /> Enregistrer les objectifs</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
 
       {renderCreateModal()}
 

@@ -1,0 +1,27 @@
+.cmri-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(12, 33, 65, .58); z-index: 11000; }
+.cmri-dialog { width: min(1050px, 100%); max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; background: #fff; color: #16385f; border-radius: 18px; box-shadow: 0 20px 70px rgba(0, 24, 55, .25); }
+.cmri-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px 26px 16px; border-bottom: 1px solid #e4ebf4; }
+.cmri-eyebrow { color: #f58116; font-size: 11px; font-weight: 850; letter-spacing: .7px; }
+.cmri-header h2 { display: flex; gap: 9px; align-items: center; color: #102d54; margin: 6px 0; font-size: 22px; font-weight: 850; }
+.cmri-header p { margin: 0; color: #5f7794; font-size: 12px; }
+.cmri-icon { display: grid; place-items: center; border: 0; background: #f5f8fc; color: #173c69; border-radius: 10px; width: 36px; height: 36px; cursor: pointer; }
+.cmri-content { padding: 20px 26px; overflow: auto; }
+.cmri-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.cmri-outline, .cmri-file, .cmri-confirm { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 10px 16px; min-height: 42px; border-radius: 9px; font: inherit; font-size: 12px; font-weight: 750; cursor: pointer; }
+.cmri-outline { border: 1px solid #d6e1ed; background: white; color: #164780; }
+.cmri-file, .cmri-confirm { border: 1px solid #fb8314; color: #fff; background: #fb8314; }
+.cmri-confirm:disabled, .cmri-file:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.cmri-help, .cmri-file-name { color: #5e7694; font-size: 12px; line-height: 1.5; margin: 12px 0; }
+.cmri-error, .cmri-success { border-radius: 9px; padding: 11px 13px; margin: 12px 0; font-size: 12px; }
+.cmri-error { color: #a12525; background: #fff1f0; }
+.cmri-success { color: #14633f; background: #e7f7ee; }
+.cmri-totals { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 10px; }
+.cmri-totals span { padding: 8px 12px; border-radius: 9px; background: #f3f6fa; color: #355c86; font-size: 12px; }
+.cmri-good { color: #12804b !important; }
+.cmri-bad { color: #bf3838 !important; }
+.cmri-table-scroll { max-height: 320px; overflow: auto; border: 1px solid #e0e7ef; border-radius: 11px; }
+.cmri-table-scroll table { border-collapse: collapse; width: 100%; text-align: left; font-size: 12px; }
+.cmri-table-scroll th { position: sticky; top: 0; background: #f2f6fb; padding: 11px 12px; color: #345d89; white-space: nowrap; }
+.cmri-table-scroll td { padding: 10px 12px; border-top: 1px solid #e8eef5; }
+.cmri-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 26px; border-top: 1px solid #e4ebf4; }
+@media (max-width: 680px) { .cmri-overlay { padding: 8px; } .cmri-header, .cmri-content, .cmri-footer { padding-left: 14px; padding-right: 14px; } .cmri-header h2 { font-size: 17px; } }

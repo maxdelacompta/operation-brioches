@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode, type Dispatch, type SetStateAction } from 'react'
+import { useUsers } from './UsersContext'
+import { useLocation } from 'react-router-dom'
+import { assertCampaignWritable, isCampaignReadOnly } from '../lib/campaignAccess'
 import { type Campagne, type CampagneDetails, type Commande, type Donateur, type DepotBanque, type FicheCaisse, type NouvelleCampagne } from '../types/ob'
 import { initialDonateurs } from '../data/initialDonateurs'
 import { initialCommandes } from '../data/initialCommandes'
 import { initialFichesCaisse } from '../data/initialFichesCaisse'
 import { BILLETS, PIECES, calculerCoffre } from '../services/coffre'
+import { persistAuditedCollection } from '../services/auditPersistence'
 import { DONATEURS_KEY, COMMANDES_KEY, FICHES_KEY, CAMPAGNES_KEY, DEPOTS_KEY, loadArray, loadCampagnes, getLocalDate, createDepotId, type NouveauDepotBanque, type ObDataContextValue, ObDataContext } from "./ObDataContext"
 
 export function ObDataProvider({
@@ -12,13 +16,16 @@ export function ObDataProvider({
   children: ReactNode
 }) {
 
+  const { currentUser } = useUsers()
+  const location = useLocation()
+
   /* =======================================================
      1. DONATEURS
      ======================================================= */
 
   const [
     donateurs,
-    setDonateurs,
+    setDonateursState,
   ] = useState<Donateur[]>(
     () =>
       loadArray(
@@ -33,7 +40,7 @@ export function ObDataProvider({
 
   const [
     commandes,
-    setCommandes,
+    setCommandesState,
   ] = useState<Commande[]>(
     () =>
       loadArray(
@@ -48,7 +55,7 @@ export function ObDataProvider({
 
   const [
     fichesCaisse,
-    setFichesCaisse,
+    setFichesCaisseState,
   ] = useState<FicheCaisse[]>(
     () =>
       loadArray(
@@ -123,15 +130,32 @@ export function ObDataProvider({
     [campagnes, selectedCampagneId, activeCampagne],
   )
 
+  // Cette deuxième protection couvre les écritures passant par ObData,
+  // même si une action est déclenchée autrement que par un bouton.
+  const canWriteOperations = !isCampaignReadOnly(
+    selectedCampagne,
+    currentUser?.role,
+    location.pathname,
+  )
+  const setDonateurs = useCallback<Dispatch<SetStateAction<Donateur[]>>>(next => {
+    if (!canWriteOperations) return
+    setDonateursState(next)
+  }, [canWriteOperations])
+  const setCommandes = useCallback<Dispatch<SetStateAction<Commande[]>>>(next => {
+    if (!canWriteOperations) return
+    setCommandesState(next)
+  }, [canWriteOperations])
+  const setFichesCaisse = useCallback<Dispatch<SetStateAction<FicheCaisse[]>>>(next => {
+    if (!canWriteOperations) return
+    setFichesCaisseState(next)
+  }, [canWriteOperations])
+
   /* =======================================================
      SAUVEGARDE DES DONATEURS
      ======================================================= */
 
   useEffect(() => {
-    localStorage.setItem(
-      DONATEURS_KEY,
-      JSON.stringify(donateurs),
-    )
+    persistAuditedCollection(DONATEURS_KEY, donateurs, 'donateurs', 'Donateur', false)
   }, [donateurs])
 
   /* =======================================================
@@ -139,10 +163,7 @@ export function ObDataProvider({
      ======================================================= */
 
   useEffect(() => {
-    localStorage.setItem(
-      COMMANDES_KEY,
-      JSON.stringify(commandes),
-    )
+    persistAuditedCollection(COMMANDES_KEY, commandes, 'commandes', 'Commande')
   }, [commandes])
 
   /* =======================================================
@@ -150,10 +171,7 @@ export function ObDataProvider({
      ======================================================= */
 
   useEffect(() => {
-    localStorage.setItem(
-      FICHES_KEY,
-      JSON.stringify(fichesCaisse),
-    )
+    persistAuditedCollection(FICHES_KEY, fichesCaisse, 'encaissements', 'Fiche de caisse')
   }, [fichesCaisse])
 
   /* =======================================================
@@ -162,10 +180,7 @@ export function ObDataProvider({
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        CAMPAGNES_KEY,
-        JSON.stringify(campagnes),
-      )
+      persistAuditedCollection(CAMPAGNES_KEY, campagnes, 'campagnes', 'Campagne', false)
     } catch {
       console.warn(
         'Sauvegarde locale des campagnes indisponible.',
@@ -191,6 +206,7 @@ export function ObDataProvider({
   function creerDepotBanque(
     entree: NouveauDepotBanque,
   ): string {
+    assertCampaignWritable(selectedCampagne, currentUser?.role, location.pathname)
 
     /* CAMPAGNE */
 
@@ -337,6 +353,7 @@ export function ObDataProvider({
   function annulerDepotBanque(
     id: string,
   ): void {
+    assertCampaignWritable(selectedCampagne, currentUser?.role, location.pathname)
     const depot = depotsBanque.find(
       item =>
         item.id === id,
@@ -467,10 +484,30 @@ export function ObDataProvider({
       )
     }
 
+    if (currentUser?.role !== 'administrateur') {
+      throw new Error('Seul un administrateur peut modifier les paramètres de campagne.')
+    }
+
+    // Une campagne terminée est figée, sauf ses objectifs prévisionnels.
+    // On compare les champs de gestion pour empêcher tout changement silencieux
+    // du prix, des dates ou du statut depuis l'éditeur des objectifs.
     if (target.statut === 'TERMINEE') {
-      throw new Error(
-        'Cette campagne est terminée.',
-      )
+      const unchanged =
+        details.nom === target.nom &&
+        details.description === target.description &&
+        details.dateDebut === target.dateDebut &&
+        details.dateFin === target.dateFin &&
+        details.prixUnitaire === target.prixUnitaire
+      if (!unchanged) {
+        throw new Error('Une campagne terminée autorise uniquement la correction des objectifs.')
+      }
+    }
+
+    const goals = [details.objectifBrioches, details.objectifDonateurs, details.budgetPrevisionnel]
+    if (goals.some(value => value !== null && (!Number.isFinite(value) || value < 0)) ||
+      (details.objectifBrioches !== null && !Number.isInteger(details.objectifBrioches)) ||
+      (details.objectifDonateurs !== null && !Number.isInteger(details.objectifDonateurs))) {
+      throw new Error('Les objectifs doivent être positifs ; les quantités sont des nombres entiers.')
     }
 
     if (

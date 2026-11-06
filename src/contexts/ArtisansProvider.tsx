@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { useCampaignWriteAccess } from '../lib/useCampaignWriteAccess'
 import { type Artisan, type CommandeArtisan, type Fournisseur } from '../types/artisans'
 import { LEGACY_ARTISANS_KEY, FOURNISSEURS_KEY, COMMANDES_KEY, lireTableau, chargerFournisseurs, Context } from "./ArtisansContext"
 
 export function ArtisansProvider({ children }: { children: ReactNode }) {
-  const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>(chargerFournisseurs)
-  const [commandesArtisans, setCommandesArtisans] = useState<CommandeArtisan[]>(() =>
+  const canWrite = useCampaignWriteAccess()
+  const [fournisseurs, setFournisseursState] = useState<Fournisseur[]>(chargerFournisseurs)
+  const [commandesArtisans, setCommandesArtisansState] = useState<CommandeArtisan[]>(() =>
     lireTableau(COMMANDES_KEY, []),
   )
+  const setFournisseurs = useCallback<Dispatch<SetStateAction<Fournisseur[]>>>(update => {
+    if (canWrite) setFournisseursState(update)
+  }, [canWrite])
+  const setCommandesArtisans = useCallback<Dispatch<SetStateAction<CommandeArtisan[]>>>(update => {
+    if (canWrite) setCommandesArtisansState(update)
+  }, [canWrite])
 
   const artisans = useMemo(
     () => fournisseurs.filter(fournisseur => fournisseur.type === 'ARTISAN'),
@@ -24,7 +32,7 @@ export function ArtisansProvider({ children }: { children: ReactNode }) {
       const autresFournisseurs = anciens.filter(f => f.type !== 'ARTISAN')
       return [...autresFournisseurs, ...suivants.map(a => ({ ...a, type: 'ARTISAN' as const }))]
     })
-  }, [])
+  }, [setFournisseurs])
 
   useEffect(() => {
     try {

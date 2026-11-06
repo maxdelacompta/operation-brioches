@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react'
 
 import { seedCommandesMairiesRs2026 } from '../data/commandesMairiesRs2026'
 import { type CommandeMairieRs, type NouvelleCommandeMairieRs } from '../types/commandesMairiesRs'
+import type { CommandeMairiesRsImportInput } from '../lib/commandesMairiesRsImport'
 
 export const STORAGE_KEY = 'ob-commandes-mairies-rs-v1'
 
@@ -10,6 +11,7 @@ export type CommandesMairiesRsContextValue = {
   createCommande: (value: NouvelleCommandeMairieRs) => CommandeMairieRs
   updateCommande: (id: string, patch: Partial<NouvelleCommandeMairieRs>) => void
   deleteCommande: (id: string) => void
+  importCommandes: (rows: CommandeMairiesRsImportInput[]) => { imported: number; skipped: number }
 }
 
 export const CommandesMairiesRsContext =

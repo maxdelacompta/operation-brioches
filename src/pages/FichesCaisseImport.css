@@ -1,0 +1,13 @@
+.fc-import-overlay{position:fixed;inset:0;z-index:2500;background:rgba(14,31,53,.58);display:flex;align-items:center;justify-content:center;padding:18px}
+.fc-import-dialog{width:min(1060px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:17px;padding:24px;box-shadow:0 25px 85px rgba(0,30,70,.23);color:#153457}
+.fc-import-heading,.fc-import-actions,.fc-import-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.fc-import-heading h2{font-size:21px;margin:0 0 6px;color:#082d58}.fc-import-heading p{margin:0;color:#6783a3;font-size:13px}
+.fc-import-heading button,.fc-import-actions button,.fc-import-footer button{background:#fff;border:1px solid #d4e0ee;border-radius:9px;padding:10px 13px;color:#123b6a;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.fc-import-notice{background:#fff5e9;border:1px solid #ffdfba;border-radius:9px;padding:12px;font-size:13px;line-height:1.5;margin:18px 0}
+.fc-import-actions{justify-content:flex-start}.fc-import-summary{display:flex;gap:12px;flex-wrap:wrap;margin:15px 0}.fc-import-summary>*{background:#edf4fc;border-radius:8px;padding:10px 12px;font-size:13px}
+.fc-import-error,.fc-import-errors{color:#a83232;background:#fff0f0;border-radius:8px;padding:10px;font-size:13px}.fc-import-errors{max-height:130px;overflow:auto}.fc-import-errors p{margin:4px 0}
+.fc-import-table-scroll{max-width:100%;max-height:280px;overflow:auto;border:1px solid #dce5f0;border-radius:9px;margin:16px 0}.fc-import-table-scroll table{border-collapse:collapse;width:100%;font-size:12px}.fc-import-table-scroll th,.fc-import-table-scroll td{padding:10px;text-align:left;border-bottom:1px solid #e6edf6;white-space:nowrap}.fc-import-table-scroll th{position:sticky;top:0;background:#f2f6fb;color:#123a70}
+.fc-import-footer{justify-content:flex-end;border-top:1px solid #e4ebf4;padding-top:16px}.fc-import-footer .fc-import-confirm{background:#fb790d;color:white;border-color:#fb790d;font-weight:700}.fc-import-footer button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:680px){.fc-import-dialog{padding:14px}.fc-import-heading h2{font-size:18px}.fc-import-footer button{flex:1;justify-content:center}}
+
+.fc-import-confirmation{display:flex;align-items:center;gap:10px;padding:12px;background:#f7fbff;border-radius:10px;font-size:13px;color:#143f70}.fc-import-confirmation input{width:17px;height:17px;accent-color:#f87912;flex:none}

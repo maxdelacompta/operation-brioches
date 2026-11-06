@@ -882,3 +882,49 @@
   outline: 3px solid rgba(255, 134, 20, 0.45);
   outline-offset: 2px;
 }
+
+/* Navigation : icône = vue d'ensemble, libellé/chevron = déplier. */
+.ob-sidebar-section-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 5px;
+}
+.ob-sidebar-section-icon-link:hover,
+.ob-sidebar-section-icon-link:focus-visible {
+  color: #ef5f18;
+}
+.ob-sidebar-section-label-toggle {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ob-sidebar-section-chevron-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 3px;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  cursor: pointer;
+}
+.ob-sidebar-section-label-toggle:focus-visible,
+.ob-sidebar-section-chevron-toggle:focus-visible {
+  outline: 2px solid #ef5f18;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

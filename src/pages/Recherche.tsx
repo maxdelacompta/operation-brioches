@@ -59,7 +59,8 @@ export default function Recherche() {
   const [category,setCategory]=useState('Tout')
   const input=useRef<HTMLInputElement>(null)
   const {canVisit}=useAccess()
-  const {fichesCaisse,commandes,donateurs}=useObData()
+  const {fichesCaisse,commandes,donateurs,selectedCampagne,activeCampagne}=useObData()
+  const campagneId=(selectedCampagne??activeCampagne)?.id??'' 
   const {mairies}=useMairies()
   const {etablissements}=useEtablissements()
   const [vols,setVols]=useState(volunteers)
@@ -70,7 +71,7 @@ export default function Recherche() {
     const add=(path:string,category:string,id:string,title:string,sub:string,fields:unknown[],code?:unknown,amounts?:Array<{label:string;value:number}>)=>{
       if(canVisit(path.split('?')[0])) all.push({path,category,id,title,sub,fields:fields.flatMap(f=>typeof f==='object'?flatten(f):[stringify(f)]),code:stringify(code),amounts})
     }
-    fichesCaisse.forEach(f=>{
+    fichesCaisse.filter(f=>f.campagne===campagneId).forEach(f=>{
       const billets=(f.billets100||0)*100+(f.billets50||0)*50+(f.billets20||0)*20+(f.billets10||0)*10+(f.billets5||0)*5
       const pieces=(f.pieces2||0)*2+(f.pieces1||0)+(f.pieces050||0)*0.5+(f.pieces020||0)*0.2+(f.pieces010||0)*0.1+(f.pieces005||0)*0.05+(f.pieces002||0)*0.02+(f.pieces001||0)*0.01
       const especes=Math.round((billets+pieces)*100)/100
@@ -79,17 +80,17 @@ export default function Recherche() {
       const amounts=[{label:'Total de la fiche',value:total},{label:'Espèces',value:especes},{label:'Billets',value:billets},{label:'Pièces',value:pieces},{label:'Dons',value:dons},{label:'Chèques',value:f.montantCheques||0},{label:'TPE',value:f.montantTpe||0},{label:'Virements',value:f.montantVirement||0},{label:'Autres dons',value:f.montantDonsAutres||0}]
       add('/encaissements/fiches-caisse?fiche='+encodeURIComponent(String(f.id)),'Fiches de caisse','f-'+f.id,'Fiche de caisse n° '+f.numero,[f.libelle,f.ville,`Total ${money(total)}`].filter(Boolean).join(' • '),[f],f.numero,amounts)
     })
-    commandes.forEach(c=>add('/commandes?recherche='+encodeURIComponent(c.numero),'Commandes','c-'+c.id,'Commande '+c.numero,[c.campagne,c.statut].join(' • '),[c],c.numero,[{label:'Montant de la commande',value:c.quantite*c.prixUnitaire},{label:'Prix unitaire',value:c.prixUnitaire}]))
+    commandes.filter(c=>c.campagne===campagneId).forEach(c=>add('/commandes?recherche='+encodeURIComponent(c.numero),'Commandes','c-'+c.id,'Commande '+c.numero,[c.campagne,c.statut].join(' • '),[c],c.numero,[{label:'Montant de la commande',value:c.quantite*c.prixUnitaire},{label:'Prix unitaire',value:c.prixUnitaire}]))
     donateurs.forEach(d=>add('/bdd/donateurs?recherche='+encodeURIComponent(d.code),'Donateurs','d-'+d.id,d.nom,d.code+' • '+(d.ville||''),[d],d.code))
     mairies.forEach(m=>add('/bdd/mairies?recherche='+encodeURIComponent(m.code),'Mairies','m-'+m.id,m.nomAffiche,m.code+' • '+m.commune,[m],m.code))
     etablissements.forEach(e=>add('/administration/etablissements?recherche='+encodeURIComponent(e.code),'Établissements','e-'+e.id,e.nom,e.code+' • '+e.ville,[e],e.code))
     vols.forEach(b=>add('/bdd/benevoles?recherche='+encodeURIComponent(stringify(b.nom)),'Bénévoles','b-'+stringify(b.id),[b.prenom,b.nom].map(stringify).join(' '),[b.commune,b.mission].map(stringify).join(' • '),[b,...(Array.isArray(b.mairieIds)?b.mairieIds.map(id=>mairies.find(m=>m.id===id)?.nomAffiche||''):[])],b.id))
     PERMISSION_MODULES.forEach(m=>{const path=aliases[m.path]||m.path;if(canVisit(path))all.push({id:'p-'+m.key,title:m.label,sub:m.path,path,category:'Pages',fields:[m.label,m.path],isPage:true})})
     return all
-  },[fichesCaisse,commandes,donateurs,mairies,etablissements,vols,canVisit])
+  },[fichesCaisse,commandes,campagneId,donateurs,mairies,etablissements,vols,canVisit])
   const matches=useMemo(()=>items.map(item=>({item,...rank(item,query)})).filter(r=>r.score>=0&&(category==='Tout'||r.item.category===category)).sort((a,b)=>b.score-a.score||a.item.title.localeCompare(b.item.title,'fr')).map(r=>({...r.item,details:r.reason})),[items,query,category])
   return <div className="ob-search-page">
-    <div className="ob-search-heading"><div className="ob-search-heading-icon"><Search size={28}/></div><div><span>RECHERCHE GLOBALE</span><h1>Rechercher dans OB2026</h1><p>Montants, références, dates, noms, commentaires et données accessibles.</p></div></div>
+    <div className="ob-search-heading"><div className="ob-search-heading-icon"><Search size={28}/></div><div><span>RECHERCHE GLOBALE</span><h1>Rechercher dans Opération Brioche</h1><p>Montants, références, dates, noms, commentaires et données accessibles.</p></div></div>
     <section className="ob-search-panel"><label className="ob-search-field"><Search size={23}/><input ref={input} aria-label="Recherche" placeholder="Montant, numéro, date, nom, remarque, ville..." value={query} onChange={e=>setQuery(e.target.value)}/></label>
       <div className="ob-search-tabs" role="group" aria-label="Filtrer les résultats">{categories.map(c=><button type="button" key={c} className={category===c?'active':''} aria-pressed={category===c} onClick={()=>setCategory(c)}>{c}</button>)}</div>
       <div className="ob-search-results-heading"><strong>Résultats dans les données réelles</strong><span>{matches.length} résultat{matches.length>1?'s':''}</span></div>

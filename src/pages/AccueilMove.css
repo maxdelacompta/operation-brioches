@@ -1,0 +1,39 @@
+/* Réorganisation des modules dans la grille personnalisable */
+.accueil-widget.customizing .accueil-move-controls {
+  position: absolute;
+  z-index: 15;
+  top: 6px;
+  left: 9px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  max-width: calc(100% - 90px);
+}
+.accueil-move-handle, .accueil-move-step {
+  border: 1px solid #f5c5a0;
+  background: #fff7f0;
+  color: #c45d11;
+  border-radius: 7px;
+  height: 25px;
+  min-width: 25px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+.accueil-move-handle { cursor: grab; touch-action: none; user-select: none; }
+.accueil-move-handle:active { cursor: grabbing; }
+.accueil-move-step { cursor: pointer; }
+.accueil-move-handle:focus-visible, .accueil-move-step:focus-visible {
+  outline: 2px solid #eb7a25;
+  outline-offset: 1px;
+}
+.accueil-widget.is-moving { opacity: .65; outline: 2px solid #f47718; }
+.accueil-widget.is-drop-target { outline: 3px dashed #f47718; background: #fff6ec; }
+
+/* Indicateurs compacts : ventilation seulement lorsque la carte est élargie. */
+.accueil-widget-breakdown { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:5px 12px; margin-top:10px; padding:9px 10px; border-radius:9px; background:#f5f8fc; color:#5d7798; font-size:11px; }
+.accueil-widget-breakdown strong {color:#073c7b; text-align:right; font-weight:800;}
+.accueil-widget-breakdown span {min-width:0; overflow-wrap:anywhere;}
+.accueil-widget[data-height="1"] .accueil-widget-breakdown {display:none;}
+@media(max-width:700px){.accueil-widget-breakdown {font-size:10px;gap:4px 8px;padding:7px;}}

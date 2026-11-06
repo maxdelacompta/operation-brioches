@@ -24,7 +24,7 @@
   min-width: 0;
   min-height: 78px;
 
-  padding: 14px 29px;
+  padding: 14px 29px 14px 59px; /* +30 px à gauche, Topbar */
 
   border-bottom: 1px solid #e1e9f2;
 
@@ -428,7 +428,7 @@
 
 @media (max-width: 1000px) {
   .ob-topbar {
-    padding: 12px 18px;
+    padding: 12px 18px 12px 48px;
   }
 
   .ob-topbar-brand {
@@ -444,7 +444,7 @@
   .ob-topbar {
     min-height: 67px;
 
-    padding: 10px 13px;
+    padding: 10px 13px 10px 43px;
     gap: 10px;
   }
 
@@ -529,3 +529,53 @@
 .ob-topbar-account-menu:hover .ob-topbar-account-popover, .ob-topbar-account-menu:focus-within .ob-topbar-account-popover { visibility: visible; opacity: 1; pointer-events: auto; transform: translateY(0); }
 .ob-topbar-account-option { display: block; color: #17395e; padding: 11px 12px; border-radius: 7px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .ob-topbar-account-option:hover, .ob-topbar-account-option:focus-visible { background: #edf5ff; }
+
+/* Sélection de campagne : rétablit le contrôle de la Topbar active.
+   Le changement reste local au navigateur, via ObDataContext. */
+.ob-topbar-campaign-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 0 0 145px;
+  min-width: 0;
+}
+.ob-topbar-campaign-picker label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+}
+.ob-topbar-campaign-picker select {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid #d8e2ef;
+  border-radius: 9px;
+  background: #fff;
+  color: #063b7c;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ob-topbar-campaign-picker select:focus-visible {
+  outline: 2px solid #ff8614;
+  outline-offset: 2px;
+}
+@media (max-width: 1000px) {
+  .ob-topbar-campaign-picker { flex-basis: 125px; }
+}
+@media (max-width: 750px) {
+  .ob-topbar-campaign-picker { flex-basis: 112px; }
+  .ob-topbar-campaign-picker label { display: none; }
+}
+@media (max-width: 540px) {
+  .ob-topbar { flex-wrap: wrap; }
+  .ob-topbar-brand { max-width: 60%; }
+  .ob-topbar-campaign-picker { order: 3; flex: 1 1 120px; }
+  .ob-topbar-global-search { order: 4; margin: 0; }
+  .ob-topbar-actions { margin-left: auto; }
+}
+
+/* Centre de notifications lié à Je crée mes alertes */
+.ob-topbar-alert-count{position:absolute;top:-5px;right:-5px;background:#f58216;color:#fff;border-radius:20px;font-size:9px;font-weight:800;min-width:16px;height:16px;display:grid;place-items:center;padding:0 3px;pointer-events:none}.ob-topbar-icon-button{position:relative}.ob-topbar-alert-preview{max-height:260px;overflow-y:auto;padding:4px 15px}.ob-topbar-alert-preview-item{padding:12px 3px;border-bottom:1px solid #edf1f6;display:flex;flex-direction:column;gap:5px}.ob-topbar-alert-preview-item strong{font-size:12px;color:#123d77}.ob-topbar-alert-preview-item span,.ob-topbar-alert-preview p{font-size:11px;color:#6682a5}.ob-topbar-alert-manage{display:block;margin:10px 15px 15px;padding:11px 14px;border-radius:9px;background:#fff1e1;color:#d66c09;font-size:12px;font-weight:800;text-decoration:none;text-align:center}.ob-topbar-alert-manage:hover{background:#ffe3bf}

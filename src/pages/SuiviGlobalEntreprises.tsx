@@ -282,6 +282,9 @@ export default function SuiviGlobalEntreprises() {
     donateurs,
     commandes,
     fichesCaisse,
+    selectedCampagne,
+    activeCampagne,
+    setSelectedCampagneId,
   } = useObData()
 
   const campagnes = useMemo(
@@ -307,12 +310,8 @@ export default function SuiviGlobalEntreprises() {
     [commandes],
   )
 
-  const [
-    campagneFilter,
-    setCampagneFilter,
-  ] = useState(
-    campagnes[0] || 'TOUTES',
-  )
+  const campagneFilter = (selectedCampagne ?? activeCampagne)?.id ?? 'TOUTES'
+  const setCampagneFilter = setSelectedCampagneId
 
   const [search, setSearch] =
     useState('')
@@ -762,10 +761,9 @@ export default function SuiviGlobalEntreprises() {
             }
             aria-label="Campagne"
           >
-            <option value="TOUTES">
-              Toutes les campagnes
-            </option>
-
+            {campagneFilter !== 'TOUTES' && !campagnes.includes(campagneFilter) && (
+              <option value={campagneFilter}>{campagneFilter} · aucune commande</option>
+            )}
             {campagnes.map(
               (campagne) => (
                 <option

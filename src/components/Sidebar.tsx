@@ -121,7 +121,6 @@ const sections: SidebarSection[] = [
       { label: 'Artisans', to: '/commandes-achats/artisans' },
       { label: 'GMS', to: '/commandes-achats/gms' },
       { label: 'Industriels', to: '/commandes-achats/industriels' },
-      { label: 'Suivi des livraisons' },
     ],
   },
   {
@@ -720,66 +719,41 @@ export default function Sidebar() {
                         <Icon size={20} />
                         <span className="ob-sidebar-group-label">{section.label}</span>
                       </NavLink>
-                    ) : section.id === 'administration' || section.id !== 'geographie' ? (
+                    ) : (
                       <div className={`ob-sidebar-group ${current ? 'is-current' : ''}`}>
-                        <Icon size={20} />
                         <NavLink
                           to={section.id === 'administration' ? '/administration' : `/rubriques/${section.id}`}
-                          className="ob-sidebar-group-label"
-                          style={{ color: 'inherit', textDecoration: 'none', alignSelf: 'stretch', display: 'flex', alignItems: 'center' }}
+                          className="ob-sidebar-section-icon-link"
+                          aria-label={`Ouvrir la vue d’ensemble ${section.label}`}
+                          title={`Vue d’ensemble : ${section.label}`}
                           onClick={() => {
                             setMobileOpen(false)
                             if (!pinned) setFloatingOpen(false)
                           }}
                         >
-                          {section.label}
+                          <Icon size={20} />
                         </NavLink>
                         <button
                           type="button"
+                          className="ob-sidebar-section-label-toggle"
+                          onClick={() => toggleSection(section.id)}
+                          aria-label={`${expanded ? 'Replier' : 'Déplier'} ${section.label}`}
+                          aria-expanded={expanded}
+                          aria-controls={`ob-sidebar-section-${section.id}`}
+                        >
+                          {section.label}
+                        </button>
+                        <button
+                          type="button"
+                          className="ob-sidebar-section-chevron-toggle"
                           onClick={() => toggleSection(section.id)}
                           aria-label={expanded ? `Replier ${section.label}` : `Déplier ${section.label}`}
                           aria-expanded={expanded}
                           aria-controls={`ob-sidebar-section-${section.id}`}
-                          style={{ border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', padding: '10px 3px', display: 'flex', alignItems: 'center' }}
                         >
                           <ChevronDown size={16} className={`ob-sidebar-chevron ${expanded ? 'is-expanded' : ''}`} />
                         </button>
                       </div>
-                    ) : (
-                    <button
-                      type="button"
-                      className={`ob-sidebar-group ${
-                        current
-                          ? 'is-current'
-                          : ''
-                      }`}
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        toggleSection(
-                          section.id,
-                        )
-                      }}
-                      aria-expanded={
-                        expanded
-                      }
-                      aria-controls={`ob-sidebar-section-${section.id}`}
-                    >
-                      <Icon size={20} />
-
-                      <span className="ob-sidebar-group-label">
-                        {section.label}
-                      </span>
-
-                      <ChevronDown
-                        size={16}
-                        className={`ob-sidebar-chevron ${
-                          expanded
-                            ? 'is-expanded'
-                            : ''
-                        }`}
-                      />
-                    </button>
                     )}
 
                     {expanded && section.id !== 'geographie' && (

@@ -1,13 +1,19 @@
 import { chatStore, conversationsForUser, CHAT_STORAGE_PREFIX } from '../services/chatStore'
+import { attachmentInfo, downloadChatFile, formatChatFileSize, MAX_CHAT_FILES, removeChatFiles, saveChatFiles, validateChatFiles } from '../services/chatAttachments'
 import {
   useEffect,
   useMemo,
   useSyncExternalStore,
   useState,
+  useRef,
+  type ChangeEvent,
 } from 'react'
 
 import {
   MessageCircle,
+  Paperclip,
+  FileDown,
+  FileText,
   Plus,
   ArrowLeft,
   ChevronDown,
@@ -70,6 +76,9 @@ function Chat({
   const [recipientId, setRecipientId] = useState<string | null>(null)
   const [recipientDropdownOpen, setRecipientDropdownOpen] = useState(false)
   const [message, setMessage] = useState('')
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [sending, setSending] = useState(false)
+  const attachmentInputRef = useRef<HTMLInputElement>(null)
 
   const storedMessages = useSyncExternalStore(chatStore.subscribe, chatStore.getSnapshot, chatStore.getServerSnapshot)
   const messages = useMemo(() => conversationsForUser(storedMessages, currentUserId), [storedMessages, currentUserId])
@@ -135,7 +144,7 @@ function Chat({
 
     return conversationMessages[
       conversationMessages.length - 1
-    ].text
+    ].text || `📎 ${conversationMessages[conversationMessages.length - 1].attachments?.length ?? 0} pièce(s) jointe(s)`
   }
 
   /* =======================================================
@@ -226,6 +235,7 @@ function Chat({
     setRecipientDropdownOpen(false)
     setSearch('')
     setMessage('')
+    setPendingFiles([])
 
     setChatError('')
   }
@@ -241,6 +251,7 @@ function Chat({
     setRecipientDropdownOpen(false)
     setSearch('')
     setMessage('')
+    setPendingFiles([])
     onClose()
   }
 
@@ -251,47 +262,105 @@ function Chat({
   function closeConversation() {
     setActiveConversationId(null)
     setMessage('')
+    setPendingFiles([])
   }
 
   /* =======================================================
      ENVOYER UN MESSAGE LOCAL
      ======================================================= */
 
-  function sendMessage() {
-    const text = message.trim()
-
-    if (!text || !activeConversation) {
-      return
-    }
-
-    try {
-      if (!chatStore.send(currentUserId, activeConversation.id, text)) return
-      setChatError('')
-    } catch {
-      setChatError('Message non envoyé : le stockage du navigateur est indisponible ou plein. Ton texte est conservé.')
-      return
-    }
-
-    setMessage('')
+  function chooseFiles(event: ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    const next = [...pendingFiles, ...selected]
+    const error = validateChatFiles(next)
+    if (error) { setChatError(error); return }
+    setPendingFiles(next)
+    setChatError('')
   }
 
-  function sendNewMessage() {
+  async function sendTo(recipient: string) {
     const text = message.trim()
-    if (!text || !recipientId || !chatUsers.some(user => user.id === recipientId)) return
+    if (sending || (!text && !pendingFiles.length)) return false
+    const files = [...pendingFiles]
+    const attachmentItems = files.map(file => ({ meta: attachmentInfo(file), file }))
+    setSending(true)
     try {
-      if (!chatStore.send(currentUserId, recipientId, text)) return
+      await saveChatFiles(attachmentItems)
+      if (!chatStore.send(currentUserId, recipient, text, attachmentItems.map(item => item.meta))) {
+        await removeChatFiles(attachmentItems.map(item => item.meta.id))
+        return false
+      }
+      setMessage('')
+      setPendingFiles([])
       setChatError('')
+      return true
     } catch {
-      setChatError('Message non envoyé : le stockage du navigateur est indisponible ou plein. Ton texte est conservé.')
-      return
+      try { await removeChatFiles(attachmentItems.map(item => item.meta.id)) } catch { /* conserve l’erreur originale */ }
+      setChatError('Envoi impossible : vérifie l’espace disponible dans le navigateur. Ton message et les pièces jointes sont conservés.')
+      return false
+    } finally {
+      setSending(false)
     }
-    setMessage('')
+  }
+
+  async function sendMessage() {
+    if (!activeConversation) return
+    await sendTo(activeConversation.id)
+  }
+
+  async function sendNewMessage() {
+    if (!recipientId || !chatUsers.some(user => user.id === recipientId)) return
+    const recipient = recipientId
+    if (!(await sendTo(recipient))) return
     setSearch('')
     setIsComposing(false)
-    setActiveConversationId(recipientId)
+    setActiveConversationId(recipient)
     setRecipientId(null)
     setRecipientDropdownOpen(false)
   }
+
+  function pendingAttachments() {
+    if (!pendingFiles.length) return null
+    return (
+      <div className="chat-pending-files" aria-label="Pièces jointes à envoyer">
+        {pendingFiles.map((file, index) => (
+          <div key={`${file.name}-${index}`} className="chat-pending-file">
+            <FileText size={16} />
+            <span title={file.name}>{file.name} <small>({formatChatFileSize(file.size)})</small></span>
+            <button type="button" disabled={sending} aria-label={`Retirer ${file.name}`} onClick={() => setPendingFiles(items => items.filter((_, i) => i !== index))}><X size={15} /></button>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  function attachmentPicker() {
+    return (
+      <>
+        <input
+          ref={attachmentInputRef}
+          type="file"
+          multiple
+          hidden
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip"
+          onChange={chooseFiles}
+          aria-label="Choisir des pièces jointes"
+        />
+        <button
+          type="button"
+          className="chat-attach-button"
+          onClick={() => attachmentInputRef.current?.click()}
+          disabled={sending || pendingFiles.length >= MAX_CHAT_FILES}
+          title="Joindre des fichiers (3 maximum, 8 Mo chacun)"
+          aria-label="Ajouter des pièces jointes"
+        >
+          <Paperclip size={19} />
+        </button>
+      </>
+    )
+  }
+
 
   /* =======================================================
      AFFICHAGE
@@ -376,7 +445,7 @@ function Chat({
             </div>
 
             <div className="chat-header-actions">
-              <button type="button" className="chat-new-message" aria-label={isComposing ? 'Revenir aux discussions' : 'Nouveau message'} title={isComposing ? 'Revenir aux discussions' : 'Nouveau message'} onClick={() => { setIsComposing(value => !value); setRecipientId(null); setRecipientDropdownOpen(false); setActiveConversationId(null); setSearch(''); setMessage('') }}>
+              <button type="button" className="chat-new-message" aria-label={isComposing ? 'Revenir aux discussions' : 'Nouveau message'} title={isComposing ? 'Revenir aux discussions' : 'Nouveau message'} onClick={() => { setIsComposing(value => !value); setRecipientId(null); setRecipientDropdownOpen(false); setActiveConversationId(null); setSearch(''); setMessage(''); setPendingFiles([]) }}>
                 {isComposing ? <ArrowLeft size={20} /> : <Plus size={22} />}
               </button>
             <button
@@ -392,7 +461,7 @@ function Chat({
           </div>
 
           {isComposing ? (
-            <form className="chat-compose" onSubmit={(event) => { event.preventDefault(); sendNewMessage() }}>
+            <form className="chat-compose" onSubmit={(event) => { event.preventDefault(); void sendNewMessage() }}>
               <label className="chat-compose-label" htmlFor="chat-recipient-search">À :</label>
               <div className="chat-compose-search">
                 <Search size={18} />
@@ -448,9 +517,13 @@ function Chat({
                 placeholder="Écrire votre message..."
                 rows={5}
               />
-              <button type="submit" className="chat-compose-send" disabled={!recipientId || !message.trim()}>
-                <Send size={17} /> Envoyer le message
-              </button>
+              {pendingAttachments()}
+              <div className="chat-compose-actions">
+                {attachmentPicker()}
+                <button type="submit" className="chat-compose-send" disabled={sending || !recipientId || (!message.trim() && !pendingFiles.length)}>
+                  <Send size={17} /> {sending ? 'Envoi...' : 'Envoyer le message'}
+                </button>
+              </div>
             </form>
           ) : (
             <>
@@ -678,7 +751,23 @@ function Chat({
                       : 'received'
                   }`}
                 >
-                  {item.text}
+                  {item.text && <span>{item.text}</span>}
+                  {Boolean(item.attachments?.length) && (
+                    <div className="chat-message-files">
+                      {item.attachments?.map(file => (
+                        <button
+                          type="button"
+                          key={file.id}
+                          className="chat-message-file"
+                          onClick={() => void downloadChatFile(file).catch(() => setChatError(`Impossible de retrouver « ${file.name} » dans ce navigateur.`))}
+                          title={`Télécharger ${file.name}`}
+                        >
+                          <FileDown size={17} />
+                          <span>{file.name}<small>{formatChatFileSize(file.size)}</small></span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
               ))
@@ -691,13 +780,15 @@ function Chat({
               BARRE D'ENVOI
           ================================================= */}
 
+          {pendingAttachments()}
           <form
             className="chat-message-input"
             onSubmit={(event) => {
               event.preventDefault()
-              sendMessage()
+              void sendMessage()
             }}
           >
+            {attachmentPicker()}
 
             <input
               value={message}
@@ -711,7 +802,7 @@ function Chat({
             <button
               type="submit"
               className="chat-send-button"
-              disabled={!message.trim()}
+              disabled={sending || (!message.trim() && !pendingFiles.length)}
               aria-label="Envoyer le message"
               title="Envoyer"
             >
