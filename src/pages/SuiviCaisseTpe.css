@@ -1428,3 +1428,18 @@
     justify-content: stretch;
   }
 }
+
+/* Calendrier : même grille, jours hors période de campagne désactivés */
+.sct-planning-table th.sct-outside-operation,
+.sct-planning-table td.sct-outside-operation {
+  background: #f5f7fa;
+  color: #99a6b6;
+  cursor: not-allowed;
+}
+.sct-planning-table th.sct-outside-operation strong,
+.sct-planning-table th.sct-outside-operation small,
+.sct-planning-table td.sct-outside-operation .sct-empty-slot {
+  color: #9ba8b8;
+}
+.sct-planning-table td.sct-outside-operation:hover { background: #f5f7fa; }
+.sct-planning-controls > button:disabled { opacity: .45; cursor: not-allowed; }

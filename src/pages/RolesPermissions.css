@@ -1066,3 +1066,90 @@
     flex-wrap: wrap;
   }
 }
+/* =========================================================
+   ARBORESCENCE DES PERMISSIONS (ordre de la Sidebar)
+   ========================================================= */
+.rp-nav-hint {
+  max-width: 660px;
+  line-height: 1.5;
+}
+
+.rp-nav-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.rp-nav-expand-button {
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 1px solid #dae6f3;
+  border-radius: 8px;
+  background: #fff;
+  color: #174a80;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.rp-nav-expand-button:hover { background: #f3f8fe; }
+
+.rp-table tbody .rp-nav-group-row > th,
+.rp-table tbody .rp-nav-group-row > td {
+  height: 45px;
+  padding: 6px 9px;
+  background: #eaf2fc;
+  border: 1px solid #d4e3f3;
+  text-align: center;
+}
+.rp-table tbody .rp-nav-group-row > th:first-child { text-align: left; }
+.rp-table tbody .rp-nav-group-row:hover > th,
+.rp-table tbody .rp-nav-group-row:hover > td { background: #e1eefc; }
+
+.rp-nav-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 3px;
+  color: #073d7a;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+.rp-nav-group-toggle:hover { color: #ed7815; }
+.rp-nav-group-toggle:focus-visible {
+  outline: 2px solid #fb8c24;
+  outline-offset: 2px;
+}
+.rp-nav-group-toggle > svg:first-child { flex-shrink: 0; color: #17549b; }
+.rp-nav-group-toggle > svg:last-child { flex-shrink: 0; margin-left: auto; }
+.rp-nav-group-toggle > strong { white-space: normal; }
+.rp-nav-group-count {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #d9e8fa;
+  color: #315e93;
+  font-size: 10px;
+}
+.rp-nav-child-row > td:first-child { padding-left: 26px; }
+.rp-nav-child-row .rp-module-name { white-space: normal; }
+.rp-nav-child-row .rp-module-name strong { font-weight: 650; }
+.rp-nav-child-row .rp-module-name svg { opacity: .7; }
+.rp-nav-child-row:nth-child(even) { background: #fcfdff; }
+.rp-table tbody .rp-nav-main-row > td { background: #fff8f0; }
+.rp-group-checkbox { accent-color: #f67f16; }
+
+@media (max-width: 720px) {
+  .rp-nav-toolbar { justify-content: flex-start; }
+  .rp-table { min-width: 860px; }
+}

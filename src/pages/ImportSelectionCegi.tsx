@@ -6,6 +6,7 @@ import { argent, montantCommande } from '../types/artisans'
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import './ImportSelectionCegi.css'
 import { conserverCegi } from '../lib/cegiDocuments'
+import { samePurchaseCampaign } from '../lib/dashboardMetrics'
 
 export type CegiOperation = {
   id: string
@@ -28,6 +29,7 @@ export type CegiOperation = {
 type Props = {
   fournisseurs: Fournisseur[]
   commandes: CommandeArtisan[]
+  campagne: string
   onClose: () => void
   onSave: (operation: CegiOperation) => string | null
   onArchived?: () => void
@@ -38,7 +40,7 @@ const amount = (v:string) => Number(v.replace(/\s/g,'').replace(',','.'))
 const somme = (items:CegiOperation[]) => Math.round(items.reduce((v,o)=>v+o.montant,0)*100)/100
 const formatMoney = (v:number) => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(v)
 
-export default function ImportSelectionCegi({fournisseurs,commandes,onClose,onSave,onArchived}:Props){
+export default function ImportSelectionCegi({fournisseurs,commandes,campagne,onClose,onSave,onArchived}:Props){
  const [files,setFiles]=useState<File[]>([])
  const [operations,setOperations]=useState<CegiOperation[]>([])
  const [idx,setIdx]=useState(0)
@@ -50,7 +52,7 @@ export default function ImportSelectionCegi({fournisseurs,commandes,onClose,onSa
  const input=useRef<HTMLInputElement>(null)
  const current=operations[idx]
  const supplier = current?.fournisseurId
- const choices=commandes.filter(c=>supplier && c.artisanId===supplier)
+ const choices=commandes.filter(c=>supplier && c.artisanId===supplier && samePurchaseCampaign(c.campagne,campagne))
  function update(partial:Partial<CegiOperation>){setOperations(old=>old.map((op,i)=>i===idx?{...op,...partial}:op))}
  async function importFiles(uploaded:File[]){
   const pdfs=uploaded.filter(f=>f.name.toLowerCase().endsWith('.pdf'))
@@ -79,7 +81,7 @@ export default function ImportSelectionCegi({fournisseurs,commandes,onClose,onSa
     const montantLu=somme(found)
     if(totalAttendu!==null && Math.abs(totalAttendu-montantLu)>0.01) warnings.push(`${file.name} : montant de la liste ${formatMoney(totalAttendu)}, mais ${formatMoney(montantLu)} extrait sur ${found.length} opération(s). Contrôle les lignes absentes avant de valider.`)
     // Conserver le PDF source, même si aucune correspondance fournisseur n’est trouvée.
-    await conserverCegi(file, found.length, montantLu)
+    await conserverCegi(file, found.length, montantLu, campagne)
     onArchived?.()
     next.push(...found.map(row=>{
       const f=fournisseurs.find(f=>norm(row.beneficiaire).includes(norm(f.nom))||norm(f.nom).includes(norm(row.beneficiaire)))
@@ -99,7 +101,7 @@ export default function ImportSelectionCegi({fournisseurs,commandes,onClose,onSa
  const saved=done.includes(current?.id||'')
  const duplicate=operations.filter(o=>o.piece===current?.piece&&o.beneficiaire===current?.beneficiaire).length>1
  const totalSelection=current?.commandeIds.reduce((s,id)=>s+montantCommande(commandes.find(c=>c.id===id)!),0)||0
- return <div className="cegi-overlay"><section className="cegi-modal" role="dialog" aria-modal="true" aria-label="Importer une liste CEGI"><header><div><h2>Importer une sélection CEGI</h2><p>Dépose des listes de virement, puis valide chaque opération.</p></div><button onClick={onClose} aria-label="Fermer"><X size={20}/></button></header>
+ return <div className="cegi-overlay"><section className="cegi-modal" role="dialog" aria-modal="true" aria-label="Importer une liste CEGI"><header><div><h2>Importer une sélection CEGI</h2><p>Campagne {campagne} · Dépose des listes de virement, puis valide chaque opération.</p></div><button onClick={onClose} aria-label="Fermer"><X size={20}/></button></header>
  <div className={`cegi-drop ${drag?'drag':''}`} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={drop} onClick={()=>input.current?.click()} role="button" tabIndex={0} onKeyDown={e=>e.key==='Enter'&&input.current?.click()}><FileUp size={25}/><b>Glisser-déposer des listes PDF CEGI</b><span>ou cliquer pour choisir un ou plusieurs fichiers</span><input ref={input} type="file" accept="application/pdf,.pdf" multiple hidden onChange={upload}/></div>
  {busy&&<p>Lecture des documents en cours…</p>}{error&&<p className="cegi-error" role="alert">{error}</p>}
  {files.length>0&&<p className="cegi-small">Documents lus : {files.map(f=>f.name).join(', ')} · {operations.length} opération(s) détectée(s) · {done.length} enregistrée(s) · Total détecté : {formatMoney(somme(operations))}</p>}
@@ -108,7 +110,7 @@ export default function ImportSelectionCegi({fournisseurs,commandes,onClose,onSa
  {current&&<div className="cegi-review"><h3>Opération {idx+1} sur {operations.length} {saved&&<span className="cegi-saved"><Check size={14}/> Enregistrée</span>}</h3><div className="cegi-facts"><div><small>Bénéficiaire extrait</small><strong>{current.beneficiaire}</strong></div><div><small>Montant extrait</small><strong>{argent(current.montant)}</strong></div><div><small>Pièce / échéance</small><strong>{current.piece} · {current.echeance||'—'}</strong></div><div><small>Liste CEGI</small><strong>{current.referenceListe||current.source}</strong></div></div>{duplicate&&<p className="cegi-warning"><AlertTriangle size={15}/> Une référence semblable apparaît plusieurs fois : contrôle avant enregistrement.</p>}
  <div className="cegi-fields"><label>Bénéficiaire (corrigeable)<input value={current.beneficiaire} disabled={saved} onChange={e=>update({beneficiaire:e.target.value})}/></label><label>Fournisseur à rapprocher<select disabled={saved} value={current.fournisseurId} onChange={e=>update({fournisseurId:e.target.value,commandeIds:[]})}><option value="">Autre bénéficiaire / non trouvé</option>{fournisseurs.map(f=><option key={f.id} value={f.id}>{f.nom}</option>)}</select></label><label>Catégorie de dépense<select disabled={saved} value={current.categorie} onChange={e=>update({categorie:e.target.value as CegiOperation['categorie']})}>{Object.entries(cat).map(([v,label])=><option key={v} value={v}>{label}</option>)}</select></label><label>Montant TTC<input disabled={saved} type="number" min="0.01" step="0.01" value={current.montant} onChange={e=>update({montant:Number(e.target.value)})}/></label></div>
  <fieldset><legend>Rapprochement avec les commandes achats</legend>{!choices.length?<p className="cegi-small">Sélectionne un fournisseur pour voir ses commandes. Si aucune ne correspond, l'opération peut être enregistrée sans commande.</p>:<div className="cegi-orders">{choices.map(c=><label key={c.id}><input type="checkbox" checked={current.commandeIds.includes(c.id)} disabled={saved} onChange={e=>update({commandeIds:e.target.checked?[...current.commandeIds,c.id]:current.commandeIds.filter(x=>x!==c.id)})}/>{c.numero} — {argent(montantCommande(c))}</label>)}</div>}{current.commandeIds.length>0&&<p className="cegi-small">Commandes sélectionnées : {argent(totalSelection)} — à rapprocher avec le montant de la sélection avant validation.</p>}</fieldset>
- <p className="cegi-warning"><AlertTriangle size={15}/> Règle OB2026 : en validant cette opération, tu la déclares payée sur la base de la sélection CEGI. Le rapprochement bancaire reste une vérification distincte.</p>
+ <p className="cegi-warning"><AlertTriangle size={15}/> Règle {campagne} : en validant cette opération, tu la déclares payée sur la base de la sélection CEGI. Le rapprochement bancaire reste une vérification distincte.</p>
  <footer><button className="cegi-secondary" disabled={idx===0} onClick={()=>setIdx(i=>i-1)}><ArrowLeft size={16}/> Précédent</button><button className="cegi-primary" disabled={saved||!current.beneficiaire.trim()||current.montant<=0} onClick={()=>{const problem=onSave(current);if(problem)setError(problem);else{setError('');setDone(old=>[...old,current.id]);if(idx<operations.length-1)setIdx(i=>i+1)}}}><Check size={16}/> {saved?'Enregistrée':'Déclarer payée et enregistrer'}</button><button className="cegi-secondary" disabled={idx===operations.length-1} onClick={()=>{setError('');setIdx(i=>i+1)}}>Suivant <ArrowRight size={16}/></button></footer>
  </div>}
  </section></div>

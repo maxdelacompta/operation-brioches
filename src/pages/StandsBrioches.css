@@ -183,3 +183,51 @@
 .ob-stand-title-row h2, .ob-stand-card-head .ob-stand-title-row h2 { margin:0; line-height:1.3; }
 .ob-stand-title-row .ob-stand-status { display:inline-flex; align-items:center; flex-shrink:0; white-space:nowrap; }
 .ob-stand-card-head .ob-stand-title-row + p { margin-top:7px; }
+
+
+/* Période du calendrier des stands, pilotée par Administration > Campagnes */
+.ob-week-operation-panel {
+  grid-template-columns: minmax(190px, 1fr) minmax(140px, auto) minmax(210px, auto) minmax(290px, auto);
+  gap: 16px;
+  align-items: center;
+}
+.ob-week-operation-panel .ob-week-intro { min-width: 0; }
+.ob-week-operation-range {
+  display: grid;
+  grid-template-columns: max-content auto;
+  gap: 4px 9px;
+  align-items: baseline;
+  background: #f5f8fc;
+  border: 1px solid #e2eaf4;
+  padding: 10px 12px;
+  border-radius: 11px;
+}
+.ob-week-operation-range span { color: var(--ob-muted); font-size: 10px; }
+.ob-week-operation-range strong { color: var(--ob-navy); font-size: 12px; white-space: nowrap; }
+.ob-week-operation-panel .ob-week-picker { display: grid; gap: 5px; font-size: 11px; font-weight: 800; color: var(--ob-muted); }
+.ob-week-operation-panel .ob-week-picker select {
+  min-width: 0;
+  width: 100%;
+  min-height: 39px;
+  padding: 8px 10px;
+  color: var(--ob-navy);
+  background: #fbfdff;
+  border: 1px solid var(--ob-line);
+  border-radius: 9px;
+  font: inherit;
+  cursor: pointer;
+}
+.ob-week-no-period { display: grid; gap: 7px; padding: 9px 13px; border-radius: 10px; background: #fff7ed; color: #8d531b; font-size: 12px; }
+.ob-week-no-period a { color: #a44d08; font-weight: 800; text-decoration: underline; }
+.ob-week-operation-panel .ob-week-nav button:disabled,
+.ob-stand-days button:disabled { opacity: .4; cursor: not-allowed; background: #f2f5f9; color: #76879a; border-color: #e0e6ed; }
+.ob-stand-days button:disabled span { background: #eceff4; }
+@media (max-width: 1470px) {
+  .ob-week-operation-panel { grid-template-columns: minmax(200px, 1fr) minmax(150px, auto); }
+  .ob-week-operation-panel .ob-week-nav { grid-column: auto; grid-row: auto; }
+}
+@media (max-width: 750px) {
+  .ob-week-operation-panel { grid-template-columns: minmax(0,1fr); }
+  .ob-week-operation-panel .ob-week-nav { justify-content: flex-start; flex-wrap: wrap; }
+  .ob-week-operation-range { grid-template-columns: minmax(0,1fr) auto; }
+}

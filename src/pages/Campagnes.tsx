@@ -668,6 +668,10 @@ function Campagnes() {
     budgetPrevisionnel: null as number | null,
   })
 
+  // Période de l'opération : édition rapide, sans modifier les objectifs ni le statut.
+  const [datesEditing, setDatesEditing] = useState(false)
+  const [datesDraft, setDatesDraft] = useState({ dateDebut: '', dateFin: '' })
+
 
 
   const [
@@ -1143,6 +1147,8 @@ function Campagnes() {
 
 
     setEditing(false)
+    setDatesEditing(false)
+    setGoalsEditing(false)
 
 
 
@@ -1214,6 +1220,41 @@ function Campagnes() {
     setError('')
     setNotice('')
     setGoalsEditing(true)
+  }
+
+  function startEditingDates() {
+    if (!canManage || !selected || selected.statut === 'TERMINEE') return
+    setDatesDraft({ dateDebut: selected.dateDebut || '', dateFin: selected.dateFin || '' })
+    setError('')
+    setNotice('')
+    setDatesEditing(true)
+  }
+
+  function saveDates(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!canManage || !selected || selected.statut === 'TERMINEE') return
+    if (!datesDraft.dateDebut || !datesDraft.dateFin) {
+      setError("Renseigne le début et la fin de l'opération.")
+      return
+    }
+    const next = { ...getDetails(selected), ...datesDraft }
+    const validationError = validateDetails(next)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    try {
+      updateCampagne(selected.id, next)
+      setDatesEditing(false)
+      const logged = logCampagne(
+        'modification',
+        selected.id,
+        `Période de l'opération modifiée : du ${dateLabel(datesDraft.dateDebut)} au ${dateLabel(datesDraft.dateFin)}.`,
+      )
+      showSuccess("Dates de l'opération enregistrées.", logged)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible d'enregistrer les dates.")
+    }
   }
 
   function saveGoals(event: FormEvent<HTMLFormElement>) {
@@ -2249,7 +2290,7 @@ function Campagnes() {
 
 
 
-                <Field label="Date de début">
+                <Field label="Début de l’opération">
 
 
 
@@ -2279,7 +2320,7 @@ function Campagnes() {
 
 
 
-                <Field label="Date de fin">
+                <Field label="Fin de l’opération">
 
 
 
@@ -3247,6 +3288,29 @@ function Campagnes() {
 
 
 
+            {/* Calendrier de l'opération : visible sans ouvrir les paramètres. */}
+            <div className="campagnes-operation-dates" aria-label="Dates de l'opération">
+              <div className="campagnes-operation-date">
+                <CalendarDays size={19} aria-hidden="true" />
+                <div>
+                  <span>Début de l'opération</span>
+                  <strong>{dateLabel(selected.dateDebut)}</strong>
+                </div>
+              </div>
+              <div className="campagnes-operation-date">
+                <CalendarDays size={19} aria-hidden="true" />
+                <div>
+                  <span>Fin de l'opération</span>
+                  <strong>{dateLabel(selected.dateFin)}</strong>
+                </div>
+              </div>
+              {canManage && selected.statut !== 'TERMINEE' && !editing && (
+                <button type="button" className="campagnes-secondary campagnes-date-edit" onClick={startEditingDates}>
+                  <Pencil size={16} aria-hidden="true" /> Modifier les dates
+                </button>
+              )}
+            </div>
+
             {/* BARRE D'ACTIONS */}
 
 
@@ -4042,7 +4106,7 @@ function Campagnes() {
 
 
 
-                      <Field label="Date de début">
+                      <Field label="Début de l’opération">
 
 
 
@@ -4076,7 +4140,7 @@ function Campagnes() {
 
 
 
-                      <Field label="Date de fin">
+                      <Field label="Fin de l’opération">
 
 
 
@@ -4220,7 +4284,7 @@ function Campagnes() {
 
                         <span>
 
-                          Date de début
+                          Début de l’opération
 
                         </span>
 
@@ -4248,7 +4312,7 @@ function Campagnes() {
 
                         <span>
 
-                          Date de fin
+                          Fin de l’opération
 
                         </span>
 
@@ -5029,6 +5093,35 @@ function Campagnes() {
       =================================================== */}
 
 
+
+      {canManage && datesEditing && selected && selected.statut !== 'TERMINEE' && (
+        <div className="campagnes-modal-overlay" role="presentation">
+          <section className="campagnes-modal" role="dialog" aria-modal="true" aria-labelledby="dates-campagne-titre">
+            <div className="campagnes-modal-header">
+              <div>
+                <h2 id="dates-campagne-titre">Dates de l'opération · {selected.id}</h2>
+                <p>Ces dates définissent la période de la campagne. Elles peuvent servir à rattacher certains stands et opérations à l'année concernée.</p>
+              </div>
+              <button type="button" className="campagnes-secondary" aria-label="Fermer" onClick={() => {setDatesEditing(false); setError('')}}><X size={18}/></button>
+            </div>
+            <form onSubmit={saveDates}>
+              <div className="campagnes-modal-content campagnes-dates-form">
+                <Field label="Début de l’opération">
+                  <input type="date" required value={datesDraft.dateDebut} onChange={event => setDatesDraft(current => ({...current, dateDebut: event.target.value}))} />
+                </Field>
+                <Field label="Fin de l’opération">
+                  <input type="date" required min={datesDraft.dateDebut || undefined} value={datesDraft.dateFin} onChange={event => setDatesDraft(current => ({...current, dateFin: event.target.value}))} />
+                </Field>
+                {error && <p role="alert" className="campagnes-objectifs-error">{error}</p>}
+              </div>
+              <div className="campagnes-modal-actions">
+                <button type="button" className="campagnes-secondary" onClick={() => {setDatesEditing(false);setError('')}}>Annuler</button>
+                <button type="submit" className="campagnes-primary"><Check size={17} /> Enregistrer les dates</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
 
       {canManage && goalsEditing && selected && (
         <div className="campagnes-modal-overlay" role="presentation">

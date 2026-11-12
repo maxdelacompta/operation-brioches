@@ -40,6 +40,7 @@ import RecapBrioches from './pages/RecapBrioches'
 import Recherche from './pages/Recherche'
 import Bdd from './pages/Bdd'
 import StandsBrioches from './pages/StandsBrioches'
+import CompteurStand from './pages/CompteurStand'
 import Donateurs from './pages/Donateurs'
 import Mairies from './pages/Mairies'
 import Benevoles from './pages/Benevoles'
@@ -111,6 +112,7 @@ function App() {
                     <Route path="/etablissements/recap-global" element={<RecapBrioches />} />
 
                     <Route path="/gestion/stands-brioches" element={<StandsBrioches />} />
+                    <Route path="/gestion/stands-brioches/:id/compteur" element={<CompteurStand />} />
                     <Route path="/bdd" element={<Bdd />} />
                     <Route path="/bdd/donateurs" element={<Donateurs />} />
                     <Route path="/bdd/mairies" element={<Mairies />} />

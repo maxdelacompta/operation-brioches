@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useMemo,
   useState,
   type FormEvent,
@@ -15,6 +16,13 @@ import {
   Check,
   CheckCircle2,
   Crown,
+  ChevronDown,
+  ChevronRight,
+  HandCoins,
+  LayoutGrid,
+  Map,
+  Package,
+  Wallet,
   Database,
   Euro,
   FileSpreadsheet,
@@ -136,6 +144,134 @@ const moduleIcons: Partial<Record<PermissionModule, LucideIcon>> = {
   utilisateurs: Users,
   roles: KeyRound,
 }
+
+/* =========================================================
+   ARBORESCENCE DES DROITS — ORDRE DE LA SIDEBAR
+
+   On réutilise les clés de permissions existantes : aucune
+   migration, nouvelle permission ou modification du stockage.
+   Les droits généraux absents de la Sidebar sont conservés
+   dans « Autres droits » pour ne rien masquer de la matrice.
+   ========================================================= */
+
+type PermissionNavItem = {
+  key: PermissionModule
+  label: string
+}
+
+type PermissionNavGroup = {
+  id: string
+  label: string
+  icon: LucideIcon
+  parent?: PermissionNavItem
+  children: PermissionNavItem[]
+}
+
+const permissionNavGroups: PermissionNavGroup[] = [
+  {
+    id: 'gestion', label: 'Gestion', icon: LayoutGrid,
+    children: [
+      { key: 'dashboard', label: 'Tableau de bord' },
+      { key: 'suivi_caisse_tpe', label: 'Suivi caisse et TPE' },
+      { key: 'stands_brioches', label: 'Stands Brioches' },
+    ],
+  },
+  {
+    id: 'bdd', label: 'BDD', icon: Database,
+    parent: { key: 'bdd', label: 'Accès général à la BDD' },
+    children: [
+      { key: 'donateurs', label: 'Donateurs' },
+      { key: 'mairies', label: 'Mairies' },
+      { key: 'benevoles', label: 'Bénévoles' },
+    ],
+  },
+  {
+    id: 'commandes-dons', label: 'Commandes dons', icon: ShoppingCart,
+    children: [
+      { key: 'commandes', label: 'Commandes entreprises' },
+      { key: 'livraisons', label: 'Livraisons / Retraits' },
+      { key: 'suivi_entreprises', label: 'Suivi global entreprises' },
+      { key: 'commandes_mairies', label: 'Commandes Mairies & RS' },
+    ],
+  },
+  {
+    id: 'commandes-achats', label: 'Commandes achats', icon: Package,
+    children: [
+      { key: 'suivi_achats', label: 'Suivi global achats' },
+      { key: 'fournisseurs', label: 'Fournisseurs' },
+      { key: 'artisans', label: 'Artisans' },
+      { key: 'gms', label: 'GMS' },
+      { key: 'industriels', label: 'Industriels' },
+    ],
+  },
+  {
+    id: 'etablissements', label: 'Établissements', icon: Building2,
+    children: [
+      { key: 'stock_brioches', label: 'Stock Brioches' },
+      { key: 'suivi_brioches', label: 'Suivi Brioches' },
+      { key: 'recap_etablissements', label: 'Récap global' },
+    ],
+  },
+  {
+    id: 'dons-percus', label: 'Dons perçus', icon: HandCoins,
+    children: [
+      { key: 'fiches_caisse', label: 'Fiches de caisse' },
+      { key: 'coffre', label: 'Coffre' },
+      { key: 'gestion_cheques', label: 'Gestion des chèques' },
+      { key: 'suivi_banque', label: 'Suivi banque' },
+      { key: 'recapitulatif', label: 'Récapitulatif global' },
+    ],
+  },
+  {
+    id: 'finance', label: 'Documents', icon: Wallet,
+    children: [
+      { key: 'factures_paiements', label: 'Factures & Paiements' },
+      { key: 'justificatifs', label: 'Justificatifs de dons' },
+      { key: 'mecenat', label: 'Mécénat' },
+      { key: 'pertes_ecarts', label: 'Pertes / Écarts' },
+    ],
+  },
+  {
+    id: 'geographie', label: 'Géographie', icon: Map,
+    parent: { key: 'geographie', label: 'Accès général à la géographie' },
+    children: [
+      { key: 'geo_carte', label: 'Carte des ventes' },
+    ],
+  },
+  {
+    id: 'administration', label: 'Administration', icon: Settings,
+    parent: { key: 'administration', label: 'Accès général à l’administration' },
+    children: [
+      { key: 'admin_etablissements', label: 'Liste des établissements' },
+      { key: 'acces_connexion', label: 'Accès de connexion' },
+      { key: 'utilisateurs', label: 'Utilisateurs' },
+      { key: 'roles', label: 'Rôles et permissions' },
+      { key: 'campagnes', label: 'Campagnes' },
+      { key: 'parametres', label: 'Paramètres généraux' },
+      { key: 'journal', label: 'Journal d’activité' },
+    ],
+  },
+]
+
+const modulesInNavigation = new Set<PermissionModule>([
+  'accueil',
+  ...permissionNavGroups.flatMap(group => [
+    ...(group.parent ? [group.parent.key] : []),
+    ...group.children.map(item => item.key),
+  ]),
+])
+
+const secondaryPermissionModules: PermissionNavItem[] = PERMISSION_MODULES
+  .filter(module => !modulesInNavigation.has(module.key))
+  .map(module => ({ key: module.key, label: module.label }))
+
+const permissionGroups: PermissionNavGroup[] = [
+  ...permissionNavGroups,
+  ...(secondaryPermissionModules.length > 0 ? [{
+    id: 'autres', label: 'Autres droits (hors Sidebar)', icon: Settings,
+    children: secondaryPermissionModules,
+  }] : []),
+]
 
 /* =========================================================
    COLONNES DE LA MATRICE
@@ -375,6 +511,14 @@ function RolesPermissions() {
     search,
     setSearch,
   ] = useState('')
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(permissionGroups.map(group => [group.id, group.id !== 'gestion']))
+  )
+
+  const toggleGroup = (id: string) => {
+    setCollapsedGroups(current => ({ ...current, [id]: !current[id] }))
+  }
 
   const [
     metadata,
@@ -779,6 +923,108 @@ function RolesPermissions() {
     logRoleActivity(
       'modification',
       message.trim(),
+    )
+  }
+
+  /* =======================================================
+     SÉLECTION GROUPÉE PAR RUBRIQUE
+
+     La sélection agit sur chaque module individuellement via le
+     moteur actuel, sans créer de droit « virtuel ».
+     ======================================================= */
+
+  function modulesDuGroupe(group: PermissionNavGroup): PermissionModule[] {
+    return [
+      ...(group.parent ? [group.parent.key] : []),
+      ...group.children.map(item => item.key),
+    ]
+  }
+
+  function droitsAutorisés(moduleKey: PermissionModule): PermissionAction[] {
+    const definition = PERMISSION_MODULES.find(item => item.key === moduleKey)
+    return definition?.actions.filter(action => allowedForRole(selectedRole, moduleKey, action)) ?? []
+  }
+
+  function handleGroupAction(group: PermissionNavGroup, action: PermissionAction) {
+    if (!canEditSelectedRole) return
+    const eligible = modulesDuGroupe(group).filter(key => droitsAutorisés(key).includes(action))
+    if (!eligible.length) return
+    const grant = eligible.some(key => !permissions[selectedRole][key].includes(action))
+    eligible.forEach(key => {
+      const currentlyGranted = permissions[selectedRole][key].includes(action)
+      if (currentlyGranted !== grant) togglePermission(selectedRole, key, action)
+    })
+    setNotice(`Droits « ${action} » de la rubrique « ${group.label} » mis à jour.`)
+    setError('')
+    logRoleActivity('modification', `Permissions groupées « ${action} » modifiées pour « ${group.label} ».`)
+  }
+
+  function handleGroupAll(group: PermissionNavGroup) {
+    if (!canEditSelectedRole) return
+    const entries = modulesDuGroupe(group).map(key => ({ key, actions: droitsAutorisés(key) }))
+      .filter(item => item.actions.length > 0)
+    if (!entries.length) return
+    const allGranted = entries.every(item => item.actions.every(action =>
+      permissions[selectedRole][item.key].includes(action)))
+
+    for (const item of entries) {
+      if (allGranted) {
+        if (permissions[selectedRole][item.key].includes('consulter')) {
+          togglePermission(selectedRole, item.key, 'consulter')
+        }
+      } else {
+        for (const action of item.actions) {
+          if (!permissions[selectedRole][item.key].includes(action)) {
+            togglePermission(selectedRole, item.key, action)
+          }
+        }
+      }
+    }
+    setNotice(`Permissions de la rubrique « ${group.label} » mises à jour.`)
+    setError('')
+    logRoleActivity('modification', `Droits de toute la rubrique « ${group.label} » ${allGranted ? 'retirés' : 'accordés'}.`)
+  }
+
+  function renderPermissionRow(item: PermissionNavItem, nested: boolean) {
+    const module = PERMISSION_MODULES.find(definition => definition.key === item.key)
+    if (!module) return null
+    const ModuleIcon = moduleIcons[module.key] ?? ShieldCheck
+    const granted = permissions[selectedRole][module.key]
+    return (
+      <tr key={module.key} className={nested ? 'rp-nav-child-row' : 'rp-nav-main-row'}>
+        <td>
+          <div className="rp-module-name">
+            <ModuleIcon size={16} aria-hidden="true" />
+            <strong>{item.label}</strong>
+          </div>
+        </td>
+        {permissionColumns.map(column => {
+          const available = module.actions.some(action => action === column.key)
+          if (!available) return <td key={column.key} className="rp-unavailable">—</td>
+          return (
+            <td key={column.key}>
+              <input
+                type="checkbox"
+                className="rp-checkbox"
+                checked={granted.includes(column.key)}
+                disabled={!canEditSelectedRole || !allowedForRole(selectedRole, module.key, column.key)}
+                aria-label={`${column.label} — ${item.label} — ${ROLE_LABELS[selectedRole]}`}
+                onChange={() => handlePermissionToggle(module.key, column.key, item.label, column.label)}
+              />
+            </td>
+          )
+        })}
+        <td>
+          <input
+            type="checkbox"
+            className="rp-checkbox"
+            checked={module.actions.every(action => granted.includes(action))}
+            disabled={!canEditSelectedRole || module.actions.some(action => !allowedForRole(selectedRole, module.key, action))}
+            aria-label={`Tous les droits — ${item.label} — ${ROLE_LABELS[selectedRole]}`}
+            onChange={() => handleAllModulePermissions(module.key)}
+          />
+        </td>
+      </tr>
     )
   }
 
@@ -1516,8 +1762,22 @@ function RolesPermissions() {
                   {' utilisateur(s) actif(s)'}
                 </p>
 
+                <p className="rp-nav-hint">
+                  Les rubriques suivent la Sidebar. Coche une rubrique pour appliquer un droit
+                  à ses sous-pages, ou déplie-la pour régler chaque page séparément.
+                </p>
+
               </div>
 
+              <div className="rp-nav-toolbar">
+                <button type="button" className="rp-nav-expand-button" onClick={() => setCollapsedGroups({})}>
+                  Tout déplier
+                </button>
+                <button type="button" className="rp-nav-expand-button" onClick={() =>
+                  setCollapsedGroups(Object.fromEntries(permissionGroups.map(group => [group.id, true])))
+                }>
+                  Tout replier
+                </button>
               <button
                 type="button"
                 className="rp-reset-button"
@@ -1542,6 +1802,7 @@ function RolesPermissions() {
                 Réinitialiser
 
               </button>
+              </div>
 
             </div>
 
@@ -1610,118 +1871,68 @@ function RolesPermissions() {
                 </thead>
 
                 <tbody>
+                  {renderPermissionRow({ key: 'accueil', label: 'Accueil' }, false)}
 
-                  {PERMISSION_MODULES.map(
-                    (module) => {
-                      const ModuleIcon =
-                        moduleIcons[module.key] ?? ShieldCheck
-
-                      const granted =
-                        permissions[
-                          selectedRole
-                        ][module.key]
-
-                      return (
-
-                        <tr key={module.key}>
-
-                          {/* MODULE */}
-
-                          <td>
-
-                            <div className="rp-module-name">
-
-                              <ModuleIcon
-                                size={17}
-                              />
-
-                              <strong>
-                                {module.label}
-                              </strong>
-
-                            </div>
-
-                          </td>
-
-                          {/* ACTIONS */}
-
-                          {permissionColumns.map(
-                            (column) => {
-                              const available =
-                                module.actions.some(
-                                  (action) =>
-                                    action ===
-                                    column.key,
-                                )
-
-                              if (!available) {
-                                return (
-
-                                  <td
-                                    key={column.key}
-                                    className="rp-unavailable"
-                                    aria-label="Action indisponible"
-                                  >
-
-                                    —
-
-                                  </td>
-
-                                )
-                              }
-
-                              const checked =
-                                granted.includes(
-                                  column.key,
-                                )
-
-                              return (
-
-                                <td
-                                  key={column.key}
-                                >
-
+                  {permissionGroups.map(group => {
+                    const keys = modulesDuGroupe(group)
+                    const expanded = !collapsedGroups[group.id]
+                    const GroupIcon = group.icon
+                    return (
+                      <Fragment key={group.id}>
+                        <tr className="rp-nav-group-row">
+                          <th scope="row" className="rp-nav-group-label">
+                            <button
+                              type="button"
+                              className="rp-nav-group-toggle"
+                              onClick={() => toggleGroup(group.id)}
+                              aria-expanded={expanded}
+                              aria-label={`${expanded ? 'Replier' : 'Déplier'} ${group.label}`}
+                            >
+                              <GroupIcon size={17} aria-hidden="true" />
+                              <strong>{group.label}</strong>
+                              <span className="rp-nav-group-count">{keys.length}</span>
+                              {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </button>
+                          </th>
+                          {permissionColumns.map(column => {
+                            const eligible = keys.filter(key => droitsAutorisés(key).includes(column.key))
+                            const count = eligible.filter(key => permissions[selectedRole][key].includes(column.key)).length
+                            return (
+                              <td key={column.key}>
+                                {eligible.length ? (
                                   <input
                                     type="checkbox"
-                                    className="rp-checkbox"
-                                    checked={checked}
-                                    disabled={
-                                      !canEditSelectedRole || !allowedForRole(selectedRole, module.key, column.key)
-                                    }
-                                    aria-label={`${column.label} — ${module.label} — ${ROLE_LABELS[selectedRole]}`}
-                                    onChange={() =>
-                                      handlePermissionToggle(
-                                        module.key,
-                                        column.key,
-                                        module.label,
-                                        column.label,
-                                      )
-                                    }
+                                    className="rp-checkbox rp-group-checkbox"
+                                    checked={count === eligible.length}
+                                    disabled={!canEditSelectedRole}
+                                    title={`${count}/${eligible.length} module(s) — ${column.label} dans ${group.label}`}
+                                    aria-label={`${column.label} pour toute la rubrique ${group.label}`}
+                                    onChange={() => handleGroupAction(group, column.key)}
                                   />
-
-                                </td>
-
-                              )
-                            },
-                          )}
-
+                                ) : <span className="rp-unavailable">—</span>}
+                              </td>
+                            )
+                          })}
                           <td>
                             <input
                               type="checkbox"
-                              className="rp-checkbox"
-                              checked={module.actions.every((action) => granted.includes(action))}
-                              disabled={!canEditSelectedRole || module.actions.some((action) => !allowedForRole(selectedRole, module.key, action))}
-                              aria-label={`Tous les droits — ${module.label} — ${ROLE_LABELS[selectedRole]}`}
-                              onChange={() => handleAllModulePermissions(module.key)}
+                              className="rp-checkbox rp-group-checkbox"
+                              checked={keys.every(key => {
+                                const actions = droitsAutorisés(key)
+                                return actions.length === 0 || actions.every(action => permissions[selectedRole][key].includes(action))
+                              })}
+                              disabled={!canEditSelectedRole || keys.every(key => droitsAutorisés(key).length === 0)}
+                              title={`Activer ou retirer tous les droits autorisés de ${group.label}`}
+                              aria-label={`Tous les droits autorisés — rubrique ${group.label}`}
+                              onChange={() => handleGroupAll(group)}
                             />
                           </td>
-
                         </tr>
-
-                      )
-                    },
-                  )}
-
+                        {expanded && group.parent && renderPermissionRow(group.parent, true)}
+                        {expanded && group.children.map(item => renderPermissionRow(item, true))}
+                      </Fragment>
+                    )
+                  })}
                 </tbody>
 
               </table>

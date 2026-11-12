@@ -10,8 +10,10 @@ import {
   History,
   ArrowRight,
   ShieldCheck,
+  Eraser,
 } from 'lucide-react'
 
+import { useUsers } from '../contexts/UsersContext'
 import './Administration.css'
 
 /* =========================================================
@@ -74,6 +76,7 @@ const sections = [
 
 function Administration() {
   const { section } = useParams<{ section?: string }>()
+  const { currentUser } = useUsers()
 
   const activeSection = sections.find(
     (item) => item.id === section,
@@ -214,6 +217,17 @@ function Administration() {
             </Link>
           )
         })}
+
+        {currentUser?.role === 'administrateur' && (
+          <Link to="/administration/reset-ob2026" className="admin-card">
+            <div className="admin-card-icon"><Eraser size={24}/></div>
+            <div className="admin-card-content">
+              <h2>Réinitialisation ciblée OB 2026</h2>
+              <p>Sauvegarder, contrôler puis effacer les données 2026 et les bases partagées sélectionnées.</p>
+            </div>
+            <ArrowRight size={19} className="admin-card-arrow"/>
+          </Link>
+        )}
 
       </div>
 

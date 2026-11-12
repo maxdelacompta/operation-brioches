@@ -167,6 +167,25 @@ function addDays(value: string, days: number) {
   return dateInput(date)
 }
 
+type PeriodeOperation = { debut: string; fin: string }
+
+function periodeDeCampagne(campagne: { dateDebut?: string; dateFin?: string } | null): PeriodeOperation | null {
+  const debut = campagne?.dateDebut ?? ''
+  const fin = campagne?.dateFin ?? ''
+  // Sans deux dates cohérentes, garder l'ancien calendrier plutôt que masquer les affectations.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(debut) || !/^\d{4}-\d{2}-\d{2}$/.test(fin) || debut > fin) return null
+  return { debut, fin }
+}
+
+function dateDansOperation(date: string, periode: PeriodeOperation | null) {
+  return !periode || (date >= periode.debut && date <= periode.fin)
+}
+
+function bornerDateOperation(date: string, periode: PeriodeOperation | null) {
+  if (!periode) return date
+  return date < periode.debut ? periode.debut : date > periode.fin ? periode.fin : date
+}
+
 function daysBetween(start: string, end: string) {
   const a = toDate(start).getTime()
   const b = toDate(end).getTime()
@@ -238,10 +257,15 @@ function SuiviCaisseTpeContent() {
 
   const [activeTab, setActiveTab] = useState<MainTab>('PLANNING')
   const [search, setSearch] = useState('')
-  const campagneFilter = (selectedCampagne ?? activeCampagne)?.id ?? getCurrentCampaign()
+  const campagneSelectionnee = selectedCampagne ?? activeCampagne
+  const campagneFilter = campagneSelectionnee?.id ?? getCurrentCampaign()
+  const periodeOperation = useMemo(() => periodeDeCampagne(campagneSelectionnee), [campagneSelectionnee])
+  const derniereSemaine = periodeOperation ? startOfWeek(periodeOperation.fin) : null
+  const debutPlanning = periodeOperation?.debut ?? todayInput()
+  const estJourOperation = (date: string) => dateDansOperation(date, periodeOperation)
   const setCampagneFilter = setSelectedCampagneId
   const [statusFilter, setStatusFilter] = useState<'TOUS' | StatutSuiviMateriel>('TOUS')
-  const [weekStart, setWeekStart] = useState(startOfWeek(todayInput()))
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(debutPlanning))
   const [planningViewMode, setPlanningViewMode] = useState<PlanningMode>('MIXTE')
   const [planningScope, setPlanningScope] = useState<PlanningScope>('GLOBALE')
   const [selectedPlanningCaisse, setSelectedPlanningCaisse] = useState('TOUTES')
@@ -250,7 +274,7 @@ function SuiviCaisseTpeContent() {
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [drawerTab, setDrawerTab] = useState<DrawerTab>('CAISSES')
   const [drawerSearch, setDrawerSearch] = useState('')
-  const [focusDate, setFocusDate] = useState(todayInput())
+  const [focusDate, setFocusDate] = useState(debutPlanning)
   const [dragOverKey, setDragOverKey] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [formMode, setFormMode] = useState<FormMode>('create')
@@ -348,11 +372,13 @@ function SuiviCaisseTpeContent() {
   )
 
   const planningSource = useMemo(
-    () =>
-      mouvements.filter(
-        (item) => item.campagne === campagneFilter && intersectsDates(item, visibleDates),
-      ),
-    [mouvements, campagneFilter, visibleDates],
+    () => {
+      const datesOperation = visibleDates.filter((date) => dateDansOperation(date, periodeOperation))
+      return mouvements.filter(
+        (item) => item.campagne === campagneFilter && intersectsDates(item, datesOperation),
+      )
+    },
+    [mouvements, campagneFilter, visibleDates, periodeOperation],
   )
 
   const planningRows = useMemo(() => {
@@ -467,7 +493,7 @@ function SuiviCaisseTpeContent() {
   }, [drawerTab, availableCaisses, availableTpes, drawerSearch])
 
   function openCreate(type: TypeSuiviMateriel, numero?: number, date?: string) {
-    const targetDate = date || focusDate
+    const targetDate = bornerDateOperation(date || focusDate, periodeOperation)
     setFormMode('create')
     setEditingId(null)
     setForm({
@@ -560,6 +586,9 @@ function SuiviCaisseTpeContent() {
     if (!form.nomStand.trim()) return setError('Le nom du stand ou de la destination est obligatoire.')
     if (!form.responsable.trim()) return setError('Le responsable est obligatoire.')
     if (!form.dateSortie) return setError('La date de sortie est obligatoire.')
+    if (formMode === 'create' && !estJourOperation(form.dateSortie)) {
+      return setError('La date de sortie doit appartenir à la période de l’opération configurée dans Administration → Campagnes.')
+    }
     if (!form.dateRetourPrevue) return setError('La date de retour prévue est obligatoire.')
     if (form.dateRetourPrevue < form.dateSortie) {
       return setError('La date de retour prévue ne peut pas être antérieure à la date de sortie.')
@@ -597,6 +626,7 @@ function SuiviCaisseTpeContent() {
   }
 
   function moveMovementToDate(item: MouvementMateriel, targetDate: string) {
+    if (!estJourOperation(targetDate)) return
     if (item.dateRetourReelle) {
       window.alert('Une affectation déjà retournée ne peut plus être déplacée. Modifiez-la depuis sa fiche si nécessaire.')
       return
@@ -617,6 +647,7 @@ function SuiviCaisseTpeContent() {
   }
 
   function handleDayDrop(event: DragEvent<HTMLElement>, date: string) {
+    if (!estJourOperation(date)) return
     event.preventDefault()
     setDragOverKey('')
     const payload = getDragPayload(event)
@@ -650,7 +681,9 @@ function SuiviCaisseTpeContent() {
     let index = 0
     while (index < dates.length) {
       const date = dates[index]
-      const items = row.assignments.filter((item) => movementCoversDate(item, date))
+      const items = estJourOperation(date)
+        ? row.assignments.filter((item) => movementCoversDate(item, date))
+        : []
       if (items.length === 0) {
         segments.push({ startIndex: index, span: 1, items: [] })
         index += 1
@@ -665,6 +698,7 @@ function SuiviCaisseTpeContent() {
       let span = 1
       while (
         index + span < dates.length &&
+        estJourOperation(dates[index + span]) &&
         movementCoversDate(item, dates[index + span]) &&
         row.assignments.filter((other) => movementCoversDate(other, dates[index + span])).length === 1
       ) {
@@ -766,9 +800,9 @@ function SuiviCaisseTpeContent() {
                   <input value={planningSearch} onChange={(e) => setPlanningSearch(e.target.value)} placeholder="Stand, responsable, matériel..." />
                 </label>
                 <div className="sct-planning-controls">
-                  {planningScope !== 'JOUR' && <button type="button" onClick={() => { const next = addDays(weekStart, -7); setWeekStart(next); setFocusDate(next) }}><ChevronLeft size={17} /></button>}
-                  <label><CalendarDays size={16} /><input type="date" value={planningScope === 'JOUR' ? focusDate : weekStart} onChange={(e) => { if (planningScope === 'JOUR') { setFocusDate(e.target.value) } else { const next = startOfWeek(e.target.value); setWeekStart(next); setFocusDate(next) } }} /></label>
-                  {planningScope !== 'JOUR' && <button type="button" onClick={() => { const next = addDays(weekStart, 7); setWeekStart(next); setFocusDate(next) }}><ChevronRight size={17} /></button>}
+                  {planningScope !== 'JOUR' && <button type="button" title="Semaine précédente" aria-label="Semaine précédente" disabled={Boolean(periodeOperation && weekStart <= startOfWeek(periodeOperation.debut))} onClick={() => { const next = addDays(weekStart, -7); if (periodeOperation && next < startOfWeek(periodeOperation.debut)) return; setWeekStart(next); setFocusDate(bornerDateOperation(addDays(focusDate, -7), periodeOperation)) }}><ChevronLeft size={17} /></button>}
+                  <label><CalendarDays size={16} /><input aria-label="Choisir un jour de l'opération" type="date" min={periodeOperation?.debut} max={periodeOperation?.fin} value={focusDate} onChange={(e) => { const date = e.target.value; if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !estJourOperation(date)) return; setFocusDate(date); setWeekStart(startOfWeek(date)) }} /></label>
+                  {planningScope !== 'JOUR' && <button type="button" title="Semaine suivante" aria-label="Semaine suivante" disabled={Boolean(derniereSemaine && weekStart >= derniereSemaine)} onClick={() => { const next = addDays(weekStart, 7); if (derniereSemaine && next > derniereSemaine) return; setWeekStart(next); setFocusDate(bornerDateOperation(addDays(focusDate, 7), periodeOperation)) }}><ChevronRight size={17} /></button>}
                 </div>
                 <button className="sct-drawer-toggle" type="button" onClick={() => setDrawerOpen((current) => !current)}>
                   {drawerOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
@@ -782,6 +816,7 @@ function SuiviCaisseTpeContent() {
                   <div>
                     <h2>Planning du matériel</h2>
                     <small>{planningScope === 'JOUR' ? `Vue du ${formatDate(focusDate)}` : `Semaine du ${formatDate(weekStart)}`}</small>
+                    <small>{periodeOperation ? `Opération du ${formatDate(periodeOperation.debut)} au ${formatDate(periodeOperation.fin)}` : 'Dates d’opération non configurées dans Administration → Campagnes'}</small>
                   </div>
                 </div>
                 <div className="sct-legend">
@@ -794,7 +829,7 @@ function SuiviCaisseTpeContent() {
 
               <div
                 className={`sct-drop-strip ${dragOverKey === 'strip' ? 'drag-over' : ''}`}
-                onDragOver={(e) => { e.preventDefault(); setDragOverKey('strip') }}
+                onDragOver={(e) => { if (estJourOperation(focusDate)) { e.preventDefault(); setDragOverKey('strip') } }}
                 onDragLeave={() => setDragOverKey('')}
                 onDrop={(e) => handleDayDrop(e, planningScope === 'JOUR' ? focusDate : focusDate)}
               >
@@ -808,7 +843,7 @@ function SuiviCaisseTpeContent() {
                     <tr>
                       <th>Matériel</th>
                       {visibleDates.map((date) => (
-                        <th key={date} className={focusDate === date ? 'focus' : ''} onClick={() => setFocusDate(date)}>
+                        <th key={date} className={`${focusDate === date ? 'focus' : ''} ${!estJourOperation(date) ? 'sct-outside-operation' : ''}`} onClick={() => { if (estJourOperation(date)) setFocusDate(date) }}>
                           <strong>{new Intl.DateTimeFormat('fr-FR', { weekday: 'short' }).format(toDate(date))}</strong>
                           <small>{formatDate(date)}</small>
                         </th>
@@ -831,14 +866,14 @@ function SuiviCaisseTpeContent() {
                               <td
                                 key={key}
                                 colSpan={segment.span}
-                                className={`${focusDate === date ? 'focus' : ''} ${dragOverKey === key ? 'drag-over' : ''}`}
-                                onDragOver={(e) => { e.preventDefault(); setDragOverKey(key) }}
+                                className={`${focusDate === date ? 'focus' : ''} ${dragOverKey === key ? 'drag-over' : ''} ${!estJourOperation(date) ? 'sct-outside-operation' : ''}`}
+                                onDragOver={(e) => { if (estJourOperation(date)) { e.preventDefault(); setDragOverKey(key) } }}
                                 onDragLeave={() => setDragOverKey('')}
                                 onDrop={(e) => handleDayDrop(e, date)}
-                                onClick={() => setFocusDate(date)}
+                                onClick={() => { if (estJourOperation(date)) setFocusDate(date) }}
                               >
                                 {segment.items.length === 0 ? (
-                                  <span className="sct-empty-slot">Déposer ici</span>
+                                  <span className="sct-empty-slot">{estJourOperation(date) ? 'Déposer ici' : 'Hors opération'}</span>
                                 ) : (
                                   segment.items.map((item) => (
                                     <button
@@ -968,7 +1003,7 @@ function SuiviCaisseTpeContent() {
                 <FormSection title="Affectation" icon={<UserRound size={18} />}>
                   <Field label="Stand / destination *" wide><input value={form.nomStand} onChange={(e) => updateField('nomStand', e.target.value)} placeholder="Ex. Leclerc Verdun" /></Field>
                   <Field label="Responsable *"><input value={form.responsable} onChange={(e) => updateField('responsable', e.target.value)} /></Field>
-                  <Field label="Date de sortie *"><input type="date" value={form.dateSortie} onChange={(e) => updateField('dateSortie', e.target.value)} /></Field>
+                  <Field label="Date de sortie *"><input type="date" min={formMode === 'create' ? periodeOperation?.debut : undefined} max={formMode === 'create' ? periodeOperation?.fin : undefined} value={form.dateSortie} onChange={(e) => updateField('dateSortie', e.target.value)} /></Field>
                   <Field label="Retour prévu *"><input type="date" value={form.dateRetourPrevue} onChange={(e) => updateField('dateRetourPrevue', e.target.value)} /></Field>
                   <Field label="Validation sortie"><input value={form.signatureSortie} onChange={(e) => updateField('signatureSortie', e.target.value)} placeholder="Nom / initiales" /></Field>
                 </FormSection>
@@ -992,7 +1027,12 @@ function SuiviCaisseTpeContent() {
 }
 
 export default function SuiviCaisseTpe() {
-  return <SuiviMaterielProvider><SuiviCaisseTpeContent /></SuiviMaterielProvider>
+  const { selectedCampagne, activeCampagne } = useObData()
+  const campagne = selectedCampagne ?? activeCampagne
+  // Réinitialise la semaine affichée si la campagne (ou ses dates) change,
+  // sans toucher aux affectations conservées par le provider.
+  const calendarKey = `${campagne?.id ?? ''}:${campagne?.dateDebut ?? ''}:${campagne?.dateFin ?? ''}`
+  return <SuiviMaterielProvider><SuiviCaisseTpeContent key={calendarKey} /></SuiviMaterielProvider>
 }
 
 function TrackingTable({ type, data, search, onSearch, statusFilter, onStatusFilter, onDetail, onEdit, onReturn }: {

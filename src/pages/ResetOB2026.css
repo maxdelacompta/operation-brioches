@@ -10,3 +10,14 @@
 .ob-reset-check input{width:20px;height:20px;accent-color:#f47718}.ob-reset-label{display:grid;gap:9px;font-weight:650}.ob-reset-label input{padding:12px;border:1px solid #cbd9e7;border-radius:9px;width:min(100%,420px);font:inherit}
 .ob-reset-card .ob-reset-warning{padding:13px 16px;background:#fff4e8;border:1px solid #ffcc9e;border-radius:10px;color:#934b17}
 .ob-reset-error{color:#a52722!important}.ob-reset-note{color:#157144!important}
+.ob-reset-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:15px 0}
+.ob-reset-metrics strong{padding:15px 12px;border-radius:10px;background:#f0f6fe;color:#063b80;font-size:16px}
+.ob-reset-scroll{max-height:310px;overflow:auto;border:1px solid #e0e8f0;border-radius:12px}
+.ob-reset-scroll table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}
+.ob-reset-scroll th,.ob-reset-scroll td{padding:11px 12px;border-bottom:1px solid #e9eef5}
+.ob-reset-scroll th{position:sticky;top:0;background:#eef4fb;color:#2a5182}
+.ob-reset-scroll td small{display:block;font-size:11px;color:#71869f;margin-top:2px;overflow-wrap:anywhere}
+.ob-reset-scroll td:not(:first-child){text-align:center;white-space:nowrap}
+.ob-reset-refresh{border:1px solid #ccdff1;background:white;color:#0c4488;margin-top:12px}
+.ob-reset-page a{color:#0c4488}
+@media(max-width:700px){.ob-reset-metrics{grid-template-columns:1fr}.ob-reset-card{padding:16px}.ob-reset-page{padding:16px 12px}}

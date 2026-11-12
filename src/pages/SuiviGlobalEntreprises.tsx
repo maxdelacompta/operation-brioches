@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -219,8 +220,113 @@ function PaiementBadge({ etat }: { etat: EntrepriseSuivi['paiement'] }) {
   </span>
 }
 
+/**
+ * Les dates prévues et les statuts importés ne prouvent pas une livraison.
+ * Seules les confirmations de missions depuis « Livraisons / Retraits »
+ * alimentent la progression de ce tableau.
+ *
+ * Les clés des missions récentes identifient la commande et la campagne,
+ * afin de ne pas réutiliser une ancienne mission après un reset local.
+ */
+type MissionDeSuivi = {
+  commandeId: number
+  commandeCle?: string
+  date: string
+  updatedAt?: string
+  statut: string
+  mode: string
+  responsable: string
+}
+type MissionMultiDeSuivi = {
+  commandeId: number
+  ligneId: string
+  statut: string
+  mode: string
+  responsable: string
+}
+type MissionsSauvegardees = {
+  simples: MissionDeSuivi[]
+  multis: Record<string, MissionMultiDeSuivi>
+}
+
+function lireMissionsSauvegardees(): MissionsSauvegardees {
+  if (typeof localStorage === 'undefined') return { simples: [], multis: {} }
+  let simples: MissionDeSuivi[] = []
+  let multis: Record<string, MissionMultiDeSuivi> = {}
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem('ob-livraisons-retraits-v1') || '[]')
+    if (Array.isArray(value)) {
+      simples = value.filter((item): item is MissionDeSuivi =>
+        item != null && typeof item === 'object' &&
+        typeof item.commandeId === 'number' && typeof item.statut === 'string' &&
+        typeof item.date === 'string' && typeof item.mode === 'string' &&
+        typeof item.responsable === 'string',
+      )
+    }
+  } catch { /* missions locales absentes ou illisibles */ }
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem('ob-livraisons-multisites-v1') || '{}')
+    if (value != null && typeof value === 'object' && !Array.isArray(value)) {
+      multis = value as Record<string, MissionMultiDeSuivi>
+    }
+  } catch { /* affectations multisites absentes ou illisibles */ }
+  return { simples, multis }
+}
+
+const empreinteCommande = (commande: Commande): string => JSON.stringify([
+  commande.campagne, commande.id, commande.numero, commande.dateCommande, commande.donateurId,
+])
+
+function estConfirmationReelle(mission: { statut: string; mode: string; responsable: string }): boolean {
+  // Une ancienne migration pouvait créer une mission « LIVREE » automatiquement,
+  // mais avec mode NON_AFFECTE et aucun livreur. Elle ne vaut pas confirmation.
+  const responsable = mission.responsable.trim().toLocaleLowerCase('fr')
+  return mission.statut === 'LIVREE' && mission.mode !== 'NON_AFFECTE' &&
+    responsable !== '' && !['non affecté', 'non affecte', 'bénévole', 'benevole', 'esat', 'services comm', 'retrait'].includes(responsable)
+}
+
+function quantiteReellementLivree(
+  commande: Commande,
+  toutesLesCommandes: Commande[],
+  sauvegarde: MissionsSauvegardees,
+): number {
+  if (commande.statut === 'ANNULEE') return 0
+  const max = Math.max(0, Number(commande.quantite) || 0)
+  if ((commande.livraisons?.length ?? 0) > 0) {
+    // Chaque destination est comptée séparément, sans rendre la commande
+    // entière « Livrée » à la première réception.
+    const livrees = (commande.livraisons ?? []).reduce((total, livraison, index) => {
+      const cle = `${commande.id}:${livraison.id || `index-${index}`}`
+      const mission = sauvegarde.multis[cle]
+      return total + (mission && mission.commandeId === commande.id &&
+        estConfirmationReelle(mission) && livraison.dateLivraison
+          ? Math.max(0, Number(livraison.quantite) || 0) : 0)
+    }, 0)
+    return Math.min(max, livrees)
+  }
+
+  const identite = empreinteCommande(commande)
+  const mission = sauvegarde.simples.find(item => {
+    if (item.commandeId !== commande.id) return false
+    if (item.commandeCle) return item.commandeCle === identite
+    // Héritage des anciennes missions : rapprochement prudent par date
+    // et création de la commande. Ne jamais déduire la livraison de la
+    // seule dateLivraison de l'enregistrement entreprise.
+    const jourAttendu = commande.datePrevueLivraison || commande.dateLivraison
+    const candidates = toutesLesCommandes.filter(c =>
+      c.id === item.commandeId &&
+      (c.datePrevueLivraison || c.dateLivraison) === item.date &&
+      Boolean(c.dateCommande) &&
+      typeof item.updatedAt === 'string' && item.updatedAt.slice(0, 10) >= c.dateCommande,
+    )
+    return !!jourAttendu && item.date === jourAttendu && candidates.length === 1 && candidates[0] === commande
+  })
+  return mission && estConfirmationReelle(mission) ? max : 0
+}
+
 function statutEntreprise(
   commandes: Commande[],
+  livreesParCommande: Map<number, number>,
 ): SuiviStatut {
   if (!commandes.length) {
     return 'A_TRAITER'
@@ -235,14 +341,10 @@ function statutEntreprise(
     return 'ANNULEE'
   }
 
-  const toutesLivrees =
-    actives.every(
-      (commande) =>
-        commande.statut === 'LIVREE' ||
-        Boolean(
-          commande.dateLivraison,
-        ),
-    )
+  const toutesLivrees = actives.every(commande =>
+    Number(commande.quantite) > 0 &&
+    (livreesParCommande.get(commande.id) ?? 0) >= Number(commande.quantite),
+  )
 
   if (toutesLivrees) {
     return 'LIVREE'
@@ -251,7 +353,9 @@ function statutEntreprise(
   if (
     actives.some(
       (commande) =>
-        commande.statut === 'A_LIVRER',
+        commande.statut === 'A_LIVRER' ||
+        commande.statut === 'LIVREE' ||
+        (livreesParCommande.get(commande.id) ?? 0) > 0,
     )
   ) {
     return 'A_LIVRER'
@@ -356,6 +460,25 @@ export default function SuiviGlobalEntreprises() {
     [commandes, fichesCaisse, justificatifs],
   )
 
+  // Le suivi relit les missions à l'ouverture et lors du retour sur cet onglet.
+  // Aucune mutation de l'historique des commandes n'est effectuée ici.
+  const [missionsSauvegardees, setMissionsSauvegardees] = useState(lireMissionsSauvegardees)
+  useEffect(() => {
+    const refresh = () => setMissionsSauvegardees(lireMissionsSauvegardees())
+    window.addEventListener('focus', refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
+  const livreesParCommande = useMemo(() => new Map(
+    commandesCampagne.map(commande => [
+      commande.id,
+      quantiteReellementLivree(commande, commandes, missionsSauvegardees),
+    ]),
+  ), [commandesCampagne, commandes, missionsSauvegardees])
+
   const suivis = useMemo<
     EntrepriseSuivi[]
   >(() => {
@@ -431,41 +554,16 @@ export default function SuiviGlobalEntreprises() {
               0,
             )
 
-          const livrees =
-            actives.filter(
-              (commande) =>
-                commande.statut ===
-                  'LIVREE' ||
-                Boolean(
-                  commande.dateLivraison,
-                ),
-            )
+          const quantiteLivree = actives.reduce(
+            (total, commande) => total + (livreesParCommande.get(commande.id) ?? 0),
+            0,
+          )
 
-          const quantiteLivree =
-            livrees.reduce(
-              (total, commande) =>
-                total +
-                Number(
-                  commande.quantite ||
-                    0,
-                ),
-              0,
-            )
-
-          const montantLivre =
-            livrees.reduce(
-              (total, commande) =>
-                total +
-                Number(
-                  commande.quantite ||
-                    0,
-                ) *
-                  Number(
-                    commande.prixUnitaire ||
-                      0,
-                  ),
-              0,
-            )
+          const montantLivre = actives.reduce(
+            (total, commande) => total + (livreesParCommande.get(commande.id) ?? 0) *
+              Number(commande.prixUnitaire || 0),
+            0,
+          )
 
           const progression =
             quantite > 0
@@ -512,6 +610,7 @@ export default function SuiviGlobalEntreprises() {
             statut:
               statutEntreprise(
                 commandesDonateur,
+                livreesParCommande,
               ),
             derniereCommande:
               dates.at(-1) || '',
@@ -529,6 +628,7 @@ export default function SuiviGlobalEntreprises() {
     commandesCampagne,
     donateurs,
     paiementsParCommande,
+    livreesParCommande,
   ])
 
   const villes = useMemo(

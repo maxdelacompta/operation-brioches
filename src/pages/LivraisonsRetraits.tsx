@@ -16,8 +16,6 @@ import {
   Clock3,
   Download,
   Minus,
-  Lock,
-  Unlock,
   MapPin,
   MoreHorizontal,
   Package,
@@ -30,6 +28,7 @@ import {
 } from 'lucide-react'
 
 import { useObData } from '../contexts/ObDataContext'
+import type { Commande } from '../types/ob'
 import { useEtablissements } from '../contexts/EtablissementsContext'
 import { useUsers } from '../contexts/UsersContext'
 import type {
@@ -42,7 +41,35 @@ import './LivraisonsRetraits.css'
 import './LivraisonsRetraitsSemaine.css'
 
 type RetraitType = 'STAND' | 'ETABLISSEMENT'
-type MissionAvecRetrait = MissionLivraison & { retraitType?: RetraitType }
+type MissionSauvegardee = MissionLivraison & { commandeCle?: string }
+type MissionAvecRetrait = MissionSauvegardee & { retraitType?: RetraitType }
+
+// Les identifiants numériques peuvent être réutilisés après un reset d'OB 2026.
+// Associer également la mission à l'identité de la commande et à sa campagne
+// empêche une nouvelle commande de récupérer une ancienne livraison « Livrée ».
+const commandeCle = (commande: Commande): string => JSON.stringify([
+  commande.campagne, commande.id, commande.numero, commande.dateCommande, commande.donateurId,
+])
+const appartientACommande = (mission: MissionSauvegardee, commande: Commande): boolean => {
+  if (mission.commandeId !== commande.id) return false
+  if (mission.commandeCle) return mission.commandeCle === commandeCle(commande)
+  // Compatibilité prudente avec les anciennes missions, sans cle persistée :
+  // seulement si leur jour correspond à la date prévue de la même commande.
+  // Une date de livraison saisie seule ne valide pas une livraison.
+  if (mission.statut === 'LIVREE' && commande.statut !== 'LIVREE') return false
+  const jourConnu = commande.datePrevueLivraison || (commande.statut === 'LIVREE' ? commande.dateLivraison : '')
+  if (!jourConnu || mission.date !== jourConnu) return false
+  if (!mission.updatedAt || !commande.dateCommande) return false
+  return mission.updatedAt.slice(0, 10) >= commande.dateCommande
+}
+
+// Les anciennes affectations sans empreinte sont reconnues uniquement quand
+// une seule commande correspond à leur id, leur date ET leur statut : l'OB 2025
+// conserve ainsi ses anciennes affectations sans les attribuer à OB 2026.
+const appartient = (mission: MissionSauvegardee, commande: Commande, toutes: Commande[]): boolean =>
+  appartientACommande(mission, commande) &&
+  (Boolean(mission.commandeCle) || toutes.filter(c => appartientACommande(mission, c)).length === 1)
+
 
 type Tab =
   | 'GLOBAL'
@@ -139,13 +166,13 @@ function todayInput() {
     .slice(0, 10)
 }
 
-function loadMissions(): MissionLivraison[] {
+function loadMissions(): MissionSauvegardee[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     return Array.isArray(parsed)
-      ? (parsed as MissionLivraison[])
+      ? (parsed as MissionSauvegardee[])
       : []
   } catch {
     return []
@@ -226,6 +253,25 @@ function shortDate(value: string): string {
   return `${day}/${month}`
 }
 
+// Dates de l'opération saisies dans Administration -> Campagnes.
+// Les comparaisons ISO AAAA-MM-JJ évitent les décalages de fuseau horaire.
+type PeriodeOperation = { debut: string; fin: string }
+function periodeOperation(campagne: { dateDebut: string; dateFin: string } | null): PeriodeOperation | null {
+  if (!campagne) return null
+  const debut = campagne.dateDebut
+  const fin = campagne.dateFin
+  const estDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    !Number.isNaN(Date.parse(`${value}T12:00:00Z`))
+  return estDate(debut) && estDate(fin) && debut <= fin ? { debut, fin } : null
+}
+function dansOperation(date: string, periode: PeriodeOperation | null): boolean {
+  return !periode || (date >= periode.debut && date <= periode.fin)
+}
+function bornerJour(date: string, periode: PeriodeOperation | null): string {
+  if (!periode) return date
+  return date < periode.debut ? periode.debut : date > periode.fin ? periode.fin : date
+}
+
 function formatDateLabel(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return value || '—'
@@ -289,10 +335,22 @@ function csvCell(value: unknown) {
   return `"${text.replace(/"/g, '""')}"`
 }
 
+// Une nouvelle instance du calendrier est montée lorsqu'on change de campagne
+// (ou de dates) : une sélection de jour 2025 ne peut pas déborder sur OB 2026.
 export default function LivraisonsRetraits() {
-  const selection = useObData() as ReturnType<typeof useObData> & {selectedCampagne?: {id:string}}
+  const { selectedCampagne, activeCampagne } = useObData()
+  const campagne = selectedCampagne ?? activeCampagne
+  const key = `${campagne?.id ?? 'sans-campagne'}:${campagne?.dateDebut ?? ''}:${campagne?.dateFin ?? ''}`
+  return <LivraisonsRetraitsCampagne key={key} />
+}
+
+function LivraisonsRetraitsCampagne() {
+  const selection = useObData()
   const {commandes, setCommandes, getDonateurById, activeCampagne} = selection
-  const campagneAnnee = anneeDe(selection.selectedCampagne?.id ?? activeCampagne?.id ?? '')
+  const campagne = selection.selectedCampagne ?? activeCampagne
+  const campagneAnnee = anneeDe(campagne?.id ?? '')
+  const periode = useMemo(() => periodeOperation(campagne), [campagne])
+  const dateStorageKey = `ob-livraisons-jour-travail-v2:${campagne?.id ?? 'sans-campagne'}`
   const { etablissements } = useEtablissements()
   const { users } = useUsers()
   const [benevolesLogistique,setBenevolesLogistique]=useState<BenevoleLivraison[]>(() => readArray('ob-bdd-benevoles-v1'))
@@ -331,7 +389,7 @@ export default function LivraisonsRetraits() {
     updateMulti(item.cle, item.commande.id, item.ligneId, dateLivraison, {statut:status})
     // Une livraison partielle ne doit jamais marquer toute la commande livrée.
     setCommandes(current => current.map(commande => {
-      if (commande.id !== item.commande.id) return commande
+      if (commandeCle(commande) !== commandeCle(item.commande)) return commande
       const livraisons = (commande.livraisons ?? []).map((ligne, i) =>
         (ligne.id || `index-${i}`) === item.ligneId
           ? {...ligne, dateLivraison: status === 'LIVREE' ? dateLivraison : undefined}
@@ -345,49 +403,58 @@ export default function LivraisonsRetraits() {
 
 
   const initialDate = useMemo(() => {
+    // Dès que les dates sont connues, on se place sur la première semaine de
+    // l'opération : aucune ancienne préférence hors période n'est reprise.
+    if (periode) return periode.debut
+
     const dates = commandes
-      .flatMap((commande) => [commande.datePrevueLivraison, ...(commande.livraisons ?? []).map(l => l.datePrevue)])
+      .filter(commande => campagneAnnee === '' || anneeDe(commande.campagne) === campagneAnnee)
+      .flatMap(commande => [commande.datePrevueLivraison, ...(commande.livraisons ?? []).map(l => l.datePrevue)])
       .filter((date): date is string => Boolean(date))
       .sort()
-
     const today = todayInput()
-    return (
-      dates.find((date) => date >= today) ||
-      dates[0] ||
-      today
-    )
-  }, [commandes])
+    return dates.find(date => date >= today) || dates[0] || today
+  }, [commandes, campagneAnnee, periode])
 
   const [missions, setMissions] =
-    useState<MissionLivraison[]>(loadMissions)
+    useState<MissionSauvegardee[]>(loadMissions)
 
-  // Le jour de travail reste mémorisé au retour sur le module.
+
+
+  // Jour mémorisé PAR CAMPAGNE et limité aux dates de l'opération. L'ancienne
+  // préférence globale ne sert que pour les campagnes sans période définie.
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem('ob-livraisons-jour-travail-v1')
-      return saved && /^\d{4}-\d{2}-\d{2}$/.test(saved) ? saved : initialDate
+      const saved = localStorage.getItem(dateStorageKey)
+      const legacy = periode ? null : localStorage.getItem('ob-livraisons-jour-travail-v1')
+      const choice = saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)
+        ? saved
+        : legacy && /^\d{4}-\d{2}-\d{2}$/.test(legacy) ? legacy : initialDate
+      return bornerJour(choice, periode)
     } catch { return initialDate }
   })
-  const [jourFige, setJourFige] = useState<boolean>(() => {
-    try { return localStorage.getItem('ob-livraisons-jour-fige-v1') === 'true' }
-    catch { return false }
-  })
   useEffect(() => {
-    try {
-      localStorage.setItem('ob-livraisons-jour-travail-v1', selectedDate)
-      localStorage.setItem('ob-livraisons-jour-fige-v1', String(jourFige))
-    } catch { /* navigation disponible même sans stockage */ }
-  }, [selectedDate, jourFige])
+    try { localStorage.setItem(dateStorageKey, selectedDate) }
+    catch { /* navigation disponible même sans stockage */ }
+  }, [selectedDate, dateStorageKey])
 
   const weekStart = mondayOf(selectedDate)
   const weekEnd = shiftDate(weekStart, 6)
   const daysOfWeek = Array.from({ length: 7 }, (_, index) => shiftDate(weekStart, index))
   const selectedWeek = isoWeekValue(selectedDate)
+  const firstWeek = periode ? mondayOf(periode.debut) : null
+  const lastWeek = periode ? mondayOf(periode.fin) : null
+  const previousWeek = shiftDate(weekStart, -7)
+  const nextWeek = shiftDate(weekStart, 7)
+  const canPrevious = !firstWeek || previousWeek >= firstWeek
+  const canNext = !lastWeek || nextWeek <= lastWeek
   function changeWeek(monday: string) {
-    if (jourFige) return
-    // Conserve le jour de semaine choisi quand on change de semaine.
+    if (firstWeek && lastWeek && (monday < firstWeek || monday > lastWeek)) return
+    // On conserve le même jour de semaine si possible, et on sélectionne
+    // automatiquement le premier/dernier jour permis en semaine partielle.
     const dayOffset = daysOfWeek.indexOf(selectedDate)
-    setSelectedDate(shiftDate(monday, Math.max(0, dayOffset)))
+    const wanted = shiftDate(monday, Math.max(0, dayOffset))
+    setSelectedDate(bornerJour(wanted, periode))
   }
 
   const [activeTab, setActiveTab] =
@@ -427,7 +494,7 @@ export default function LivraisonsRetraits() {
 
   const [tourForm, setTourForm] =
     useState<TourForm>(() => ({
-      date: initialDate,
+      date: selectedDate,
       mode: 'BENEVOLE',
       responsable: '',
       retraitType: 'ETABLISSEMENT',
@@ -512,13 +579,14 @@ export default function LivraisonsRetraits() {
 
         const index = next.findIndex(
           (mission) =>
-            mission.commandeId === commande.id,
+            appartient(mission, commande, commandes),
         )
 
         if (index < 0) {
           next.push({
             id: createMissionId(),
             commandeId: commande.id,
+            commandeCle: commandeCle(commande),
             date:
               commande.datePrevueLivraison ||
               commande.dateLivraison ||
@@ -526,9 +594,7 @@ export default function LivraisonsRetraits() {
             heure: '',
             mode: 'NON_AFFECTE',
             responsable: '',
-            statut: commande.dateLivraison
-              ? 'LIVREE'
-              : 'A_PLANIFIER',
+            statut: commande.statut === 'LIVREE' ? 'LIVREE' : 'A_PLANIFIER',
             commentaire: '',
             updatedAt: new Date().toISOString(),
           })
@@ -538,15 +604,27 @@ export default function LivraisonsRetraits() {
 
         const mission = next[index]
 
-        if (
-          commande.dateLivraison &&
-          mission.statut !== 'LIVREE'
-        ) {
+        if (commande.statut === 'LIVREE' && mission.statut !== 'LIVREE') {
           next[index] = {
             ...mission,
+            commandeCle: commandeCle(commande),
             statut: 'LIVREE',
             updatedAt: new Date().toISOString(),
           }
+          changed = true
+        } else if (commande.statut !== 'LIVREE' && mission.statut === 'LIVREE') {
+          // Un ancien id réutilisé ne doit jamais livrer une nouvelle commande.
+          next[index] = {
+            ...mission,
+            commandeCle: commandeCle(commande),
+            mode: 'NON_AFFECTE',
+            responsable: '',
+            statut: 'A_PLANIFIER',
+            updatedAt: new Date().toISOString(),
+          }
+          changed = true
+        } else if (!mission.commandeCle) {
+          next[index] = { ...mission, commandeCle: commandeCle(commande) }
           changed = true
         } else if (
           mission.mode === 'NON_AFFECTE' &&
@@ -571,7 +649,7 @@ export default function LivraisonsRetraits() {
     () =>
       missions.filter(
         (mission) => mission.date === selectedDate &&
-          commandes.some(c=>c.id===mission.commandeId &&
+          commandes.some(c=>appartient(mission, c, commandes) &&
             (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee)),
       ),
     [missions, selectedDate, commandes, campagneAnnee],
@@ -582,7 +660,7 @@ export default function LivraisonsRetraits() {
       selectedDayMissions
         .map((mission) => {
           const commande = commandes.find(
-            (item) => item.id === mission.commandeId,
+            (item) => appartient(mission, item, commandes),
           )
 
           if (!commande) return null
@@ -648,7 +726,7 @@ export default function LivraisonsRetraits() {
           heure: affectation?.heure || '',
           mode: affectation?.mode || 'NON_AFFECTE',
           responsable: affectation?.responsable || '',
-          statut: item.ligne.dateLivraison ? 'LIVREE' : affectation?.statut || 'A_PLANIFIER',
+          statut: item.ligne.dateLivraison ? 'LIVREE' : affectation?.statut === 'LIVREE' ? 'A_PLANIFIER' : affectation?.statut || 'A_PLANIFIER',
           commentaire: affectation?.commentaire || '',
           retraitType: affectation?.retraitType,
           updatedAt: '',
@@ -966,9 +1044,9 @@ export default function LivraisonsRetraits() {
     () => commandes
       .filter(commande => {
         if (commande.statut === 'ANNULEE' || commande.statut === 'LIVREE' ||
-            commande.dateLivraison || (commande.livraisons?.length ?? 0) > 0 ||
+            (commande.livraisons?.length ?? 0) > 0 ||
             (campagneAnnee && anneeDe(commande.campagne) !== campagneAnnee)) return false
-        const commandesMissions = missions.filter(m => m.commandeId === commande.id)
+        const commandesMissions = missions.filter(m => appartient(m, commande, commandes))
         return commandesMissions.length === 0 ||
           commandesMissions.every(missionDoitEtreAttribuee)
       })
@@ -986,7 +1064,7 @@ export default function LivraisonsRetraits() {
     }),
     ...lignesMulti.filter(item => {
       const state=multiAffectations[item.cle]
-      return !item.ligne.dateLivraison && (!state || missionDoitEtreAttribuee(state))
+      return !item.ligne.dateLivraison && (!state || state.statut === 'LIVREE' || missionDoitEtreAttribuee(state))
     }).map(item => ({ key: `multi:${item.cle}`,
       label: item.ligne.destinataireNom || 'Destination sans nom',
       numero: item.commande.numero, quantite: item.ligne.quantite,
@@ -998,7 +1076,7 @@ export default function LivraisonsRetraits() {
   const datesNonAffectees = useMemo(() => {
     const byKey = new Map<string,string>()
     for (const commande of eligibleCommandes) {
-      const mission = missions.find(m => m.commandeId === commande.id && missionDoitEtreAttribuee(m))
+      const mission = missions.find(m => appartient(m, commande, commandes) && missionDoitEtreAttribuee(m))
       byKey.set(`simple:${commande.id}`, mission?.date || commande.datePrevueLivraison || '')
     }
     for (const item of lignesMulti) {
@@ -1053,7 +1131,7 @@ export default function LivraisonsRetraits() {
       const commande = eligibleCommandes.find(item => `simple:${item.id}` === stop.key)
       if (!commande) return null
       const donneur = getDonateurById(commande.donateurId)
-      const existante = missions.find(item => item.commandeId === commande.id)
+      const existante = missions.find(item => appartient(item, commande, commandes))
       const datePrevue = existante?.date || commande.datePrevueLivraison || ''
       const mission: MissionLivraison = existante && missionDoitEtreAttribuee(existante)
         ? existante
@@ -1125,6 +1203,11 @@ export default function LivraisonsRetraits() {
   ) {
     event.preventDefault()
 
+    if (!dansOperation(tourForm.date, periode)) {
+      window.alert("La date de livraison doit être comprise entre le début et la fin de l'opération.")
+      return
+    }
+
     const selectedKeys = Object.entries(tourForm.commandes)
       .filter(([,value]) => value.selected)
       .map(([key]) => key)
@@ -1155,7 +1238,10 @@ export default function LivraisonsRetraits() {
       return
     }
 
-    if(selectedIds.some(id=>missions.some(m=>m.commandeId===id && !missionDoitEtreAttribuee(m)))){
+    if(selectedIds.some(id => {
+      const commande = commandes.find(c => c.id === id && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
+      return commande && missions.some(m => appartient(m, commande, commandes) && !missionDoitEtreAttribuee(m))
+    })){
       window.alert('Une commande a déjà été affectée à une tournée. Actualise la liste avant de continuer.');return
     }
     if(multiKeys.some(key => {
@@ -1189,9 +1275,14 @@ export default function LivraisonsRetraits() {
 
       for (const commandeId of selectedIds) {
         const currentMissionIndex = next.findIndex(
-          (mission) => mission.commandeId === commandeId,
+          (mission) => {
+            const commande = commandes.find(c => c.id === commandeId && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
+            return Boolean(commande && appartient(mission, commande, commandes))
+          },
         )
 
+        const commande = commandes.find(c => c.id === commandeId && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
+        if (!commande) continue
         const heure =
           tourForm.commandes[`simple:${commandeId}`]?.heure ||
           ''
@@ -1199,6 +1290,7 @@ export default function LivraisonsRetraits() {
         if (currentMissionIndex >= 0) {
           next[currentMissionIndex] = {
             ...next[currentMissionIndex],
+            commandeCle: commandeCle(commande),
             mode: tourForm.mode,
             responsable,
             retraitType: tourForm.mode === 'RETRAIT' ? tourForm.retraitType : undefined,
@@ -1215,6 +1307,7 @@ export default function LivraisonsRetraits() {
           next.push({
             id: createMissionId(),
             commandeId,
+            commandeCle: commandeCle(commande),
             date: tourForm.date,
             heure,
             mode: tourForm.mode,
@@ -1232,7 +1325,8 @@ export default function LivraisonsRetraits() {
 
     setCommandes((current) =>
       current.map((commande) =>
-        selectedIds.includes(commande.id)
+        selectedIds.includes(commande.id) &&
+        (!campagneAnnee || anneeDe(commande.campagne) === campagneAnnee)
           ? {
               ...commande,
               datePrevueLivraison: tourForm.date,
@@ -1242,7 +1336,7 @@ export default function LivraisonsRetraits() {
     )
 
     setAlertesReattribution(prev=>{const next={...prev};selectedIds.forEach(id=>delete next[String(id)]);return next})
-    if (!jourFige) setSelectedDate(tourForm.date)
+    setSelectedDate(bornerJour(tourForm.date, periode))
     setTourOpen(false)
   }
 
@@ -1283,7 +1377,7 @@ export default function LivraisonsRetraits() {
     if (statut === 'LIVREE') {
       setCommandes((current) =>
         current.map((commande) =>
-          commande.id === mission.commandeId
+          appartient(mission, commande, commandes)
             ? {
                 ...commande,
                 statut: 'LIVREE',
@@ -1353,13 +1447,15 @@ export default function LivraisonsRetraits() {
       return
     }
     const commandeId=Number(key.slice(7))
+    const commande = commandes.find(c => c.id === commandeId && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
+    if (!commande) return
     setMissions(current=>{
-      if(current.some(m=>m.commandeId===commandeId && !missionDoitEtreAttribuee(m)))return current
-      const old=current.find(m=>m.commandeId===commandeId)
-      return old?current.map(m=>m.id===old.id?{...m,date:selectedDate,mode,responsable,heure:'',statut:'PLANIFIEE',updatedAt:new Date().toISOString()}:m):[
-        ...current,{id:createMissionId(),commandeId,date:selectedDate,mode,responsable,heure:'',statut:'PLANIFIEE',commentaire:'',updatedAt:new Date().toISOString()}]
+      if(current.some(m=>appartient(m, commande, commandes) && !missionDoitEtreAttribuee(m))) return current
+      const old=current.find(m=>appartient(m, commande, commandes))
+      return old?current.map(m=>m.id===old.id?{...m,commandeCle:commandeCle(commande),date:selectedDate,mode,responsable,heure:'',statut:'PLANIFIEE',updatedAt:new Date().toISOString()}:m):[
+        ...current,{id:createMissionId(),commandeId,commandeCle:commandeCle(commande),date:selectedDate,mode,responsable,heure:'',statut:'PLANIFIEE',commentaire:'',updatedAt:new Date().toISOString()}]
     })
-    setCommandes(current=>current.map(c=>c.id===commandeId?{...c,datePrevueLivraison:selectedDate}:c))
+    setCommandes(current=>current.map(c=>commandeCle(c)===commandeCle(commande)?{...c,datePrevueLivraison:selectedDate}:c))
     setAlertesReattribution(prev=>{const next={...prev};delete next[String(commandeId)];return next})
     setCommandeAjout('');setTourEdit(null)
   }
@@ -1730,28 +1826,35 @@ export default function LivraisonsRetraits() {
           <div className="lr-week-picker" aria-label="Choisir la semaine et le jour des livraisons">
             <div className="lr-week-picker-top">
               <CalendarDays size={17} aria-hidden="true" />
-              <button type="button" className="lr-week-arrow" aria-label="Semaine précédente" disabled={jourFige} onClick={() => changeWeek(shiftDate(weekStart, -7))}>‹</button>
+              <button type="button" className="lr-week-arrow" aria-label="Semaine précédente" disabled={!canPrevious} onClick={() => changeWeek(previousWeek)}>‹</button>
               <label className="lr-week-select">
                 <span>Semaine du {shortDate(weekStart)} au {shortDate(weekEnd)}</span>
-                <input type="week" aria-label="Choisir une semaine" disabled={jourFige} value={selectedWeek} onChange={event => {
-                  const monday = mondayFromWeek(event.target.value)
-                  if (monday) changeWeek(monday)
-                }} />
+                <input type="week" aria-label="Choisir une semaine" value={selectedWeek}
+                  min={periode ? isoWeekValue(periode.debut) : undefined}
+                  max={periode ? isoWeekValue(periode.fin) : undefined}
+                  onChange={event => {
+                    const monday = mondayFromWeek(event.target.value)
+                    if (monday) changeWeek(monday)
+                  }} />
               </label>
-              <button type="button" className="lr-week-arrow" aria-label="Semaine suivante" disabled={jourFige} onClick={() => changeWeek(shiftDate(weekStart, 7))}>›</button>
+              <button type="button" className="lr-week-arrow" aria-label="Semaine suivante" disabled={!canNext} onClick={() => changeWeek(nextWeek)}>›</button>
             </div>
             <div className="lr-week-days" role="group" aria-label="Jour de la semaine">
               {daysOfWeek.map((date, index) => (
-                <button type="button" key={date} className={`lr-week-day${date === selectedDate ? ' is-active' : ''}`} aria-pressed={date === selectedDate} disabled={jourFige} onClick={() => setSelectedDate(date)}>
+                <button type="button" key={date} className={`lr-week-day${date === selectedDate ? ' is-active' : ''}`} aria-pressed={date === selectedDate}
+                  disabled={!dansOperation(date, periode)} title={!dansOperation(date, periode) ? "Hors des dates de l'opération" : undefined}
+                  onClick={() => setSelectedDate(date)}>
                   <span>{WEEKDAYS_SHORT[index]}</span><strong>{shortDate(date)}</strong>
                   {nonAffecteesPourDate(date).length > 0 && <em className="lr-day-pending" title={`${nonAffecteesPourDate(date).length} livraison(s) non affectée(s)`}>{nonAffecteesPourDate(date).length}</em>}
                 </button>
               ))}
             </div>
-            <button type="button" className={`lr-day-lock${jourFige ? ' is-locked' : ''}`} aria-pressed={jourFige} onClick={() => setJourFige(value => !value)}>
-              {jourFige ? <Lock size={14}/> : <Unlock size={14}/>}
-              {jourFige ? `Jour figé : ${shortDate(selectedDate)}` : 'Figer ce jour'}
-            </button>
+            <span className="lr-day-lock" style={{ cursor: 'default' }}>
+              <CalendarDays size={14}/>
+              {periode
+                ? `Opération du ${shortDate(periode.debut)} au ${shortDate(periode.fin)}`
+                : 'Dates à renseigner dans Administration → Campagnes'}
+            </span>
           </div>
           </div>
         </div>
@@ -2439,6 +2542,8 @@ export default function LivraisonsRetraits() {
                     <span>Date</span>
                     <input
                       type="date"
+                      min={periode?.debut}
+                      max={periode?.fin}
                       value={tourForm.date}
                       onChange={(event) =>
                         setTourForm(
