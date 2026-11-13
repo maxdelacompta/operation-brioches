@@ -1,3 +1,4 @@
+import { lazy } from 'react'
 import {
   BrowserRouter,
   Navigate,
@@ -21,61 +22,63 @@ import { CommandesMairiesRsProvider } from "./contexts/CommandesMairiesRsProvide
 import AppLayout from './layouts/AppLayout'
 import { AuthProvider } from "./contexts/AuthProvider"
 import Connexion from './pages/Connexion'
-import AccesConnexion from './pages/AccesConnexion'
-import ResetOB2026 from './pages/ResetOB2026'
 
-import ThemeShowcase from './pages/ThemeShowcase'
+// Chaque page est chargée à la première ouverture de sa route.
+// Les providers, l'authentification et le layout restent disponibles dès le démarrage.
+const AccesConnexion = lazy(() => import('./pages/AccesConnexion'))
+const ResetOB2026 = lazy(() => import('./pages/ResetOB2026'))
+const ThemeShowcase = lazy(() => import('./pages/ThemeShowcase'))
 
-import Accueil from './pages/Accueil'
-import VuesEnsembleRubriques from './pages/VuesEnsembleRubriques'
-import Dashboard from './pages/Dashboard'
-import SuiviCaisseTpe from './pages/SuiviCaisseTpe'
-import Communication from './pages/Communication'
-import Comptabilite from './pages/Comptabilite'
-import Etablissement from './pages/Etablissement'
-import SuiviBrioches from './pages/SuiviBrioches'
-import StockBrioches from './pages/StockBrioches'
-import RecapBrioches from './pages/RecapBrioches'
+const Accueil = lazy(() => import('./pages/Accueil'))
+const VuesEnsembleRubriques = lazy(() => import('./pages/VuesEnsembleRubriques'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const SuiviCaisseTpe = lazy(() => import('./pages/SuiviCaisseTpe'))
+const Communication = lazy(() => import('./pages/Communication'))
+const Comptabilite = lazy(() => import('./pages/Comptabilite'))
+const Etablissement = lazy(() => import('./pages/Etablissement'))
+const SuiviBrioches = lazy(() => import('./pages/SuiviBrioches'))
+const StockBrioches = lazy(() => import('./pages/StockBrioches'))
+const RecapBrioches = lazy(() => import('./pages/RecapBrioches'))
 
-import Recherche from './pages/Recherche'
-import Bdd from './pages/Bdd'
-import StandsBrioches from './pages/StandsBrioches'
-import CompteurStand from './pages/CompteurStand'
-import Donateurs from './pages/Donateurs'
-import Mairies from './pages/Mairies'
-import Benevoles from './pages/Benevoles'
+const Recherche = lazy(() => import('./pages/Recherche'))
+const Bdd = lazy(() => import('./pages/Bdd'))
+const StandsBrioches = lazy(() => import('./pages/StandsBrioches'))
+const CompteurStand = lazy(() => import('./pages/CompteurStand'))
+const Donateurs = lazy(() => import('./pages/Donateurs'))
+const Mairies = lazy(() => import('./pages/Mairies'))
+const Benevoles = lazy(() => import('./pages/Benevoles'))
 
-import Commandes from './pages/Commandes'
-import LivraisonsRetraits from './pages/LivraisonsRetraits'
-import SuiviGlobalEntreprises from './pages/SuiviGlobalEntreprises'
-import CommandesMairiesRs from './pages/CommandesMairiesRs'
-import CommandesArtisans from './pages/CommandesArtisans'
-import Fournisseurs from './pages/Fournisseurs'
-import CommandesGms from './pages/CommandesGms'
-import CommandesIndustriels from './pages/CommandesIndustriels'
-import SuiviCommandesAchats from './pages/SuiviCommandesAchats'
-import Geographie from './pages/Geographie'
+const Commandes = lazy(() => import('./pages/Commandes'))
+const LivraisonsRetraits = lazy(() => import('./pages/LivraisonsRetraits'))
+const SuiviGlobalEntreprises = lazy(() => import('./pages/SuiviGlobalEntreprises'))
+const CommandesMairiesRs = lazy(() => import('./pages/CommandesMairiesRs'))
+const CommandesArtisans = lazy(() => import('./pages/CommandesArtisans'))
+const Fournisseurs = lazy(() => import('./pages/Fournisseurs'))
+const CommandesGms = lazy(() => import('./pages/CommandesGms'))
+const CommandesIndustriels = lazy(() => import('./pages/CommandesIndustriels'))
+const SuiviCommandesAchats = lazy(() => import('./pages/SuiviCommandesAchats'))
+const Geographie = lazy(() => import('./pages/Geographie'))
 
-import FichesCaisse from './pages/FichesCaisse'
-import Coffre from './pages/Coffre'
-import SuiviBanque from './pages/Suivibanque'
-import GestionCheques from './pages/GestionCheques'
-import RecapitulatifGlobal from './pages/RecapitulatifGlobal'
+const FichesCaisse = lazy(() => import('./pages/FichesCaisse'))
+const Coffre = lazy(() => import('./pages/Coffre'))
+const SuiviBanque = lazy(() => import('./pages/Suivibanque'))
+const GestionCheques = lazy(() => import('./pages/GestionCheques'))
+const RecapitulatifGlobal = lazy(() => import('./pages/RecapitulatifGlobal'))
 
-import JustificatifsDons from './pages/JustificatifsDons'
-import FacturesPaiements from './pages/FacturesPaiements'
-import Mecenat from './pages/Mecenat'
-import PertesEcarts from './pages/PertesEcarts'
+const JustificatifsDons = lazy(() => import('./pages/JustificatifsDons'))
+const FacturesPaiements = lazy(() => import('./pages/FacturesPaiements'))
+const Mecenat = lazy(() => import('./pages/Mecenat'))
+const PertesEcarts = lazy(() => import('./pages/PertesEcarts'))
 
-import Administration from './pages/Administration'
-import Utilisateurs from './pages/Utilisateurs'
-import GestionMonCompte from './pages/GestionMonCompte'
-import RolesPermissions from './pages/RolesPermissions'
-import Campagnes from './pages/Campagnes'
-import ParametresGeneraux from './pages/ParametresGeneraux'
-import JournalActivite from './pages/JournalActivite'
-import MesAlertes from './pages/MesAlertes'
-import AdminEtablissements from './pages/AdminEtablissements'
+const Administration = lazy(() => import('./pages/Administration'))
+const Utilisateurs = lazy(() => import('./pages/Utilisateurs'))
+const GestionMonCompte = lazy(() => import('./pages/GestionMonCompte'))
+const RolesPermissions = lazy(() => import('./pages/RolesPermissions'))
+const Campagnes = lazy(() => import('./pages/Campagnes'))
+const ParametresGeneraux = lazy(() => import('./pages/ParametresGeneraux'))
+const JournalActivite = lazy(() => import('./pages/JournalActivite'))
+const MesAlertes = lazy(() => import('./pages/MesAlertes'))
+const AdminEtablissements = lazy(() => import('./pages/AdminEtablissements'))
 
 function App() {
   return (

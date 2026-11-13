@@ -4,7 +4,7 @@ import { isCampaignReadOnly } from '../lib/campaignAccess'
 import CampaignReadOnlyBoundary from '../components/CampaignReadOnlyBoundary'
 import PermissionGate from '../components/PermissionGate'
 import { permissionModuleForPath } from '../security/accessPolicy'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Outlet } from 'react-router-dom'
@@ -25,9 +25,15 @@ function AppLayout() {
   // les pages métier lors d'une ouverture directe par URL.
   const routeAvecDroit = Boolean(permissionModuleForPath(location.pathname)) ||
     location.pathname === '/administration/reset-ob2026'
-  const page = routeAvecDroit
-    ? <PermissionGate><Outlet key={pageKey} /></PermissionGate>
-    : <Outlet key={pageKey} />
+  const page = (
+    <Suspense
+      fallback={<div role="status" aria-live="polite" style={{ padding: '24px' }}>Chargement de la page…</div>}
+    >
+      {routeAvecDroit
+        ? <PermissionGate><Outlet key={pageKey} /></PermissionGate>
+        : <Outlet key={pageKey} />}
+    </Suspense>
+  )
   const [chatOpen, setChatOpen] = useState(false)
 
   const [unreadCount, setUnreadCount] = useState(0)

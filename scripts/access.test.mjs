@@ -42,6 +42,19 @@ test('Chaque route concrète possède un module, sans héritage implicite', () =
   assert.equal(canAccessPath(user, '/administration/utilisateurs', grantOnly('administration')), false)
   assert.equal(canAccessPath(user, '/commandes/mairies-rs', grantOnly('commandes')), false)
 })
+test('Les pages métier se chargent à la demande, avec un indicateur dans le layout', () => {
+  const app = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8')
+  const layout = fs.readFileSync(path.join(root, 'src/layouts/AppLayout.tsx'), 'utf8')
+  const lazyPages = new Set([...app.matchAll(/const (\w+) = lazy\(\(\) => import\('\.\/pages\/[^']+'\)\)/g)]
+    .map(match => match[1]))
+  const routedPages = new Set([...app.matchAll(/element=\{\s*<(\w+)\s*\/>\s*\}/g)]
+    .map(match => match[1])
+    .filter(name => name !== 'Connexion' && name !== 'AppLayout'))
+  assert.ok(routedPages.size > 30, 'La liste de routes métier doit être vérifiée')
+  for (const page of routedPages) assert.ok(lazyPages.has(page), `Import non différé : ${page}`)
+  assert.match(layout, /<Suspense[\s\S]*<PermissionGate><Outlet/)
+  assert.match(layout, /role="status"/)
+})
 test('Le droit Voir autorise uniquement le module demandé', () => {
   for (const module of PERMISSION_MODULES) {
     assert.equal(canAccessPath(user, module.path, grantOnly(module.key)), true, module.path)
