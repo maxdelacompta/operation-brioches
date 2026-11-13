@@ -18,7 +18,12 @@ function load(relative) {
   if (cache.has(file)) return cache.get(file).exports
   if (file.endsWith('.css')) return {}
   const module = { exports: {} }; cache.set(file, module)
-  const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText
+  const source = fs.readFileSync(file, 'utf8')
+  // Vite fournit import.meta.env.DEV ; le chargeur CommonJS de ce test le simule.
+  const testSource = file.endsWith(path.join('src', 'lib', 'testMode.ts'))
+    ? source.replaceAll('import.meta.env.DEV', 'true')
+    : source
+  const output = ts.transpileModule(testSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText
   const run = vm.runInThisContext(`(function(require,module,exports){${output}\n})`, { filename: file })
   run(name => name.startsWith('.') ? load(path.resolve(path.dirname(file), name)) : requirePackage(name), module, module.exports)
   return module.exports
@@ -30,8 +35,10 @@ const grantOnly = key => (_role, module, action) => module === key && action ===
 
 test('Chaque route concrète possède un module, sans héritage implicite', () => {
   const app = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8')
-  const routes = [...app.matchAll(/path="([^"]+)"/g)].map(match => match[1]).filter(route => !route.includes(':'))
-  for (const route of routes) assert.ok(permissionModuleForPath(route), route)
+  const routes = [...app.matchAll(/path="([^"]+)"/g)].map(match => match[1])
+  // Les routes publiques et les vues utilitaires ne font pas partie du catalogue métier.
+  // Inversement, toutes les permissions déclarées doivent pointer sur une vraie route.
+  for (const module of PERMISSION_MODULES) assert.ok(routes.includes(module.path), module.path)
   assert.equal(canAccessPath(user, '/administration/utilisateurs', grantOnly('administration')), false)
   assert.equal(canAccessPath(user, '/commandes/mairies-rs', grantOnly('commandes')), false)
 })
@@ -48,23 +55,39 @@ test('Compte inactif, absent ou route inconnue : accès refusé', () => {
   assert.equal(canAccessPath(user, '/commandes-inconnues', () => true), false)
 })
 test('Alias et slash final utilisent la permission exacte', () => {
-  assert.equal(permissionModuleForPath('/geographie/carte'), 'geographie')
+  assert.equal(permissionModuleForPath('/geographie/carte'), 'geo_carte')
+  assert.equal(permissionModuleForPath('/geographie/secteurs'), 'geo_secteurs')
+  assert.equal(permissionModuleForPath('/geographie/comparaison'), 'geo_comparaison')
+  assert.equal(permissionModuleForPath('/geographie/couverture'), 'geo_couverture')
   assert.equal(permissionModuleForPath('/commandes-achats/artisans/fournisseurs'), 'fournisseurs')
   assert.equal(permissionModuleForPath('/bdd/donateurs/'), 'donateurs')
+  assert.equal(permissionModuleForPath('/gestion/stands-brioches/stand-01/compteur'), 'stands_brioches')
+  // Un lien direct doit respecter le même droit que la navigation latérale.
+  assert.equal(canAccessPath(user, '/gestion/stands-brioches/stand-01/compteur', () => false), false)
+})
+
+test('Le garde de permissions est intégré au layout des routes métier', () => {
+  const layout = fs.readFileSync(path.join(root, 'src/layouts/AppLayout.tsx'), 'utf8')
+  assert.match(layout, /<PermissionGate><Outlet/)
 })
 
 const React = requirePackage('react')
 const { renderToStaticMarkup } = requirePackage('react-dom/server')
 const { MemoryRouter } = requirePackage('react-router-dom')
-const { UsersProvider } = load('src/contexts/UsersContext.tsx')
-const { PermissionsProvider } = load('src/contexts/PermissionsContext.tsx')
+const { UsersProvider } = load('src/contexts/UsersProvider.tsx')
+const { PermissionsProvider } = load('src/contexts/PermissionsProvider.tsx')
+const { Context: AuthContext } = load('src/contexts/AuthContext.tsx')
 const Gate = load('src/components/PermissionGate.tsx').default
 const Panel = load('src/components/UserTestPanel.tsx').default
+const { selectableTestUsers } = load('src/lib/testUserSelection.ts')
 function render(component, pathname, values = {}) {
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: key => values[key] ?? null } })
   try {
-    return renderToStaticMarkup(React.createElement(UsersProvider, null, React.createElement(PermissionsProvider, null, React.createElement(MemoryRouter, { initialEntries: [pathname] }, component))))
+    return renderToStaticMarkup(React.createElement(UsersProvider, null,
+      React.createElement(AuthContext.Provider, { value: { authenticated: true, userId: 'demo-admin' } },
+        React.createElement(PermissionsProvider, null,
+          React.createElement(MemoryRouter, { initialEntries: [pathname] }, component)))))
   } finally {
     if (previous) Object.defineProperty(globalThis, 'localStorage', previous)
     else delete globalThis.localStorage
@@ -82,14 +105,17 @@ test('Le garde ne rend pas le contenu d’une page refusée', () => {
 })
 test('Le sélecteur propose les comptes actifs uniquement', () => {
   const base = { email: '', poste: '', perimetre: '', role: 'terrain' }
-  const html = render(React.createElement(Panel), '/', { 'ob-users-v1': JSON.stringify([{ ...base, id: 'a', name: 'ACTIF_TEST', status: 'actif' }, { ...base, id: 'b', name: 'INACTIF_TEST', status: 'inactif' }]) })
-  assert.match(html, /ACTIF_TEST/)
+  const comptes = [{ ...base, id: 'a', name: 'ACTIF_TEST', status: 'actif' }, { ...base, id: 'b', name: 'INACTIF_TEST', status: 'inactif' }]
+  assert.deepEqual(selectableTestUsers(comptes).map(compte => compte.name), ['ACTIF_TEST'])
+  const html = render(React.createElement(Panel), '/', { 'ob-users-v1': JSON.stringify(comptes) })
+  // Par défaut, le sélecteur reste replié : aucun nom de compte n'est exposé.
+  assert.match(html, /Mode test désactivé/)
+  assert.doesNotMatch(html, /ACTIF_TEST/)
   assert.doesNotMatch(html, /INACTIF_TEST/)
-  assert.match(html, /compte de départ/)
 })
 test('Ancienne matrice : droits conservés et nouveaux modules refusés par défaut', () => {
   function Snapshot() {
-    const { hasPermission } = load('src/contexts/PermissionsContext.tsx').usePermissions()
+    const { hasPermission } = load('src/contexts/permissionsState.ts').usePermissions()
     return React.createElement('p', null, JSON.stringify([hasPermission('terrain', 'dashboard', 'consulter'), hasPermission('terrain', 'geographie', 'consulter')]))
   }
   const html = render(React.createElement(Snapshot), '/', { 'ob-role-permissions-v1': JSON.stringify({ terrain: { dashboard: ['consulter'] } }) })

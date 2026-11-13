@@ -267,7 +267,8 @@ function AccueilPersonnalise({ storageKey }: { storageKey: string }) {
     window.addEventListener('storage',refresh)
     return ()=>{window.removeEventListener(ACTIVITY_EVENT_NAME,refresh);window.removeEventListener('storage',refresh)}
   },[])
-  const available = useMemo(()=>WIDGETS.filter(w=>!w.route || canVisit(w.route)),[canVisit])
+  // Liste courte : recalcul léger, et toujours cohérent avec les droits courants.
+  const available = WIDGETS.filter(w=>!w.route || canVisit(w.route))
   const shown = visible.map(id => available.find(w => w.id === id)).filter((w): w is WidgetDefinition => Boolean(w))
   const hidden = available.filter(w=>!visible.includes(w.id))
   const campaignOrders = campagneCourante ? commandes.filter(c=>c.campagne===campagneCourante.id) : commandes
@@ -295,14 +296,15 @@ function AccueilPersonnalise({ storageKey }: { storageKey: string }) {
   const progressBarWidth = progress === null ? 0 : Math.min(100, Math.max(0, progress))
   // Reprendre exactement le service de calcul du module Coffre :
   // fiches enregistrées - remises bancaires enregistrées, par campagne.
+  const campagneCoffreId = campagneCourante?.id ?? ''
   const coffre = useMemo(() => {
-    if (!campagneCourante?.id) return { data: null, error: 'Aucune campagne sélectionnée' }
+    if (!campagneCoffreId) return { data: null, error: 'Aucune campagne sélectionnée' }
     try {
-      return { data: calculerCoffre(campagneCourante.id, fichesCaisse, depotsBanque), error: '' }
+      return { data: calculerCoffre(campagneCoffreId, fichesCaisse, depotsBanque), error: '' }
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Coffre indisponible' }
     }
-  }, [campagneCourante?.id, fichesCaisse, depotsBanque])
+  }, [campagneCoffreId, fichesCaisse, depotsBanque])
   const mairiesActives = mairies.filter(m => m.statut === 'ACTIVE')
   const mairiesAContacter = mairiesActives.filter(m => m.participations?.find(p => p.campagne === campagneCourante?.id)?.statut === 'A_CONTACTER' ||
     (!m.participations?.some(p => p.campagne === campagneCourante?.id) && m.participation === 'A_CONTACTER'))

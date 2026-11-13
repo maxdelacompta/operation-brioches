@@ -5,17 +5,14 @@ import type { AppUser } from '../contexts/UsersContext'
 export function permissionModuleForPath(pathname: string): PermissionModule | null {
   const path = pathname.replace(/\/+$/, '') || '/'
   if (path === '/commandes-achats/artisans/fournisseurs') return 'fournisseurs'
-  if (['/geographie/carte', '/geographie/secteurs', '/geographie/comparaison', '/geographie/couverture'].includes(path)) return 'geographie'
+  if (/^\/gestion\/stands-brioches\/[^/]+\/compteur$/.test(path)) return 'stands_brioches'
+  // Les quatre écrans de géographie ont chacun leur case à cocher.
+  if (path === '/geographie/carte') return 'geo_carte'
+  if (path === '/geographie/secteurs') return 'geo_secteurs'
+  if (path === '/geographie/comparaison') return 'geo_comparaison'
+  if (path === '/geographie/couverture') return 'geo_couverture'
   return PERMISSION_MODULES.find(module => module.path === path)?.key ?? null
 }
-
-// TEMPORAIRE : ces trois pages sont accessibles à tous les comptes actifs.
-// À supprimer lorsque les permissions du module Établissements seront configurées.
-const PUBLIC_ESTABLISHMENT_PATHS = new Set([
-  '/etablissements/stock-brioches',
-  '/etablissements/suivi-brioches',
-  '/etablissements/recap-global',
-])
 
 export function canAccessPath(
   user: Pick<AppUser, 'role' | 'status'> | null,
@@ -26,8 +23,6 @@ export function canAccessPath(
 
   const path = pathname.replace(/\/+$/, '') || '/'
   if (path === '/administration/reset-ob2026') return user.role === 'administrateur'
-  if (PUBLIC_ESTABLISHMENT_PATHS.has(path)) return true
-
   const module = permissionModuleForPath(path)
   if (!module) return false
 

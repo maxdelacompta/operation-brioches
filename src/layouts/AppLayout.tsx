@@ -2,6 +2,8 @@ import { useUsers } from '../contexts/UsersContext'
 import { useObData } from '../contexts/ObDataContext'
 import { isCampaignReadOnly } from '../lib/campaignAccess'
 import CampaignReadOnlyBoundary from '../components/CampaignReadOnlyBoundary'
+import PermissionGate from '../components/PermissionGate'
+import { permissionModuleForPath } from '../security/accessPolicy'
 import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -19,6 +21,13 @@ function AppLayout() {
   const location = useLocation()
   const readOnly = isCampaignReadOnly(selectedCampagne, currentUser?.role, location.pathname)
   const pageKey = `${currentUserId}:${selectedCampagneId}`
+  // La visibilité de la Sidebar n'est pas un contrôle d'accès : garder aussi
+  // les pages métier lors d'une ouverture directe par URL.
+  const routeAvecDroit = Boolean(permissionModuleForPath(location.pathname)) ||
+    location.pathname === '/administration/reset-ob2026'
+  const page = routeAvecDroit
+    ? <PermissionGate><Outlet key={pageKey} /></PermissionGate>
+    : <Outlet key={pageKey} />
   const [chatOpen, setChatOpen] = useState(false)
 
   const [unreadCount, setUnreadCount] = useState(0)
@@ -47,10 +56,10 @@ function AppLayout() {
 
         {readOnly ? (
           <CampaignReadOnlyBoundary campaignName={selectedCampagne?.nom ?? selectedCampagne?.id ?? ''}>
-            <Outlet key={pageKey} />
+            {page}
           </CampaignReadOnlyBoundary>
         ) : (
-          <Outlet key={pageKey} />
+          page
         )}
         <UserTestPanel placement="status" />
 

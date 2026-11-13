@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "check:imports": "node scripts/check-imports.mjs",
-    "test:access": "node --test scripts/access.test.mjs"
+    "test:access": "node --test scripts/access.test.mjs",
+    "test": "node --test scripts/*.test.mjs"
   },
   "dependencies": {
     "@embedpdf/engines": "^2.15.1",

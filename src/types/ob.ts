@@ -116,6 +116,8 @@ export type FicheCaisse = {
   nbBriochesDonnees?: number
   /** Nombre de dons sans contrepartie lorsqu'il est connu. */
   nbDonsSansContrepartie?: number
+  /** Montant déclaré de ces dons, déjà compris dans les moyens de paiement. */
+  montantDonsSansContrepartie?: number
   /** Permet d'indiquer que le nombre de dons sans contrepartie est inconnu. */
   donsSansContrepartieInconnu?: boolean
   /** Utilisé pour les établissements : l'enveloppe a été retournée au siège. */

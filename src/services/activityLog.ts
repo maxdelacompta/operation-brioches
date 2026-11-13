@@ -28,6 +28,8 @@ export const ACTIVITY_CATEGORIES = {
   stocks: 'Stocks et brioches',
   stands: 'Stands et compteurs',
   factures: 'Factures et règlements',
+  mecenat: 'Mécénat',
+  // Ancienne orthographe conservée pour relire les journaux déjà enregistrés.
   mecanat: 'Mécénat',
   ecarts: 'Pertes et écarts',
   justificatifs: 'Justificatifs',

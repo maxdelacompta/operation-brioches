@@ -60,3 +60,36 @@
 @media(max-width:650px){.gc-detail-actions .gc-btn{flex:1 1 170px}.gc-detail-action-spacer{display:none}}
 
 .gc-scans-warning{position:fixed;z-index:2200;bottom:18px;right:18px;max-width:480px;background:#fff5e8;color:#804214;border:1px solid #ffd2a2;border-radius:12px;padding:14px 18px;box-shadow:0 12px 36px #092a4b25;font-size:13px}.gc-scans-warning button{margin-left:10px;border:0;background:transparent;color:#804214;text-decoration:underline;cursor:pointer}
+
+/* Sélection de chèques existants et création de bordereau */
+.gc-selection-bar{display:flex;align-items:center;flex-wrap:wrap;gap:9px 15px;padding:12px 20px 14px;margin:0 20px 14px;border:1px solid #d7e5f3;border-radius:11px;background:#f6f9fe}
+.gc-select-all{display:flex;align-items:center;gap:9px;color:#194576;font-size:12px;font-weight:750;cursor:pointer}
+.gc-select-all input,.gc-check-cell input{width:17px;height:17px;accent-color:#f58218;cursor:pointer}
+.gc-select-all input:disabled,.gc-check-cell input:disabled{cursor:not-allowed}
+.gc-selection-actions{margin-left:auto;display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.gc-selection-actions strong{font-size:12px;color:#183f77}
+.gc-selection-bar small{flex:0 0 100%;font-size:11px;color:#6b819a}
+.gc-check-cell{width:36px;text-align:center}
+.gc-remise-open{border:0;background:#eef5fc;border-radius:7px;color:#164578;padding:7px 9px;text-align:left;cursor:pointer;font-size:11px;font-weight:700}
+.gc-remise-open:hover{text-decoration:underline}
+.gc-unassigned{color:#8ba0b7;font-size:11px}
+.gc-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.gc-btn:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:700px){.gc-selection-bar{margin:0 12px 12px;padding:12px}.gc-selection-actions{margin-left:0;width:100%;justify-content:space-between}}
+
+/* Confirmation visible des nouveaux bordereaux : remplace window.confirm. */
+.gc-bordereau-confirm-overlay{z-index:4200}
+.gc-bordereau-confirm{width:min(620px,100%)}
+.gc-bordereau-confirm-body{padding:18px 24px;display:grid;gap:14px}
+.gc-bordereau-confirm-total{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border:1px solid #dce6f2;border-radius:11px;background:#f6f9fd;color:#184576;font-size:13px}
+.gc-bordereau-confirm-total strong{font-size:22px;color:#0d3570}
+.gc-bordereau-check-list{max-height:210px;overflow:auto;list-style:none;padding:0;margin:0;display:grid;gap:4px}
+.gc-bordereau-check-list li{display:flex;justify-content:space-between;gap:12px;padding:9px 10px;border-bottom:1px solid #e7edf5;font-size:12px;color:#234771}
+.gc-bordereau-check-list li b{white-space:nowrap}
+.gc-bordereau-orphan-warning{border:1px solid #f5c38b;background:#fff5e7;border-radius:11px;padding:13px 15px;color:#824912;font-size:12px;display:grid;gap:10px}
+.gc-bordereau-orphan-warning p{color:#824912;font-size:12px;line-height:1.6}
+.gc-bordereau-orphan-warning label{display:flex;align-items:flex-start;gap:9px;cursor:pointer;line-height:1.6;font-weight:650}
+.gc-bordereau-orphan-warning input{width:17px;height:17px;flex:0 0 17px;accent-color:#f58218}
+.gc-bordereau-note{font-size:12px;color:#607b9a;line-height:1.5}
+.gc-bordereau-confirm-actions{padding:16px 24px;border-top:1px solid #e4ebf5}
+@media(max-width:600px){.gc-bordereau-confirm-body{padding:14px}.gc-bordereau-confirm-actions{padding:14px}.gc-bordereau-confirm-actions .gc-btn{width:100%}}

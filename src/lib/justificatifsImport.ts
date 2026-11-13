@@ -169,7 +169,7 @@ export function analyserImportJustificatifs(
       donateurTelephone: champs.donateurTelephone || undefined,
       donateurAdresse: champs.donateurAdresse || undefined,
       commandeNumero: champs.commandeNumero || undefined,
-      datePaiement,
+      datePaiement: datePaiement || undefined,
       referencePaiement: champs.referencePaiement || undefined,
       remarque: champs.remarque || undefined,
     })

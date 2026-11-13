@@ -292,28 +292,6 @@ function FichesCaisse() {
   } = useObData()
   const activeCampagne = selectedCampagne ?? campagneActiveAdministrativement
 
-  // Accès direct depuis une commande mairie/RS. Ouvre la saisie seulement pour
-  // une commande de la campagne sélectionnée et modifiable.
-  const demandeCreationMairieRs = globalSearchParams.get('creation') === '1'
-  useEffect(() => {
-    if (!demandeCreationMairieRs || !commandeMairieRsFiltre) return
-    const frame = window.requestAnimationFrame(() => {
-      const next = new URLSearchParams(globalSearchParams)
-      next.delete('creation')
-      setGlobalSearchParams(next, { replace: true })
-      if (canWriteCampaign && commandeMairieRsSelectionnee &&
-          commandeMairieRsSelectionnee.statut !== 'ANNULEE' &&
-          commandeMairieRsSelectionnee.campagne === activeCampagne?.id) {
-        setEditingFiche(null)
-        setModalMode('create')
-        setModalOpen(true)
-      }
-    })
-    return () => window.cancelAnimationFrame(frame)
-  }, [demandeCreationMairieRs, commandeMairieRsFiltre, commandeMairieRsSelectionnee,
-      globalSearchParams, setGlobalSearchParams, activeCampagne?.id, canWriteCampaign])
-
-
   /* =======================================================
      INTÉGRATION AUTOMATIQUE DES ANCIENNES FICHES
      ======================================================= */
@@ -396,6 +374,27 @@ function FichesCaisse() {
     useState<FicheCaisse | null>(
       null,
     )
+
+  // Accès direct depuis une commande mairie/RS. Ouvre la saisie seulement pour
+  // une commande de la campagne sélectionnée et modifiable.
+  const demandeCreationMairieRs = globalSearchParams.get('creation') === '1'
+  useEffect(() => {
+    if (!demandeCreationMairieRs || !commandeMairieRsFiltre) return
+    const frame = window.requestAnimationFrame(() => {
+      const next = new URLSearchParams(globalSearchParams)
+      next.delete('creation')
+      setGlobalSearchParams(next, { replace: true })
+      if (canWriteCampaign && commandeMairieRsSelectionnee &&
+          commandeMairieRsSelectionnee.statut !== 'ANNULEE' &&
+          commandeMairieRsSelectionnee.campagne === activeCampagne?.id) {
+        setEditingFiche(null)
+        setModalMode('create')
+        setModalOpen(true)
+      }
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [demandeCreationMairieRs, commandeMairieRsFiltre, commandeMairieRsSelectionnee,
+      globalSearchParams, setGlobalSearchParams, activeCampagne?.id, canWriteCampaign])
 
   const [
     detailFiche,
@@ -3829,7 +3828,7 @@ const pageButtons = Array.from(
           commandes={commandes}
           commandesMairiesRs={commandesMairiesRs}
           commandeMairieRsInitiale={commandeMairieRsSelectionnee?.campagne === activeCampagne?.id
-            ? commandeMairieRsSelectionnee.id : undefined}
+            ? commandeMairieRsSelectionnee?.id : undefined}
           getDonateurById={getDonateurById}
           campagneActive={activeCampagne?.id ?? ''}
           onClose={() => {

@@ -61,16 +61,13 @@ import { useUsers } from '../contexts/UsersContext'
 import { useJustificatifs } from '../contexts/JustificatifsContext'
 import { generateAndDownloadJustificatifPdf } from '../services/justificatifPdf'
 import type { JustificatifDon } from '../types/justificatifs'
+import { memeCampagneCommande } from '../lib/commandeCampaign'
 
 import './Commandes.css'
 
 // Une campagne peut avoir été stockée sous '2025', 'OB 2025' ou 'OB2025'.
 function memeCampagneEntreprise(a: string, b: string): boolean {
-  if (a === b) return true
-  if (/^TEST[-_ ]/i.test(a) || /^TEST[-_ ]/i.test(b)) return false
-  const aa = a.match(/(?:19|20)\d{2}/)?.[0]
-  const bb = b.match(/(?:19|20)\d{2}/)?.[0]
-  return Boolean(aa && bb && aa === bb)
+  return memeCampagneCommande(a, b)
 }
 
 type CommandeFormMode =

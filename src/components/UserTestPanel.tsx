@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLE_LABELS, DEMO_CURRENT_USER_ID, useUsers } from '../contexts/UsersContext'
 import { TEST_MODE_AVAILABLE, TEST_MODE_EVENT, testModeEnabled, setTestModeEnabled } from '../lib/testMode'
+import { selectableTestUsers } from '../lib/testUserSelection'
 
 type Props = { placement?: 'status' }
 
@@ -26,7 +27,7 @@ export default function UserTestPanel({ placement }: Props) {
   // Ne jamais afficher l'outil en production, ni à un utilisateur non-administrateur connecté.
   if (!TEST_MODE_AVAILABLE || userId !== DEMO_CURRENT_USER_ID) return null
 
-  const activeUsers = users.filter(user => user.status === 'actif')
+  const activeUsers = selectableTestUsers(users)
   const isOpen = enabled && expanded
 
   return (

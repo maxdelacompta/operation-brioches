@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Banknote, Check, ChevronDown, FileText, Landmark, Printer, Search, UploadCloud } from 'lucide-react'
 import { useObData } from '../contexts/ObDataContext'
+import { useCampaignWriteAccess } from '../lib/useCampaignWriteAccess'
 import { calculerCoffre } from '../services/coffre'
 import { getCampagneJustificatifsSettings } from '../services/campagneJustificatifs'
 import './GestionCheques.css'
 import ScanCheques, { type ScanCheque } from './ScanCheques'
-import { getChequeScan } from './chequeScanStorage'
+import { getChequeScan, storeChequeScan } from './chequeScanStorage'
+import { loadChequeRegistry, saveChequeRegistry } from '../lib/chequeRegistryStorage'
 
 type Statut = 'À vérifier' | 'À remettre' | 'Remis en banque' | 'Encaissé' | 'Rejeté'
 type RemiseCategorie = 'Sur place' | 'Hors place'
@@ -18,17 +20,17 @@ const today = () => new Date().toLocaleDateString('en-CA')
 const euro = (n: number) => n.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})
 function load<T,>(key: string, fallback: T): T { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) as T : fallback } catch { return fallback } }
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2,7)}`
-const nextChrono = (existing: Remise[]) => {
-  const previous = Math.max(0, Number(localStorage.getItem(CHRONO_KEY) || '0'), ...existing.map(r => Number(r.chrono) || 0))
-  const next = previous + 1
-  localStorage.setItem(CHRONO_KEY, String(next))
-  return String(next).padStart(6, '0')
+const nextChrono = (existing: Remise[], savedChrono: number) => {
+  // Le numéro est sauvegardé avec le registre, sans écrire dans localStorage saturé.
+  const previous = Math.max(0, savedChrono, ...existing.map(r => Number(r.chrono) || 0))
+  return String(previous + 1).padStart(6, '0')
 }
 
 const emplacement = (d?:string) => !d || !/^\d{2}$/.test(d) ? 'À déterminer' : ['54','55','57','88'].includes(d) ? 'Sur place' : 'Hors place'
 
 export default function GestionCheques() {
   const { fichesCaisse, depotsBanque, campagnes, activeCampagne, selectedCampagne, setSelectedCampagneId, creerDepotBanque } = useObData()
+  const canWrite = useCampaignWriteAccess()
   const campagneCoffre = selectedCampagne?.id ?? ''
   const setCampagneCoffre = setSelectedCampagneId
   const campagneActive = campagneCoffre || activeCampagne?.id || campagnes[0]?.id || ''
@@ -43,13 +45,61 @@ export default function GestionCheques() {
   const fichesCheques = useMemo(() => fichesCaisse.filter(f => f.campagne === campagneActive && f.nbCheques > 0), [fichesCaisse, campagneActive])
   const depotsCheques = useMemo(() => depotsBanque.filter(d => d.campagne === campagneActive && d.statut === 'ENREGISTRE' && d.nbCheques > 0), [depotsBanque, campagneActive])
 
+  // Les deux anciennes clés sont lues mais jamais réécrites : migration sûre.
   const [cheques, setCheques] = useState<Cheque[]>(() => load(CK, []))
   const [remises, setRemises] = useState<Remise[]>(() => load(RK, []))
+  const [registryReady, setRegistryReady] = useState(false)
+  const [registrySaving, setRegistrySaving] = useState(false)
+  const registrySavingRef = useRef(false)
+  const lastChronoRef = useRef(Math.max(0, Number(localStorage.getItem(CHRONO_KEY) || '0')))
+  const [pdfError, setPdfError] = useState('')
+  useEffect(() => {
+    let alive = true
+    const anciensCheques = load<Array<Cheque & {image?: string}>>(CK, [])
+    const nettoyes = anciensCheques.map(({ image, ...cheque }) => {
+      void image // L'image intégrée est migrée séparément dans IndexedDB.
+      return cheque
+    })
+    const legacy = {
+      cheques: nettoyes,
+      remises: load<Remise[]>(RK, []),
+      lastChrono: lastChronoRef.current,
+    }
+    void (async () => {
+      // Les scans étaient parfois intégrés en base64 au registre localStorage.
+      // Les déplacer vers leur stockage d'images déjà prévu dans IndexedDB.
+      for (const c of anciensCheques) {
+        if (typeof c.image === 'string' && c.image.startsWith('data:image/')) {
+          await storeChequeScan(c.id, c.image)
+        }
+      }
+      const snapshot = await loadChequeRegistry(legacy)
+      // La copie IndexedDB étant confirmée, libérer l'espace occupé par les
+      // images encodées. Si l'opération échoue, conserver l'ancienne clé intacte.
+      if (anciensCheques.some(c => Boolean(c.image))) {
+        try { localStorage.setItem(CK, JSON.stringify(nettoyes)) }
+        catch { /* Ancien registre inchangé : la nouvelle base est déjà sauvée. */ }
+      }
+      return snapshot
+    })().then(snapshot => {
+      if (!alive) return
+      setCheques(snapshot.cheques)
+      setRemises(snapshot.remises)
+      lastChronoRef.current = snapshot.lastChrono
+      setRegistryReady(true)
+    }).catch(error => {
+      if (!alive) return
+      setPdfError(`Registre indisponible : ${error instanceof Error ? error.message : 'erreur de stockage'}. Aucune donnée n’a été supprimée.`)
+    })
+    return () => { alive = false }
+  }, [])
   const [filter, setFilter] = useState<'Tous' | Statut>('Tous')
+  const [selectedChequeIds, setSelectedChequeIds] = useState<string[]>([])
+  const [bordereauEnAttente, setBordereauEnAttente] = useState<string[] | null>(null)
+  const [confirmationOrphelins, setConfirmationOrphelins] = useState(false)
   const [search, setSearch] = useState('')
   const [showScanner, setShowScanner] = useState(false)
   const [selectedRemise, setSelectedRemise] = useState('')
-    const [pdfError, setPdfError] = useState('')
   const [creatingPdf, setCreatingPdf] = useState(false)
   const [scanSaving] = useState(false)
   const [scansWarning, setScansWarning] = useState('')
@@ -133,14 +183,140 @@ export default function GestionCheques() {
     const content=rows.map(fmt).join('\r\n')+'\r\n'
     downloadBlob(new Blob([content],{type:'text/plain;charset=windows-1252'}),`remise-${detail.chrono||detail.id}-import.txt`)
   }
-  function saveCheques(next: Cheque[]) { setCheques(next); localStorage.setItem(CK, JSON.stringify(next)) }
-  function saveRemises(next: Remise[]) { setRemises(next); localStorage.setItem(RK, JSON.stringify(next)) }
+  async function persistRegistre(nextCheques: Cheque[], nextRemises: Remise[], lastChrono = lastChronoRef.current): Promise<boolean> {
+    if (!registryReady || registrySavingRef.current) {
+      setPdfError('Le registre est encore en cours de chargement ou de sauvegarde. Réessaie dans un instant.')
+      return false
+    }
+    registrySavingRef.current = true
+    setRegistrySaving(true)
+    try {
+      // Écriture atomique : aucune association chèque/bordereau partielle.
+      await saveChequeRegistry({ cheques: nextCheques, remises: nextRemises, lastChrono })
+      setCheques(nextCheques)
+      setRemises(nextRemises)
+      lastChronoRef.current = lastChrono
+      return true
+    } catch (error) {
+      setPdfError(`Enregistrement impossible : ${error instanceof Error ? error.message : 'stockage indisponible'}. Le registre précédent est conservé.`)
+      return false
+    } finally {
+      registrySavingRef.current = false
+      setRegistrySaving(false)
+    }
+  }
   const filtered = useMemo(() => cheques.filter(c => c.campagne === campagneActive && (filter === 'Tous' || c.statut === filter) && [c.numero,c.emetteur,c.banque,c.etablissement,c.campagne,c.fichier].join(' ').toLowerCase().includes(search.toLowerCase())),[cheques,filter,search,campagneActive])
+  // Après un reset, certains chèques conservent un remiseId alors que
+  // le bordereau a été supprimé. Ne pas confondre ce lien orphelin avec
+  // une remise toujours existante : seul le second bloque la sélection.
+  const remiseIdsExistants = new Set(remises.map(r => r.id))
+  const remiseOrpheline = (c: Cheque) => Boolean(c.remiseId) && !remiseIdsExistants.has(c.remiseId)
+  const peutMettreEnBordereau = (c: Cheque) =>
+    c.statut === 'À remettre' && (!c.remiseId || remiseOrpheline(c))
+  const disponibles = filtered.filter(peutMettreEnBordereau)
+  const selectedEligibleIds = selectedChequeIds.filter(id =>
+    cheques.some(c => c.id === id && c.campagne === campagneActive && peutMettreEnBordereau(c)),
+  )
+  const orphelinsVisibles = filtered.filter(c => c.statut === 'À remettre' && remiseOrpheline(c))
+
+  const selectionCourante = disponibles.filter(c => selectedEligibleIds.includes(c.id))
+  const tousVisiblesSelectionnes = disponibles.length > 0 && disponibles.every(c => selectedEligibleIds.includes(c.id))
+  const totalSelection = selectionCourante.reduce((amount, cheque) => amount + cheque.montant, 0)
+  function selectionnerTousVisibles(checked: boolean) {
+    const ids = new Set(selectedEligibleIds)
+    for (const cheque of disponibles) {
+      if (checked) ids.add(cheque.id)
+      else ids.delete(cheque.id)
+    }
+    setSelectedChequeIds([...ids])
+  }
+  // La confirmation se fait DANS le logiciel plutôt que par window.confirm :
+  // un dialogue navigateur bloqué donnait l'impression que rien ne se passait.
+  function creerBordereauDepuisCheques() {
+    if (!registryReady || registrySavingRef.current) {
+      setPdfError('Attends la fin du chargement du registre des chèques.')
+      return
+    }
+    setPdfError('')
+    if (!canWrite) {
+      setPdfError('Cette campagne est en consultation seule. Seul un administrateur peut créer une remise.')
+      return
+    }
+    if (!campagneActive || !campagnes.some(c => c.id === campagneActive)) {
+      setPdfError('Sélectionne une campagne valide avant de créer un bordereau.')
+      return
+    }
+    const items = selectionCourante
+    if (!items.length) {
+      setPdfError('Coche au moins un chèque « À remettre », puis clique sur Créer un bordereau.')
+      return
+    }
+    if (items.some(c => !c.numero.trim() || !Number.isFinite(c.montant) || c.montant <= 0)) {
+      setPdfError('Vérifie les numéros et montants des chèques sélectionnés.')
+      return
+    }
+    if (items.some(c => emplacement(c.departement) === 'À déterminer')) {
+      setPdfError('Vérifie le département de chaque chèque sélectionné avant de créer la remise.')
+      return
+    }
+    if (items.some(c => c.signature !== 'Oui')) {
+      setPdfError('Vérifie les signatures : tous les chèques du bordereau doivent être signés.')
+      return
+    }
+    setConfirmationOrphelins(false)
+    setBordereauEnAttente(items.map(c => c.id))
+  }
+
+  const chequesBordereauEnAttente = bordereauEnAttente
+    ? cheques.filter(c => bordereauEnAttente.includes(c.id) && c.campagne === campagneActive)
+    : []
+  const orphelinsEnAttente = chequesBordereauEnAttente.filter(remiseOrpheline)
+
+  async function confirmerCreationBordereau() {
+    if (!bordereauEnAttente || !canWrite) {
+      setBordereauEnAttente(null)
+      setPdfError('Création impossible : l’accès ou la sélection a changé.')
+      return
+    }
+    const ids = new Set(bordereauEnAttente)
+    // Nouvelle vérification avant tout enregistrement, y compris pour les chèques
+    // dont le bordereau ancien a été supprimé lors du reset.
+    const items = cheques.filter(c => ids.has(c.id) && c.campagne === campagneActive && peutMettreEnBordereau(c))
+    if (items.length !== ids.size || items.some(c => !c.numero.trim() || !Number.isFinite(c.montant) || c.montant <= 0 || emplacement(c.departement) === 'À déterminer' || c.signature !== 'Oui')) {
+      setBordereauEnAttente(null)
+      setPdfError('La sélection ou les informations des chèques ont changé. Vérifie les lignes et recommence.')
+      return
+    }
+    if (items.some(remiseOrpheline) && !confirmationOrphelins) {
+      setPdfError('Vérifie le dépôt bancaire antérieur et coche la confirmation avant de réaffecter ces chèques.')
+      return
+    }
+
+    const chrono = nextChrono(remises, lastChronoRef.current)
+    const remise: Remise = {
+      id: uid(), operationId: uid(), chrono, campagneId: campagneActive,
+      nom: `Bordereau de remise n° ${chrono}`, date: today(), statut: 'Brouillon',
+    }
+    const prochainCheques = cheques.map(c => ids.has(c.id) ? { ...c, remiseId: remise.id } : c)
+    const prochainesRemises = [remise, ...remises]
+    // Attendre la sauvegarde effective avant d’ouvrir le bordereau.
+    if (!await persistRegistre(prochainCheques, prochainesRemises, Number(chrono))) return
+    setSelectedChequeIds([])
+    setBordereauEnAttente(null)
+    setConfirmationOrphelins(false)
+    setSelectedRemise(remise.id)
+    setDetailRemise(remise.id)
+    setViewTab('bordereau')
+    setMainTab('remises')
+    setPdfError('')
+  }
   const chequesCampagne = cheques.filter(c => c.campagne === campagneActive)
   const remisesCampagne = remises.filter(r => r.campagneId === campagneActive || (!r.campagneId && chequesCampagne.some(c => c.remiseId === r.id)))
   const total = (data: Cheque[]) => data.reduce((sum,c) => sum + c.montant,0)
   const count = (r: Remise) => cheques.filter(c => c.remiseId === r.id)
-  function saveScanBatch(items: ScanCheque[]): string[] {
+  async function saveScanBatch(items: ScanCheque[]): Promise<string[]> {
+    if (!registryReady || registrySavingRef.current) return ['Erreur : chargement ou sauvegarde en cours']
+    if (!canWrite) { setPdfError('Cette campagne est en consultation seule.'); return ['Campagne non modifiable'] }
     const duplicates = items.filter((c,i) =>
       cheques.some(x => x.numero.trim().toLowerCase() === c.numero.trim().toLowerCase() && x.banque.trim().toLowerCase() === c.banque.trim().toLowerCase()) ||
       items.findIndex(y => y.numero.trim().toLowerCase() === c.numero.trim().toLowerCase() && y.banque.trim().toLowerCase() === c.banque.trim().toLowerCase()) !== i
@@ -151,17 +327,30 @@ export default function GestionCheques() {
       return ['Département manquant']
     }
     // Transaction unique : créer la remise dès la validation, jamais à la fermeture.
-    const chrono = nextChrono(remises)
+    const chrono = nextChrono(remises, lastChronoRef.current)
     const remise: Remise = {
       id: uid(), operationId: uid(), chrono, campagneId: campagneActive,
       nom: `Bordereau de remise n° ${chrono}`, date: today(), statut: 'Brouillon'
     }
-    const added: Cheque[] = items.map(c => ({
-      ...c, id:uid(), etablissement:'', campagne:campagneActive,
-      statut:'À remettre', remiseId:remise.id
+    const added = items.map(c => ({
+      id: uid(), numero: c.numero, emetteur: c.emetteur, banque: c.banque,
+      montant: c.montant, date: c.date, departement: c.departement,
+      signature: c.signature, fichier: c.fichier, etablissement: '',
+      campagne: campagneActive, statut: 'À remettre' as const, remiseId: remise.id,
     }))
-    saveCheques([...added, ...cheques])
-    saveRemises([remise, ...remises])
+    try {
+      // Les images des chèques ne sont JAMAIS copiées dans les métadonnées.
+      for (let i = 0; i < items.length; i++) {
+        const image = items[i].image
+        if (image) await storeChequeScan(added[i].id, image)
+      }
+    } catch (error) {
+      setPdfError(`Impossible d'enregistrer le scan : ${error instanceof Error ? error.message : 'stockage indisponible'}. Aucun bordereau n'a été créé.`)
+      return ['Erreur : un scan n’a pas pu être enregistré']
+    }
+    if (!await persistRegistre([...added, ...cheques], [remise, ...remises], Number(chrono))) {
+      return ['Erreur d’enregistrement : la sauvegarde locale a échoué']
+    }
     setSelectedRemise(remise.id)
     setViewTab('bordereau')
     setShowScanner(false)
@@ -169,9 +358,12 @@ export default function GestionCheques() {
     setMainTab('remises')
     return []
   }
-  function updateCheque(id:string, patch:Partial<Cheque>) { saveCheques(cheques.map(c => c.id===id ? {...c,...patch}:c)) }
-  function deposerRemise(r: Remise) {
-    if (depositBusy) return
+  async function updateCheque(id:string, patch:Partial<Cheque>) { if (!canWrite) return; await persistRegistre(cheques.map(c => c.id===id ? {...c,...patch}:c), remises) }
+  async function deposerRemise(r: Remise) {
+    if (depositBusy || !registryReady || registrySavingRef.current) return
+    if (!canWrite || r.campagneId && r.campagneId !== campagneActive) {
+      setPdfError('Cette remise ne peut pas être déposée depuis la campagne sélectionnée.'); return
+    }
     const lignes = count(r)
     if (!lignes.length || lignes.some(c => c.statut !== 'À remettre')) { setPdfError('Les chèques doivent être au statut À remettre.'); return }
     const campagne = r.campagneId || lignes[0]?.campagne || campagneActive
@@ -191,8 +383,13 @@ export default function GestionCheques() {
           remarque:`Remise de chèques n° ${r.chrono || r.id}`
         })
       }
-      saveRemises(remises.map(x => x.id === r.id ? {...x, statut:'Déposée'} : x))
-      saveCheques(cheques.map(c => c.remiseId === r.id ? {...c, statut:'Remis en banque'} : c))
+      const saved = await persistRegistre(
+        cheques.map(c => c.remiseId === r.id ? {...c, statut:'Remis en banque'} : c),
+        remises.map(x => x.id === r.id ? {...x, statut:'Déposée'} : x),
+      )
+      if (!saved) {
+        throw new Error('Le dépôt peut être enregistré dans Suivi banque, mais le registre des chèques n’a pas pu être mis à jour. Vérifie la remise avant de réessayer.')
+      }
       setDetailRemise('')
       setMainTab('remises')
       setConfirmation({ chrono:r.chrono || r.id, message:'La remise est enregistrée dans Suivi banque et déduite du Coffre.' })
@@ -372,7 +569,7 @@ export default function GestionCheques() {
   }
 
   return <div className="gc-page">
-    <header className="gc-hero"><div><span className="gc-kicker">DONS PERÇUS · OPÉRATION BRIOCHES</span><h1>Gestion des chèques</h1><p>Importez et vérifiez un lot : les remises et leurs bordereaux PDF sont ensuite créés automatiquement.</p></div><div className="gc-actions"><button className="gc-btn primary" onClick={()=>{setMainTab('cheques');setShowScanner(true)}}><UploadCloud size={17}/> Importer un lot de chèques</button></div></header>
+    <header className="gc-hero"><div><span className="gc-kicker">DONS PERÇUS · OPÉRATION BRIOCHES</span><h1>Gestion des chèques</h1><p>Importez et vérifiez un lot : les remises et leurs bordereaux PDF sont ensuite créés automatiquement.</p></div><div className="gc-actions"><button className="gc-btn primary" disabled={!canWrite || !registryReady || registrySaving} onClick={()=>{setMainTab('cheques');setShowScanner(true)}}><UploadCloud size={17}/> Importer un lot de chèques</button></div></header>
     <nav className="gc-main-tabs" aria-label="Sections Gestion des chèques">
       <button type="button" className={mainTab==='global'?'active':''} onClick={()=>setMainTab('global')}>Vue globale</button>
       <button type="button" className={mainTab==='cheques'?'active':''} onClick={()=>setMainTab('cheques')}>Chèques enregistrés</button>
@@ -403,10 +600,56 @@ export default function GestionCheques() {
       <p className="gc-coffre-note">Le Coffre connaît les totaux par fiche, pas les numéros individuels. Lorsqu’une remise est déposée, un mouvement est créé dans Suivi banque et le Coffre est recalculé automatiquement. Un bordereau en brouillon ne modifie pas le Coffre.</p>
     </section>
     </>}
-    <div className={`gc-grid gc-grid--tabs gc-tab-${mainTab}`}><section className="gc-card gc-cheques-panel"><div className="gc-heading"><div><h2>Registre des chèques</h2><p>Informations enregistrées après contrôle des originaux.</p></div><span className="gc-count">{filtered.length} chèque(s)</span></div><div className="gc-toolbar"><label className="gc-search"><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un chèque, une banque, un établissement..."/></label><div className="gc-select"><select aria-label="Filtrer par statut" value={filter} onChange={e=>setFilter(e.target.value as typeof filter)}>{['Tous','À vérifier','À remettre','Remis en banque','Encaissé','Rejeté'].map(s=><option key={s}>{s}</option>)}</select><ChevronDown size={15}/></div></div><div className="gc-table-wrap"><table className="gc-table"><thead><tr><th>N° chèque</th><th>Émetteur / Banque</th><th>Lieu</th><th>Signature</th><th>Date</th><th>Établissement</th><th>Montant</th><th>Statut</th><th>Remise</th><th/></tr></thead><tbody>{filtered.map(c=><tr key={c.id}><td><strong>{c.numero}</strong>{c.fichier&&<small>Fichier : {c.fichier}</small>}</td><td>{c.emetteur||'—'}<small>{c.banque||'Banque non renseignée'}</small></td><td>{emplacement(c.departement)}{c.departement&&<small>Dépt. {c.departement}</small>}</td><td>{c.signature||'À vérifier'}</td><td>{c.date}</td><td>{c.etablissement||'—'}</td><td className="gc-money">{euro(c.montant)}</td><td><select className="gc-mini-select" value={c.statut} disabled={!!c.remiseId&&remises.find(r=>r.id===c.remiseId)?.statut==='Déposée'&&c.statut==='À remettre'} onChange={e=>updateCheque(c.id,{statut:e.target.value as Statut})}>{(['À vérifier','À remettre','Remis en banque','Encaissé','Rejeté'] as Statut[]).map(s=><option key={s}>{s}</option>)}</select></td><td><select className="gc-mini-select" disabled value={c.remiseId} ><option value="">Non affecté</option>{remises.filter(r=>r.id===c.remiseId).map(r=><option key={r.id} value={r.id}>{r.nom}</option>)}</select></td><td></td></tr>)}</tbody></table>{!filtered.length&&<div className="gc-empty">Aucun chèque pour le moment. Ajoute ton premier chèque pour commencer.</div>}</div></section>
-    <aside className="gc-card gc-remises"><div className="gc-heading"><div><h2>Bordereaux de remise</h2><p>Préparez et suivez vos dépôts.</p></div></div>{!remisesCampagne.length&&<div className="gc-empty"><Landmark size={30}/><p>Aucune remise créée</p><p>Importe puis valide un lot de chèques pour générer une remise.</p></div>}{remisesCampagne.map(r=><article className={`gc-remise ${r.id===selectedRemise?'active':''}`} key={r.id}><button className="gc-remise-title" onClick={()=>setSelectedRemise(r.id===selectedRemise?'':r.id)}><strong>{r.nom}</strong><span>{r.statut}</span></button><div className="gc-remise-meta">{count(r).length} chèque(s) · {euro(total(count(r)))}{r.chrono ? ` · Chrono ${r.chrono}` : ''}</div>{selectedRemise===r.id&&<div className="gc-remise-detail"><p>{r.date} · {r.statut==='Brouillon'?'En attente de dépôt bancaire.':'Remise déclarée déposée.'}</p><button className="gc-btn ghost" onClick={()=>{setDetailRemise(r.id);setViewTab('bordereau')}}><FileText size={16}/> Voir le bordereau</button>{r.statut==='Brouillon'&&<button className="gc-btn primary" onClick={()=>deposerRemise(r)}>Marquer comme déposée</button>}</div>}</article>)}</aside></div>
-    <p className="gc-notice">Version locale : les informations sont enregistrées dans ce navigateur. Les fichiers de chèques sélectionnés ne sont pas archivés ; seul leur nom est conservé. Un lot validé crée un bordereau en brouillon. Le dépôt est enregistré dans Suivi banque, et déduit du Coffre, uniquement lorsque tu cliques sur « Déposer dans Suivi banque ». Aucun double dépôt n’est créé pour la même référence.</p>
+    <div className={`gc-grid gc-grid--tabs gc-tab-${mainTab}`}><section className="gc-card gc-cheques-panel"><div className="gc-heading"><div><h2>Registre des chèques</h2><p>Informations enregistrées après contrôle des originaux.</p></div><span className="gc-count">{filtered.length} chèque(s)</span></div>
+    {mainTab === 'cheques' && <div className="gc-selection-bar">
+      <label className="gc-select-all">
+        <input type="checkbox" checked={tousVisiblesSelectionnes} disabled={!canWrite || !registryReady || registrySaving || disponibles.length === 0}
+          onChange={e => selectionnerTousVisibles(e.target.checked)} />
+        <span>Sélectionner les chèques disponibles ({disponibles.length})</span>
+      </label>
+      <div className="gc-selection-actions"><strong>{selectionCourante.length} sélectionné(s) · {euro(totalSelection)}</strong>
+        <button type="button" className="gc-btn primary" disabled={!canWrite || !registryReady || registrySaving}
+          onClick={creerBordereauDepuisCheques}><FileText size={16}/> Créer un bordereau</button>
+      </div>
+      <small>Le bordereau est créé en brouillon : aucun dépôt bancaire n'est enregistré automatiquement.
+        {orphelinsVisibles.length > 0 &&
+          ` ${orphelinsVisibles.length} chèque(s) ont une remise introuvable : ils peuvent être sélectionnés, avec confirmation avant réaffectation.`}
+      </small>
+    </div>}<div className="gc-toolbar"><label className="gc-search"><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un chèque, une banque, un établissement..."/></label><div className="gc-select"><select aria-label="Filtrer par statut" value={filter} onChange={e=>setFilter(e.target.value as typeof filter)}>{['Tous','À vérifier','À remettre','Remis en banque','Encaissé','Rejeté'].map(s=><option key={s}>{s}</option>)}</select><ChevronDown size={15}/></div></div><div className="gc-table-wrap"><table className="gc-table"><thead><tr><th><span className="gc-sr-only">Sélection</span></th><th>N° chèque</th><th>Émetteur / Banque</th><th>Lieu</th><th>Signature</th><th>Date</th><th>Établissement</th><th>Montant</th><th>Statut</th><th>Remise</th><th/></tr></thead><tbody>{filtered.map(c=><tr key={c.id}><td className="gc-check-cell"><input
+        type="checkbox" aria-label={`Sélectionner le chèque ${c.numero}`}
+        checked={selectedEligibleIds.includes(c.id)}
+        disabled={!canWrite || !registryReady || registrySaving || !peutMettreEnBordereau(c)}
+        onChange={e => setSelectedChequeIds(prev => e.target.checked ? [...new Set([...prev,c.id])] : prev.filter(id => id !== c.id))}
+      /></td><td><strong>{c.numero}</strong>{c.fichier&&<small>Fichier : {c.fichier}</small>}</td><td>{c.emetteur||'—'}<small>{c.banque||'Banque non renseignée'}</small></td><td>{emplacement(c.departement)}{c.departement&&<small>Dépt. {c.departement}</small>}</td><td>{c.signature||'À vérifier'}</td><td>{c.date}</td><td>{c.etablissement||'—'}</td><td className="gc-money">{euro(c.montant)}</td><td><select className="gc-mini-select" value={c.statut} disabled={!canWrite || !registryReady || registrySaving || Boolean(c.remiseId)} onChange={e=>{ void updateCheque(c.id,{statut:e.target.value as Statut}) }}>{(['À vérifier','À remettre','Remis en banque','Encaissé','Rejeté'] as Statut[]).map(s=><option key={s}>{s}</option>)}</select></td><td>{c.remiseId && remiseIdsExistants.has(c.remiseId) ? <button type="button" className="gc-remise-open" onClick={() => {
+        const remise = remises.find(r => r.id === c.remiseId)
+        if (remise) { setSelectedRemise(remise.id); setDetailRemise(remise.id); setViewTab('bordereau'); setMainTab('remises') }
+      }}>{remises.find(r => r.id === c.remiseId)?.nom ?? 'Remise introuvable'}</button>
+        : c.remiseId ? <span className="gc-unassigned">Remise introuvable · à vérifier</span>
+        : <span className="gc-unassigned">Non affecté</span>}</td><td></td></tr>)}</tbody></table>{!filtered.length&&<div className="gc-empty">Aucun chèque pour le moment. Ajoute ton premier chèque pour commencer.</div>}</div></section>
+    <aside className="gc-card gc-remises"><div className="gc-heading"><div><h2>Bordereaux de remise</h2><p>Préparez et suivez vos dépôts.</p></div></div>{!remisesCampagne.length&&<div className="gc-empty"><Landmark size={30}/><p>Aucune remise créée</p><p>Dans « Chèques enregistrés », sélectionne les chèques à remettre, puis clique sur « Créer un bordereau ».</p></div>}{remisesCampagne.map(r=><article className={`gc-remise ${r.id===selectedRemise?'active':''}`} key={r.id}><button className="gc-remise-title" onClick={()=>setSelectedRemise(r.id===selectedRemise?'':r.id)}><strong>{r.nom}</strong><span>{r.statut}</span></button><div className="gc-remise-meta">{count(r).length} chèque(s) · {euro(total(count(r)))}{r.chrono ? ` · Chrono ${r.chrono}` : ''}</div>{selectedRemise===r.id&&<div className="gc-remise-detail"><p>{r.date} · {r.statut==='Brouillon'?'En attente de dépôt bancaire.':'Remise déclarée déposée.'}</p><button className="gc-btn ghost" onClick={()=>{setDetailRemise(r.id);setViewTab('bordereau')}}><FileText size={16}/> Voir le bordereau</button>{r.statut==='Brouillon'&&canWrite&&<button className="gc-btn primary" disabled={!registryReady || registrySaving || depositBusy} onClick={() => { void deposerRemise(r) }}>Marquer comme déposée</button>}</div>}</article>)}</aside></div>
+    <p className="gc-notice">{registryReady ? '✓ Registre sauvegardé dans IndexedDB. ' : 'Chargement sécurisé du registre… ' }Version locale : les informations sont enregistrées dans ce navigateur. Les scans des chèques validés sont conservés séparément dans IndexedDB ; une copie de l'ancien registre reste disponible en local tant que nécessaire. Un lot scanné validé ou une sélection de chèques existants crée un bordereau en brouillon. Le dépôt est enregistré dans Suivi banque, et déduit du Coffre, uniquement lorsque tu cliques sur « Déposer dans Suivi banque ». Aucun double dépôt n’est créé pour la même référence.</p>
     {showScanner&&<ScanCheques onClose={closeScanner} onSave={saveScanBatch}/>}    
+    {bordereauEnAttente && <div className="gc-overlay gc-bordereau-confirm-overlay" role="presentation">
+      <section className="gc-modal gc-bordereau-confirm" role="dialog" aria-modal="true" aria-labelledby="gc-bordereau-confirm-title">
+        <header><div><span className="gc-kicker">PRÉPARATION · {campagneActive}</span><h2 id="gc-bordereau-confirm-title">Confirmer le nouveau bordereau</h2><p>Vérifie les chèques avant de créer la remise en brouillon.</p></div></header>
+        <div className="gc-bordereau-confirm-body">
+          <div className="gc-bordereau-confirm-total"><span>{chequesBordereauEnAttente.length} chèque(s)</span><strong>{euro(total(chequesBordereauEnAttente))}</strong></div>
+          <ul className="gc-bordereau-check-list">{chequesBordereauEnAttente.map(c =>
+            <li key={c.id}><span><strong>Chèque n° {c.numero}</strong> · {c.emetteur || 'Émetteur non renseigné'}</span><b>{euro(c.montant)}</b></li>
+          )}</ul>
+          {orphelinsEnAttente.length > 0 && <div className="gc-bordereau-orphan-warning">
+            <strong>Attention · {orphelinsEnAttente.length} chèque(s) étaient liés à une remise introuvable.</strong>
+            <p>Vérifie dans Suivi banque qu'ils n'ont pas déjà été déposés. Leur ancien lien sera remplacé uniquement après confirmation.</p>
+            <label><input type="checkbox" checked={confirmationOrphelins} onChange={e => setConfirmationOrphelins(e.target.checked)} /> J'ai vérifié qu'aucun de ces chèques n'a déjà été remis en banque.</label>
+          </div>}
+          <p className="gc-bordereau-note">La création du bordereau ne crée pas de dépôt bancaire et ne déduit rien du coffre.</p>
+        </div>
+        <footer className="gc-modal-actions gc-bordereau-confirm-actions">
+          <button type="button" className="gc-btn ghost" onClick={()=>{setBordereauEnAttente(null);setConfirmationOrphelins(false)}}>Annuler</button>
+          <button type="button" className="gc-btn primary" disabled={!registryReady || registrySaving || (orphelinsEnAttente.length > 0 && !confirmationOrphelins)} onClick={() => { void confirmerCreationBordereau() }}><FileText size={16}/> Confirmer et ouvrir le bordereau</button>
+        </footer>
+      </section>
+    </div>}
     {detail&&<div className="gc-overlay gc-detail-overlay"><section className="gc-detail-modal" role="dialog" aria-modal="true" aria-label="Détail du bordereau">
       <header className="gc-detail-header"><div><span className="gc-kicker">REMISE DE CHÈQUES · {detail.statut.toUpperCase()}</span><h2>Bordereau n° {detail.chrono || detail.id}</h2><p>Campagne : {campagnes.find(c=>c.id===(detail.campagneId||campagneActive))?.nom || detail.campagneId || campagneActive} · {detail.date}</p></div><button className="gc-btn ghost" onClick={()=>{setDetailRemise('');setMainTab('remises')}}>← Fermer et revenir aux bordereaux</button></header>
       <nav className="gc-detail-tabs"><button className={viewTab==='bordereau'?'active':''} onClick={()=>setViewTab('bordereau')}>Aperçu du bordereau</button><button className={viewTab==='compta'?'active':''} onClick={()=>setViewTab('compta')}>Écritures comptables</button></nav>
@@ -420,7 +663,7 @@ export default function GestionCheques() {
         <div className="gc-paper-grandtotal">TOTAL GÉNÉRAL · {detailItems.length} chèque(s) <strong>{euro(total(detailItems))}</strong></div>
         <p className="gc-paper-foot">Bordereau de suivi interne · La remise n'est pas déclarée déposée par la génération du PDF.</p>
       </div></div>:<section className="gc-accounting"><p>Les comptes sont repris des paramètres comptables de la campagne. Vérifie le tableau avant de produire les fichiers.</p><div className="gc-account-table"><table><thead><tr><th>Type</th><th>N° chèque / pièce</th><th>Compte</th><th>Libellé</th><th>Montant</th></tr></thead><tbody>{makeExportRows().map((r,i)=><tr key={i}><td>{r.ref.startsWith('RC')?'Banque':r.type==='S'?'Sur place':'Hors place'}</td><td>{r.ref}</td><td>{r.account || 'À renseigner'}</td><td>{r.libelle}</td><td>{euro(r.amount/100)}</td></tr>)}</tbody></table></div><p>Excel reprend les huit colonnes du modèle fourni. TXT reprend les écritures par chèque, puis la contrepartie banque par catégorie. Aucun fichier n’est envoyé automatiquement en comptabilité.</p></section>}
-      <footer className="gc-detail-actions"><button type="button" className="gc-btn ghost" onClick={()=>{setDetailRemise('');setMainTab('remises')}}>← Fermer / Retour</button><div className="gc-detail-action-spacer"/>{detail.statut==='Brouillon'&&<button type="button" className="gc-btn primary" disabled={depositBusy} onClick={()=>deposerRemise(detail)}><Landmark size={16}/> {depositBusy?'Enregistrement…':'Déposer dans Suivi banque'}</button>}{viewTab==='bordereau'?<><button className="gc-btn ghost" onClick={()=>window.print()}><Printer size={16}/> Imprimer</button><button className="gc-btn ghost" disabled={creatingPdf} onClick={()=>printRemise(detail)}><FileText size={16}/> Bordereau seul</button><button className="gc-btn primary" disabled={creatingPdf || scanSaving} onClick={()=>printRemise(detail,undefined,true)}><FileText size={16}/> Bordereau + chèques</button></>:<><button className="gc-btn primary" onClick={downloadExcel}>Exporter Excel</button><button className="gc-btn ghost" onClick={downloadTxt}>Exporter TXT comptable</button></>}</footer>
+      <footer className="gc-detail-actions"><button type="button" className="gc-btn ghost" onClick={()=>{setDetailRemise('');setMainTab('remises')}}>← Fermer / Retour</button><div className="gc-detail-action-spacer"/>{detail.statut==='Brouillon'&&canWrite&&<button type="button" className="gc-btn primary" disabled={depositBusy || registrySaving || !registryReady} onClick={() => { void deposerRemise(detail) }}><Landmark size={16}/> {depositBusy?'Enregistrement…':'Déposer dans Suivi banque'}</button>}{viewTab==='bordereau'?<><button className="gc-btn ghost" onClick={()=>window.print()}><Printer size={16}/> Imprimer</button><button className="gc-btn ghost" disabled={creatingPdf} onClick={()=>printRemise(detail)}><FileText size={16}/> Bordereau seul</button><button className="gc-btn primary" disabled={creatingPdf || scanSaving} onClick={()=>printRemise(detail,undefined,true)}><FileText size={16}/> Bordereau + chèques</button></>:<><button className="gc-btn primary" onClick={downloadExcel}>Exporter Excel</button><button className="gc-btn ghost" onClick={downloadTxt}>Exporter TXT comptable</button></>}</footer>
     </section></div>}
     {confirmation&&<div className="gc-overlay gc-confirm-overlay" role="status" aria-live="polite">
       <div className="gc-confirm-card"><span className="gc-confirm-check">✓</span>

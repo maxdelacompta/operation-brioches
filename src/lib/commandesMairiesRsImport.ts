@@ -90,7 +90,7 @@ function dateValue(value: unknown): string {
   }
   const source = excelValueText(value)
   if (!source) return ''
-  const match = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(source)
+  const match = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(source)
   const formatted = match
     ? `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`
     : /^\d{4}-\d{2}-\d{2}$/.test(source) ? source : ''

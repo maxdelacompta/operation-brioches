@@ -29,8 +29,9 @@ import {
 
 import { useObData } from '../contexts/ObDataContext'
 import type { Commande } from '../types/ob'
+import { campagneEstTest, cleAlerteLivraison, cleLivraisonMulti, conserverAffectationsMulti, memeCampagneCommande } from '../lib/commandeCampaign'
 import { useEtablissements } from '../contexts/EtablissementsContext'
-import { useUsers } from '../contexts/UsersContext'
+import { useUsers, type AppUser } from '../contexts/UsersContext'
 import type {
   MissionLivraison,
   ModeLivraison,
@@ -88,6 +89,10 @@ type TourForm = {
 
 type BenevoleLivraison = { id:string;nom:string;prenom:string;mission?:string;statut?:string;disponibilites?:string;peutEffectuerLivraisons?:boolean;departLivraison?:string;adresseDepart?:string }
 type StandLivraison = { id:string; nom:string; date:string;lieu?:string;campagne?:string }
+type ChoixDepart = 'SIEGE' | 'DOMICILE' | 'AUTRE'
+const ADRESSE_SIEGE_DEFAUT = '6 allée de Saint-Cloud, 54600 Villers-lès-Nancy'
+const estMembreCommunication = (user: Pick<AppUser,'role'|'pole'|'status'>) =>
+  user.status === 'actif' && (user.pole === 'communication' || user.role === 'communication' || user.role === 'stagiaire_communication')
 function readArray<T>(key:string):T[] {
   try {const content:unknown=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(content)?content as T[]:[]}
   catch {return []}
@@ -124,7 +129,6 @@ function readMultiAffectations(): Record<string, MultiAffectation> {
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, MultiAffectation> : {}
   } catch { return {} }
 }
-const keyMulti = (commandeId: number, ligneId: string) => `${commandeId}:${ligneId}`
 const anneeDe = (value: string) => value.match(/(?:19|20)\d{2}/)?.[0] ?? ''
 
 // Une livraison n'est réellement attribuée qu'avec un mode ET un responsable.
@@ -324,6 +328,8 @@ async function geocodeAddress(address:string):Promise<[number,number]>{
   return [coords[0],coords[1]]
 }
 const TOUR_DEPART_KEY='ob-livraisons-departs-v1'
+const TOUR_CHOIX_DEPART_KEY='ob-livraisons-choix-depart-v1'
+const TOUR_ADRESSES_AUTRES_KEY='ob-livraisons-adresses-autres-v1'
 const TOUR_ORDRE_KEY='ob-livraisons-ordre-v1'
 const TOUR_ALERTES_KEY='ob-livraisons-reattribution-v1'
 function readObject<T>(key:string):Record<string,T>{
@@ -348,11 +354,19 @@ function LivraisonsRetraitsCampagne() {
   const selection = useObData()
   const {commandes, setCommandes, getDonateurById, activeCampagne} = selection
   const campagne = selection.selectedCampagne ?? activeCampagne
+  const campagneId = campagne?.id ?? ''
   const campagneAnnee = anneeDe(campagne?.id ?? '')
+  const commandesCampagne = useMemo(() => commandes.filter(c => memeCampagneCommande(c.campagne, campagneId)), [commandes, campagneId])
   const periode = useMemo(() => periodeOperation(campagne), [campagne])
   const dateStorageKey = `ob-livraisons-jour-travail-v2:${campagne?.id ?? 'sans-campagne'}`
   const { etablissements } = useEtablissements()
   const { users } = useUsers()
+  const adresseSiege = useMemo(() => {
+    const siege = etablissements.find(e => e.type === 'SIEGE' && e.statut === 'ACTIF')
+      ?? etablissements.find(e => e.code?.toUpperCase() === 'SIEGE' || normalizeText(e.nom) === 'siege' || normalizeText(e.nom) === 'siège')
+    if (!siege?.adresse?.trim() || !siege.codePostal?.trim() || !siege.ville?.trim()) return ADRESSE_SIEGE_DEFAUT
+    return [siege.adresse.trim(), siege.codePostal.trim(), siege.ville.trim()].join(', ')
+  }, [etablissements])
   const [benevolesLogistique,setBenevolesLogistique]=useState<BenevoleLivraison[]>(() => readArray('ob-bdd-benevoles-v1'))
   const [standsLogistique,setStandsLogistique]=useState<StandLivraison[]>(() => readArray('ob-stands-brioches-v1'))
   useEffect(()=>{
@@ -365,15 +379,16 @@ function LivraisonsRetraitsCampagne() {
     return ()=>{window.removeEventListener('focus',refresh);window.removeEventListener('storage',refresh)}
   },[])
 
-  const [multiAffectations, setMultiAffectations] = useState<Record<string, MultiAffectation>>(readMultiAffectations)
+  const [multiAffectations, setMultiAffectations] = useState<Record<string, MultiAffectation>>(
+    () => conserverAffectationsMulti(readMultiAffectations(), commandes),
+  )
   useEffect(() => { localStorage.setItem(MULTI_STORAGE_KEY, JSON.stringify(multiAffectations)) }, [multiAffectations])
-  const lignesMulti = useMemo(() => commandes
-    .filter(commande => commande.statut !== 'ANNULEE' &&
-      (campagneAnnee === '' || anneeDe(commande.campagne) === campagneAnnee))
+  const lignesMulti = useMemo(() => commandesCampagne
+    .filter(commande => commande.statut !== 'ANNULEE')
     .flatMap(commande => (commande.livraisons ?? []).map((ligne, index) => ({
       commande, ligne, ligneId: ligne.id || `index-${index}`,
-      cle: keyMulti(commande.id, ligne.id || `index-${index}`),
-    }))), [commandes, campagneAnnee])
+      cle: cleLivraisonMulti(commande, ligne.id || `index-${index}`),
+    }))), [commandesCampagne])
   function updateMulti(cle: string, commandeId: number, ligneId: string, dateInitiale: string, patch: Partial<MultiAffectation>) {
     setMultiAffectations(current => {
       const old = current[cle] ?? {
@@ -407,14 +422,13 @@ function LivraisonsRetraitsCampagne() {
     // l'opération : aucune ancienne préférence hors période n'est reprise.
     if (periode) return periode.debut
 
-    const dates = commandes
-      .filter(commande => campagneAnnee === '' || anneeDe(commande.campagne) === campagneAnnee)
+    const dates = commandesCampagne
       .flatMap(commande => [commande.datePrevueLivraison, ...(commande.livraisons ?? []).map(l => l.datePrevue)])
       .filter((date): date is string => Boolean(date))
       .sort()
     const today = todayInput()
     return dates.find(date => date >= today) || dates[0] || today
-  }, [commandes, campagneAnnee, periode])
+  }, [commandesCampagne, periode])
 
   const [missions, setMissions] =
     useState<MissionSauvegardee[]>(loadMissions)
@@ -475,6 +489,8 @@ function LivraisonsRetraitsCampagne() {
     useState('TOUS')
 
   const [departs,setDeparts]=useState<Record<string,string>>(()=>readObject<string>(TOUR_DEPART_KEY))
+  const [choixDeparts,setChoixDeparts]=useState<Record<string,ChoixDepart>>(()=>readObject<ChoixDepart>(TOUR_CHOIX_DEPART_KEY))
+  const [adressesAutres,setAdressesAutres]=useState<Record<string,string>>(()=>readObject<string>(TOUR_ADRESSES_AUTRES_KEY))
   const [ordreTour,setOrdreTour]=useState<Record<string,number>>(()=>readObject<number>(TOUR_ORDRE_KEY))
   const [horairesDepart,setHorairesDepart]=useState<Record<string,string>>(()=>readObject<string>(TOUR_HORAIRE_KEY))
   const [routesCalculees,setRoutesCalculees]=useState<Record<string,RoutePlan>>(()=>readObject<RoutePlan>(TOUR_ROUTE_KEY))
@@ -484,6 +500,8 @@ function LivraisonsRetraitsCampagne() {
   const [tourEdit,setTourEdit]=useState<{mode:ModeLivraison;responsable:string}|null>(null)
   const [commandeAjout,setCommandeAjout]=useState('')
   useEffect(()=>{localStorage.setItem(TOUR_DEPART_KEY,JSON.stringify(departs))},[departs])
+  useEffect(()=>{try{localStorage.setItem(TOUR_CHOIX_DEPART_KEY,JSON.stringify(choixDeparts))}catch{/* stockage navigateur saturé */}},[choixDeparts])
+  useEffect(()=>{try{localStorage.setItem(TOUR_ADRESSES_AUTRES_KEY,JSON.stringify(adressesAutres))}catch{/* stockage navigateur saturé */}},[adressesAutres])
   useEffect(()=>{localStorage.setItem(TOUR_ORDRE_KEY,JSON.stringify(ordreTour))},[ordreTour])
   useEffect(()=>{localStorage.setItem(TOUR_HORAIRE_KEY,JSON.stringify(horairesDepart))},[horairesDepart])
   useEffect(()=>{localStorage.setItem(TOUR_ROUTE_KEY,JSON.stringify(routesCalculees))},[routesCalculees])
@@ -540,20 +558,22 @@ function LivraisonsRetraitsCampagne() {
       .map(e=>({id:e.id,label:`${e.nom}${e.ville ? ` · ${e.ville}` : ''}`}))
       .sort((a,b)=>a.label.localeCompare(b.label,'fr'))
     if(tourForm.mode === 'SERVICE_COMM') return users
-      .filter(u=>u.role==='communication' && u.status==='actif')
+      .filter(estMembreCommunication)
       .map(u=>({id:u.id,label:u.name}))
     if(tourForm.retraitType === 'ETABLISSEMENT') return etablissements
       .filter(e=>e.statut==='ACTIF' && e.peutEffectuerLivraisons)
       .map(e=>({id:e.id,label:e.nom}))
     return standsLogistique
-      .filter(st=>!campagneAnnee || anneeDe(st.campagne||st.date)===campagneAnnee)
+      .filter(st=>st.campagne
+        ? memeCampagneCommande(st.campagne, campagneId)
+        : !campagneEstTest(campagneId) && (!campagneAnnee || anneeDe(st.date)===campagneAnnee))
       .sort((a,b)=>{
         const aToday=a.date===tourForm.date ? 0 : 1
         const bToday=b.date===tourForm.date ? 0 : 1
         return aToday-bToday || a.date.localeCompare(b.date) || a.nom.localeCompare(b.nom,'fr')
       })
       .map(st=>({id:st.id,label:`${st.nom}${st.lieu ? ` · ${st.lieu}` : ''} · ${st.date}`}))
-  },[tourForm.mode,tourForm.retraitType,tourForm.date,benevolesLogistique,missions,etablissements,users,standsLogistique,campagneAnnee])
+  },[tourForm.mode,tourForm.retraitType,tourForm.date,benevolesLogistique,missions,etablissements,users,standsLogistique,campagneAnnee,campagneId])
 
   useEffect(() => {
     localStorage.setItem(
@@ -649,10 +669,9 @@ function LivraisonsRetraitsCampagne() {
     () =>
       missions.filter(
         (mission) => mission.date === selectedDate &&
-          commandes.some(c=>appartient(mission, c, commandes) &&
-            (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee)),
+          commandesCampagne.some(c=>appartient(mission, c, commandes)),
       ),
-    [missions, selectedDate, commandes, campagneAnnee],
+    [missions, selectedDate, commandes, commandesCampagne],
   )
 
   const commandesSimplesDuJour = useMemo(
@@ -916,7 +935,7 @@ function LivraisonsRetraitsCampagne() {
           ))
           .map(e => ({id: String(e.id), nom: `${e.nom}${e.ville ? ` · ${e.ville}` : ''}`}))
       : users
-          .filter(u => u.role === 'communication' && u.status === 'actif')
+          .filter(estMembreCommunication)
           .map(u => ({id: String(u.id), nom: u.name}))
     const map = new Map<string, {id: string; nom: string; disponibiliteDeclaree: boolean; missions: typeof visible}>()
     disponibles.filter(p => p.nom.trim()).forEach(p => {
@@ -1041,17 +1060,16 @@ function LivraisonsRetraitsCampagne() {
     : null
 
   const eligibleCommandes = useMemo(
-    () => commandes
+    () => commandesCampagne
       .filter(commande => {
         if (commande.statut === 'ANNULEE' || commande.statut === 'LIVREE' ||
-            (commande.livraisons?.length ?? 0) > 0 ||
-            (campagneAnnee && anneeDe(commande.campagne) !== campagneAnnee)) return false
+            (commande.livraisons?.length ?? 0) > 0) return false
         const commandesMissions = missions.filter(m => appartient(m, commande, commandes))
         return commandesMissions.length === 0 ||
           commandesMissions.every(missionDoitEtreAttribuee)
       })
       .sort((a, b) => a.numero.localeCompare(b.numero, 'fr', { numeric: true })),
-    [commandes, campagneAnnee, missions],
+    [commandesCampagne, commandes, missions],
   )
 
   // Les commandes simples et chaque adresse multi-sites sont proposées dans
@@ -1085,7 +1103,7 @@ function LivraisonsRetraitsCampagne() {
         byKey.set(key, multiAffectations[item.cle]?.date || item.ligne.datePrevue || '')
     }
     return byKey
-  }, [eligibleCommandes, missions, lignesMulti, multiAffectations, eligibleStops])
+  }, [eligibleCommandes, missions, lignesMulti, multiAffectations, eligibleStops, commandes])
   const nonAffecteesPourDate = (date: string) => eligibleStops.filter(stop => datesNonAffectees.get(stop.key) === date)
   // Le sélecteur d'une tournée suit la bannette de la date du formulaire,
   // et non la totalité des destinations encore libres dans la campagne.
@@ -1162,7 +1180,7 @@ function LivraisonsRetraitsCampagne() {
       if (!query) return true
       return normalizeText([item.nom, item.ville, item.contact, item.commande.numero, item.datePrevue].join(' ')).includes(query)
     }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
-  }, [eligibleStops, eligibleCommandes, lignesMulti, multiAffectations, missions, selectedDate,
+  }, [eligibleStops, eligibleCommandes, lignesMulti, multiAffectations, missions, commandes, selectedDate,
       getDonateurById, searchNonAffectees, secteurFilter, voirToutesDates])
 
   function changeTab(tab: Tab) {
@@ -1239,7 +1257,7 @@ function LivraisonsRetraitsCampagne() {
     }
 
     if(selectedIds.some(id => {
-      const commande = commandes.find(c => c.id === id && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
+      const commande = commandesCampagne.find(c => c.id === id)
       return commande && missions.some(m => appartient(m, commande, commandes) && !missionDoitEtreAttribuee(m))
     })){
       window.alert('Une commande a déjà été affectée à une tournée. Actualise la liste avant de continuer.');return
@@ -1276,12 +1294,12 @@ function LivraisonsRetraitsCampagne() {
       for (const commandeId of selectedIds) {
         const currentMissionIndex = next.findIndex(
           (mission) => {
-            const commande = commandes.find(c => c.id === commandeId && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
+            const commande = commandesCampagne.find(c => c.id === commandeId)
             return Boolean(commande && appartient(mission, commande, commandes))
           },
         )
 
-        const commande = commandes.find(c => c.id === commandeId && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
+        const commande = commandesCampagne.find(c => c.id === commandeId)
         if (!commande) continue
         const heure =
           tourForm.commandes[`simple:${commandeId}`]?.heure ||
@@ -1326,7 +1344,7 @@ function LivraisonsRetraitsCampagne() {
     setCommandes((current) =>
       current.map((commande) =>
         selectedIds.includes(commande.id) &&
-        (!campagneAnnee || anneeDe(commande.campagne) === campagneAnnee)
+        memeCampagneCommande(commande.campagne, campagneId)
           ? {
               ...commande,
               datePrevueLivraison: tourForm.date,
@@ -1335,7 +1353,14 @@ function LivraisonsRetraitsCampagne() {
       ),
     )
 
-    setAlertesReattribution(prev=>{const next={...prev};selectedIds.forEach(id=>delete next[String(id)]);return next})
+    setAlertesReattribution(prev=>{
+      const next={...prev}
+      selectedIds.forEach(id=>{
+        const commande=commandesCampagne.find(c=>c.id===id)
+        if(commande) delete next[cleAlerteLivraison(commande)]
+      })
+      return next
+    })
     setSelectedDate(bornerJour(tourForm.date, periode))
     setTourOpen(false)
   }
@@ -1407,6 +1432,66 @@ function LivraisonsRetraitsCampagne() {
   }
 
   const tourKey=(mode:ModeLivraison,responsable:string)=>`${selectedDate}|${mode}|${responsable}`
+  const personneKey=(mode:ModeLivraison,responsable:string)=>`${mode}|${normalizeText(responsable)}`
+  const ficheBenevolePour=(responsable:string)=>benevolesLogistique.find(b =>
+    normalizeText(`${b.prenom || ''} ${b.nom || ''}`) === normalizeText(responsable))
+
+  // Reprendre les adresses déjà connues sans écraser les départs saisis avant
+  // ce correctif. Les choix propres à une tournée sont conservés par date.
+  function choixDepartPour(mode:ModeLivraison,responsable:string):ChoixDepart|null {
+    if(mode !== 'BENEVOLE' && mode !== 'SERVICE_COMM') return null
+    const key=tourKey(mode,responsable)
+    if(['SIEGE','DOMICILE','AUTRE'].includes(choixDeparts[key])) return choixDeparts[key]
+    const ancienneAdresse=departs[key]?.trim()||''
+    const fiche=mode==='BENEVOLE'?ficheBenevolePour(responsable):undefined
+    if(ancienneAdresse){
+      const adresseNormalisee=normalizeText(ancienneAdresse).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')
+      const siegeNormalise=normalizeText(adresseSiege).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')
+      if(adresseNormalisee===siegeNormalise || (/saintcloud/.test(adresseNormalisee) && /villers/.test(adresseNormalisee)))return 'SIEGE'
+      if(fiche?.departLivraison==='DOMICILE' && normalizeText(ancienneAdresse)===normalizeText(fiche.adresseDepart)) return 'DOMICILE'
+      return 'AUTRE'
+    }
+    if(mode==='SERVICE_COMM')return 'SIEGE'
+    return fiche?.departLivraison==='DOMICILE'?'DOMICILE':fiche?.departLivraison==='ETABLISSEMENT'?'AUTRE':'SIEGE'
+  }
+
+  function adresseDepartPour(mode:ModeLivraison,responsable:string):string {
+    const key=tourKey(mode,responsable)
+    const choix=choixDepartPour(mode,responsable)
+    if(choix==='SIEGE')return adresseSiege
+    const adresseEnregistree=departs[key]
+    if(adresseEnregistree!==undefined)return adresseEnregistree
+    const fiche=mode==='BENEVOLE'?ficheBenevolePour(responsable):undefined
+    if(choix==='DOMICILE')return fiche?.departLivraison==='DOMICILE'?fiche.adresseDepart?.trim()||'':''
+    if(choix==='AUTRE')return adressesAutres[personneKey(mode,responsable)]
+      ?? (fiche?.departLivraison==='ETABLISSEMENT'?fiche.adresseDepart?.trim()||'':'')
+    return ''
+  }
+
+  function selectionnerDepart(mode:ModeLivraison,responsable:string,choix:ChoixDepart){
+    const key=tourKey(mode,responsable)
+    const fiche=mode==='BENEVOLE'?ficheBenevolePour(responsable):undefined
+    const choixActuel=choixDepartPour(mode,responsable)
+    const adresseActuelle=adresseDepartPour(mode,responsable)
+    // Un ancien départ libre reste récupérable après un changement de choix.
+    if(choixActuel==='AUTRE' && adresseActuelle.trim()){
+      setAdressesAutres(old=>({...old,[personneKey(mode,responsable)]:adresseActuelle}))
+    }
+    const adresse=choix==='SIEGE'?adresseSiege
+      :choix==='DOMICILE'?(fiche?.departLivraison==='DOMICILE'?fiche.adresseDepart?.trim()||'':'')
+      :adressesAutres[personneKey(mode,responsable)]
+        ?? (fiche?.departLivraison==='ETABLISSEMENT'?fiche.adresseDepart?.trim()||'':'')
+    setChoixDeparts(old=>({...old,[key]:choix}))
+    setDeparts(old=>({...old,[key]:adresse}))
+  }
+
+  function changerAdresseDepart(mode:ModeLivraison,responsable:string,adresse:string){
+    const key=tourKey(mode,responsable)
+    setDeparts(old=>({...old,[key]:adresse}))
+    if(choixDepartPour(mode,responsable)==='AUTRE'){
+      setAdressesAutres(old=>({...old,[personneKey(mode,responsable)]:adresse}))
+    }
+  }
   const missionsDeTour=(mode:ModeLivraison,responsable:string)=>enriched
     .filter(item=>item.mission.mode===mode && item.mission.responsable===responsable)
     .sort((a,b)=>(ordreTour[a.mission.id]??9999)-(ordreTour[b.mission.id]??9999) ||
@@ -1427,7 +1512,8 @@ function LivraisonsRetraitsCampagne() {
     setMissions(current=>current.map(m=>m.id===mission.id?{
       ...m,mode:'NON_AFFECTE',responsable:'',heure:'',statut:'A_PLANIFIER',retraitType:undefined,updatedAt:new Date().toISOString()
     }:m))
-    setAlertesReattribution(prev=>({...prev,[String(mission.commandeId)]:'Commande retirée de la tournée, à réattribuer'}))
+    const commande=commandesCampagne.find(c=>appartient(mission,c,commandes))
+    if(commande) setAlertesReattribution(prev=>({...prev,[cleAlerteLivraison(commande)]:'Commande retirée de la tournée, à réattribuer'}))
   }
 
   function ajouterATour(mode:ModeLivraison,responsable:string){
@@ -1447,7 +1533,7 @@ function LivraisonsRetraitsCampagne() {
       return
     }
     const commandeId=Number(key.slice(7))
-    const commande = commandes.find(c => c.id === commandeId && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
+    const commande = commandesCampagne.find(c => c.id === commandeId)
     if (!commande) return
     setMissions(current=>{
       if(current.some(m=>appartient(m, commande, commandes) && !missionDoitEtreAttribuee(m))) return current
@@ -1456,7 +1542,7 @@ function LivraisonsRetraitsCampagne() {
         ...current,{id:createMissionId(),commandeId,commandeCle:commandeCle(commande),date:selectedDate,mode,responsable,heure:'',statut:'PLANIFIEE',commentaire:'',updatedAt:new Date().toISOString()}]
     })
     setCommandes(current=>current.map(c=>commandeCle(c)===commandeCle(commande)?{...c,datePrevueLivraison:selectedDate}:c))
-    setAlertesReattribution(prev=>{const next={...prev};delete next[String(commandeId)];return next})
+    setAlertesReattribution(prev=>{const next={...prev};delete next[cleAlerteLivraison(commande)];return next})
     setCommandeAjout('');setTourEdit(null)
   }
 
@@ -1473,13 +1559,13 @@ function LivraisonsRetraitsCampagne() {
     const key=tourKey(mode,responsable)
     const stops=missionsDeTour(mode,responsable)
     const plan=routesCalculees[key]
-    return plan?.fingerprint===routeFingerprint(departs[key]||'',horairesDepart[key]||'',stops)?plan:null
+    return plan?.fingerprint===routeFingerprint(adresseDepartPour(mode,responsable),horairesDepart[key]||'',stops)?plan:null
   }
 
   async function calculerItineraire(mode:ModeLivraison,responsable:string){
     const key=tourKey(mode,responsable)
     const stops=missionsDeTour(mode,responsable)
-    const depart=departs[key]?.trim()||''
+    const depart=adresseDepartPour(mode,responsable).trim()
     const horaire=horairesDepart[key]||''
     if(!depart||!/^([01]\d|2[0-3]):[0-5]\d$/.test(horaire)){
       setRouteError(prev=>({...prev,[key]:'Renseigne une adresse de départ précise et une heure au format HH:MM.'}));return
@@ -1543,7 +1629,7 @@ function LivraisonsRetraitsCampagne() {
       const muted:[number,number,number]=[92,111,132]
       const light:[number,number,number]=[234,240,246]
       const border:[number,number,number]=[190,204,217]
-      const depart=departs[tourKey(mode,responsable)]?.trim()||'Non renseigné'
+      const depart=adresseDepartPour(mode,responsable).trim()||'Non renseigné'
       const plan=planValide(mode,responsable)
       const quantities=stops.reduce((sum,item)=>sum+Number(item.commande.quantite||0),0)
       const value=(input:unknown)=>String(input??'').trim()||'—'
@@ -1685,7 +1771,7 @@ function LivraisonsRetraitsCampagne() {
   function imprimerTour(mode:ModeLivraison,responsable:string){
     const stops=missionsDeTour(mode,responsable)
     if(!stops.length)return
-    const departure=departs[tourKey(mode,responsable)]?.trim()||'Non renseigné'
+    const departure=adresseDepartPour(mode,responsable).trim()||'Non renseigné'
     const plan=planValide(mode,responsable)
     const qty=stops.reduce((sum,item)=>sum+Number(item.commande.quantite||0),0)
     const rows=stops.map((item,i)=>{
@@ -1809,6 +1895,16 @@ function LivraisonsRetraitsCampagne() {
       1000,
     )
   }
+
+  const clesAlertesCampagne = new Set(commandesCampagne.map(cleAlerteLivraison))
+  const nombreAlertesReattribution = Object.keys(alertesReattribution).filter(id => {
+    if (id.startsWith('multi:')) return lignesMulti.some(l => `multi:${l.cle}` === id)
+    if (clesAlertesCampagne.has(id)) return true
+    // Les alertes historiques avaient seulement un id numérique : elles ne sont
+    // affichées que si cet id correspond à une unique commande toutes campagnes confondues.
+    const correspondances = commandes.filter(c => String(c.id) === id)
+    return correspondances.length === 1 && memeCampagneCommande(correspondances[0].campagne, campagneId)
+  }).length
 
   return (
     <main className="lr-page">
@@ -2199,9 +2295,9 @@ function LivraisonsRetraitsCampagne() {
           {(activeTab === 'BENEVOLES' || activeTab === 'ESAT' || activeTab === 'SERVICE_COMM') ? (
             <div className="lr-benevole-groups">
               <p className="lr-benevole-explain">{activeTab === 'BENEVOLES' ? 'Choisis un bénévole pour voir ses livraisons du jour. Les bénévoles sans mission sont aussi affichés.' : activeTab === 'ESAT' ? 'Choisis un ESAT pour consulter ses livraisons du jour ou lui en attribuer de nouvelles.' : 'Choisis une personne du service Communication pour consulter et gérer ses livraisons du jour.'}</p>
-              {Object.keys(alertesReattribution).filter(id=>id.startsWith('multi:') ? lignesMulti.some(l=>`multi:${l.cle}`===id) : commandes.some(c=>String(c.id)===id && (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee))).length > 0 &&
+              {nombreAlertesReattribution > 0 &&
                 <div className="lr-reattribution-alert" role="status"><AlertTriangle size={16}/>
-                  {Object.keys(alertesReattribution).filter(id=>id.startsWith('multi:') ? lignesMulti.some(l=>`multi:${l.cle}`===id) : commandes.some(c=>String(c.id)===id && (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee))).length} commande(s) retirée(s) à réattribuer. Elles sont de nouveau disponibles dans « Planifier une tournée ».
+                  {nombreAlertesReattribution} commande(s) retirée(s) à réattribuer. Elles sont de nouveau disponibles dans « Planifier une tournée ».
                 </div>}
               {groupesIntervenants.map(b => {
                 const ouvert = benevoleDeplie === b.id
@@ -2233,10 +2329,32 @@ function LivraisonsRetraitsCampagne() {
                     <div className="lr-route-planner">
                       <div className="lr-route-heading"><MapPin size={17}/><strong>Optimiser la tournée de {b.nom}</strong></div>
                       <div className="lr-route-fields">
-                        <label>Adresse précise du départ (siège AEIM ou autre)
-                          <input placeholder="Numéro, rue, code postal, commune" value={departs[tourKey(modeBenevole,b.nom)]||''}
-                            onChange={e=>setDeparts(old=>({...old,[tourKey(modeBenevole,b.nom)]:e.target.value}))}/>
-                        </label>
+                        <div className="lr-route-depart">
+                          {modeBenevole !== 'ESAT' && <>
+                            <span className="lr-route-label">Point de départ</span>
+                            <div className="lr-route-choices" role="radiogroup" aria-label={`Point de départ de ${b.nom}`}>
+                              {([
+                                {value:'SIEGE',label:'Siège AEIM'},
+                                ...(modeBenevole==='BENEVOLE'?[{value:'DOMICILE',label:'Domicile'}]:[]),
+                                {value:'AUTRE',label:'Autre adresse'},
+                              ] as Array<{value:ChoixDepart;label:string}>).map(option=><label key={option.value} className={choixDepartPour(modeBenevole,b.nom)===option.value?'is-selected':''}>
+                                <input type="radio" name={`depart-${tourKey(modeBenevole,b.nom)}`} value={option.value}
+                                  checked={choixDepartPour(modeBenevole,b.nom)===option.value}
+                                  onChange={()=>selectionnerDepart(modeBenevole,b.nom,option.value)}/>
+                                <span>{option.label}</span>
+                              </label>)}
+                            </div>
+                          </>}
+                          <label>Adresse précise du départ
+                            <input placeholder="Numéro, rue, code postal, commune" value={adresseDepartPour(modeBenevole,b.nom)}
+                              readOnly={choixDepartPour(modeBenevole,b.nom)==='SIEGE'}
+                              onChange={e=>changerAdresseDepart(modeBenevole,b.nom,e.target.value)}/>
+                          </label>
+                          {choixDepartPour(modeBenevole,b.nom)==='DOMICILE' && !ficheBenevolePour(b.nom)?.adresseDepart?.trim() &&
+                            <small className="lr-route-address-tip">Adresse du domicile absente de la fiche bénévole : renseigne-la ici, puis dans la BDD Bénévoles pour les prochaines tournées.</small>}
+                          {choixDepartPour(modeBenevole,b.nom)==='AUTRE' &&
+                            <small className="lr-route-address-tip">Cette adresse sera mémorisée pour les prochaines tournées de cette personne.</small>}
+                        </div>
                         <label>Heure de départ
                           <input type="time" value={horairesDepart[tourKey(modeBenevole,b.nom)]||''}
                             onChange={e=>setHorairesDepart(old=>({...old,[tourKey(modeBenevole,b.nom)]:e.target.value}))}/>

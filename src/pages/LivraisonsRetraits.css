@@ -1092,6 +1092,14 @@
 .lr-route-fields{display:grid;grid-template-columns:minmax(240px,2fr) minmax(135px,0.8fr) auto;align-items:end;gap:10px}
 .lr-route-fields label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:650}
 .lr-route-fields input{min-height:39px;border:1px solid #cfdaea;border-radius:8px;padding:8px;background:white;color:#133b6d;width:100%}
+.lr-route-depart{display:grid;gap:8px;min-width:0}
+.lr-route-label{font-size:12px;font-weight:700;color:#173a66}
+.lr-route-choices{display:flex;flex-wrap:wrap;gap:7px}
+.lr-route-fields .lr-route-choices label{display:inline-flex;flex-direction:row;align-items:center;gap:7px;border:1px solid #cfdaea;border-radius:8px;padding:7px 10px;background:white;color:#173a66;cursor:pointer;font-size:12px;font-weight:650}
+.lr-route-fields .lr-route-choices label.is-selected{border-color:#165fa3;background:#eaf4ff}
+.lr-route-fields .lr-route-choices input[type="radio"]{min-height:0;width:15px;height:15px;padding:0;margin:0;accent-color:#165fa3;flex:none}
+.lr-route-fields input[readonly]{background:#f0f5fb;color:#31577b}
+.lr-route-address-tip{font-size:11px;line-height:1.35;color:#587596}
 .lr-route-fields button,.lr-route-result button{display:inline-flex;gap:7px;align-items:center;justify-content:center;min-height:39px;border:0;border-radius:8px;padding:8px 13px;background:#ff7a00;color:#fff;font-weight:700;cursor:pointer}
 .lr-route-fields button:disabled{opacity:.55;cursor:not-allowed}
 .lr-route-error{display:flex;align-items:flex-start;gap:8px;margin-top:12px;color:#a33a14;font-size:13px}
