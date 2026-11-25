@@ -12,6 +12,13 @@ import {
   type FinanceKind, type FinanceRow,
 } from '../lib/financeRegister'
 import { recordActivity } from '../services/activityLog'
+import MecenatConventionActions from './MecenatConventionActions'
+import MecenatBriochesReception from './MecenatBriochesReception'
+import { isMecenatBrioches, quantiteRecueMecenat } from '../lib/mecenatBrioches'
+import { useEtablissements } from '../contexts/EtablissementsContext'
+import { useArtisans } from '../contexts/ArtisansContext'
+import { categoriesFournisseur } from '../types/artisans'
+import { usePermissions } from '../contexts/permissionsState'
 
 const euros = (amount: number) => new Intl.NumberFormat('fr-FR', {
   style: 'currency', currency: 'EUR',
@@ -22,7 +29,7 @@ const OPTIONS = {
     title: 'Mécénat',
     intro: 'Suivez les soutiens financiers, matériels et en compétences apportés à la campagne.',
     label: 'Contribution',
-    types: ['Financier', 'En nature', 'Compétences', 'Autre'],
+    types: ['Financier', 'Mécène boulangerie', 'En nature', 'Compétences', 'Autre'],
     statuses: ['À confirmer', 'Confirmé', 'Clôturé'],
     final: 'Clôturé',
     initial: 'À confirmer',
@@ -44,8 +51,9 @@ type Field = { key: keyof FinanceRow; label: string }
 const EXPORT_COLS: Record<FinanceKind, Field[]> = {
   mecenat: [
     { key: 'campagne', label: 'Campagne' }, { key: 'date', label: 'Date' },
-    { key: 'partenaire', label: 'Mécène / partenaire' }, { key: 'donateurId', label: 'ID donateur' },
-    { key: 'nature', label: 'Nature' }, { key: 'description', label: 'Description' },
+    { key: 'partenaire', label: 'Mécène / partenaire' }, { key: 'fournisseurId', label: 'ID fournisseur lié' }, { key: 'donateurId', label: 'ID donateur' },
+    { key: 'nature', label: 'Nature' }, { key: 'produit', label: 'Produit en nature' },
+    { key: 'quantite', label: 'Brioches annoncées' }, { key: 'description', label: 'Description' },
     { key: 'valeur', label: 'Valorisation (€)' }, { key: 'etablissement', label: 'Établissement / secteur' },
     { key: 'reference', label: 'Référence' }, { key: 'statut', label: 'Statut' },
   ],
@@ -72,6 +80,10 @@ function validate(row: FinanceRow, kind: FinanceKind): string | null {
   if (kind === 'mecenat') {
     if (!row.partenaire?.trim()) return 'Renseignez le mécène ou partenaire.'
     if (!row.nature) return 'Choisissez la nature du mécénat.'
+    if (row.nature === 'En nature' && !row.produit) return 'Précisez si le don en nature concerne des brioches ou un autre produit.'
+    if (isMecenatBrioches(row) && row.quantite && (!/^\d+$/.test(row.quantite) || Number(row.quantite) > 1_000_000)) {
+      return 'La quantité de brioches annoncée doit être un entier positif.'
+    }
   } else {
     if (!row.etablissement?.trim()) return 'Indiquez le stand ou établissement concerné.'
     if (!row.origine) return 'Choisissez l’origine de l’écart.'
@@ -93,7 +105,11 @@ function validate(row: FinanceRow, kind: FinanceKind): string | null {
 export function FinanceRegister({ kind }: { kind: FinanceKind }) {
   const config = OPTIONS[kind]
   const { selectedCampagne, campagnes, donateurs } = useObData()
+  const { etablissements } = useEtablissements()
+  const { fournisseurs } = useArtisans()
+  const fournisseursTries = useMemo(() => [...fournisseurs].sort((a, b) => a.nom.localeCompare(b.nom, 'fr')), [fournisseurs])
   const { currentUser } = useUsers()
+  const { hasPermission } = usePermissions()
   const campaignWritable = useCampaignWriteAccess()
   const admin = currentUser?.role === 'administrateur'
   const campaignId = selectedCampagne?.id ?? ''
@@ -184,6 +200,10 @@ export function FinanceRegister({ kind }: { kind: FinanceKind }) {
     event.preventDefault()
     if (!editing || !canEdit) return
     const validation = validate(editing, kind)
+    if (kind === 'mecenat' && editing.fournisseurId && !fournisseurs.some(f => f.id === editing.fournisseurId)) {
+      setError('Ce fournisseur n’existe plus dans la BDD Fournisseurs : sélectionnez une fiche existante ou choisissez « Non référencée ».')
+      return
+    }
     if (validation) { setError(validation); return }
     if (!campagnes.some(c => c.id === editing.campagne)) {
       setError('La campagne sélectionnée est inconnue.'); return
@@ -205,11 +225,19 @@ export function FinanceRegister({ kind }: { kind: FinanceKind }) {
     const update = previous
       ? allRows.map(row => row.id === next.id ? next : row)
       : [...allRows, next]
+    if (previous && quantiteRecueMecenat(previous.id, previous.campagne) > 0 && (
+      next.campagne !== previous.campagne || !isMecenatBrioches(next) ||
+      next.partenaire !== previous.partenaire || next.fournisseurId !== previous.fournisseurId)) {
+      setError('Une réception existe déjà : impossible de changer la campagne, le mécène ou la nature du don.'); return
+    }
     if (store(update, previous ? 'modification' : 'creation', next)) setEditing(null)
   }
 
   function remove(row: FinanceRow) {
     if (!canEdit || (!admin && row.campagne !== campaignId)) return
+    if (kind === 'mecenat' && quantiteRecueMecenat(row.id, row.campagne) > 0) {
+      setError('Suppression impossible : des réceptions physiques sont liées à ce mécénat. Conservez l’historique et corrigez le stock par ajustement justifié.'); return
+    }
     if (!window.confirm(`Supprimer cet élément « ${row.reference || row.partenaire || row.motif || row.id} » ?`)) return
     store(allRows.filter(item => item.id !== row.id), 'suppression', row)
   }
@@ -250,7 +278,7 @@ export function FinanceRegister({ kind }: { kind: FinanceKind }) {
       </header>
 
       {!campaignId && <p className="ob-finance-warning" role="status"><AlertCircle size={17}/> Sélectionne une campagne dans la Topbar pour accéder à ce registre.</p>}
-      {kind === 'mecenat' && <p className="ob-finance-info">Les valorisations sont déclaratives : elles ne sont pas ajoutées aux encaissements ni à la comptabilité tant qu'un rapprochement n'a pas été validé.</p>}
+      {kind === 'mecenat' && <p className="ob-finance-info">Les valorisations sont déclaratives : elles ne sont pas ajoutées aux encaissements ni à la comptabilité tant qu'un rapprochement n'a pas été validé. Pour les boulangeries mécènes, seule l'action « Réceptionner » alimente le stock physique.</p>}
       {kind === 'ecarts' && <p className="ob-finance-info">Ce registre documente les écarts. Il ne décrémente pas automatiquement les stocks, le coffre ou les comptes bancaires.</p>}
 
       <section className="ob-finance-stats" aria-label="Synthèse de la campagne">
@@ -303,6 +331,8 @@ export function FinanceRegister({ kind }: { kind: FinanceKind }) {
               <td>{row.reference || '—'}</td>
               <td><span className={`ob-finance-status ${row.statut === config.final ? 'done' : 'pending'}`}>{row.statut || '—'}</span></td>
               <td><div className="ob-extra-actions">
+                {kind === 'mecenat' && isMecenatBrioches(row) && <MecenatBriochesReception row={row} canReceive={canEdit && Boolean(currentUser && hasPermission(currentUser.role, 'mecenat', 'modifier'))} etablissements={etablissements} onNotice={setNotice} onError={setError}/>}
+                {kind === 'mecenat' && <MecenatConventionActions row={row} campaignName={campagnes.find(c => c.id === row.campagne)?.nom ?? row.campagne} canEdit={canEdit && Boolean(currentUser && hasPermission(currentUser.role, 'mecenat', 'modifier'))} canExport={Boolean(currentUser && hasPermission(currentUser.role, 'mecenat', 'exporter'))} onNotice={setNotice} onError={setError}/>}
                 {canEdit && <>
                   <button type="button" title="Modifier" aria-label={`Modifier ${row.reference || row.id}`} onClick={() => { setError(''); setEditing({...row}) }}><Pencil size={16}/></button>
                   {row.statut !== config.final && <button type="button" title={`Marquer ${config.final.toLowerCase()}`} aria-label={`Marquer ${config.final.toLowerCase()}`} onClick={() => advance(row)}><CheckCircle2 size={16}/></button>}
@@ -329,8 +359,48 @@ export function FinanceRegister({ kind }: { kind: FinanceKind }) {
                 const donor = donateurs.find(d => String(d.id) === e.target.value)
                 setEditing({...editing, donateurId:e.target.value, partenaire: donor?.nom || editing.partenaire || ''})
               }}><option value="">Aucun lien</option>{donateurs.filter(d => !d.archive).map(d => <option key={d.id} value={String(d.id)}>{d.nom}</option>)}</select></label>
-              <label><span>Mécène / partenaire *</span><input required value={editing.partenaire || ''} onChange={e => setEditing({...editing, partenaire:e.target.value})}/></label>
-              <label><span>Nature du mécénat *</span><select required value={editing.nature || ''} onChange={e => setEditing({...editing, nature:e.target.value})}>{config.types.map(t => <option key={t}>{t}</option>)}</select></label>
+              <label><span>Mécène / partenaire *</span><input required value={editing.partenaire || ''}
+                readOnly={editing.nature === 'Mécène boulangerie' && !!editing.fournisseurId}
+                title={editing.nature === 'Mécène boulangerie' && editing.fournisseurId ? 'Nom repris de la BDD Fournisseurs' : undefined}
+                onChange={e => setEditing({...editing, partenaire:e.target.value})}/></label>
+              <label><span>Nature du mécénat *</span><select required value={editing.nature || ''} onChange={e => {
+                const nature = e.target.value
+                // Le choix direct « Mécène boulangerie » conserve le même circuit
+                // de réception de brioches que l'ancien « En nature → Brioches ».
+                // Les anciennes contributions enregistrées restent lisibles.
+                const produit = nature === 'Mécène boulangerie' ? 'Brioches'
+                  : nature === 'En nature' && editing.nature === 'En nature' ? editing.produit || '' : ''
+                setEditing({...editing, nature, produit, fournisseurId: nature === 'Mécène boulangerie' ? editing.fournisseurId : undefined})
+              }}>{config.types.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
+              {editing.nature === 'Mécène boulangerie' && <>
+                <label><span>Boulangerie / fournisseur existant</span><select value={editing.fournisseurId || ''}
+                  disabled={quantiteRecueMecenat(editing.id, editing.campagne) > 0}
+                  onChange={e => {
+                    const selected = fournisseurs.find(f => f.id === e.target.value)
+                    setEditing({...editing, fournisseurId: selected?.id || undefined,
+                      partenaire: selected?.nom || ''})
+                  }}>
+                  <option value="">Non référencée / saisie manuelle</option>
+                  {fournisseursTries.map(f => <option key={f.id} value={f.id}>
+                      {f.nom} — {categoriesFournisseur(f).join(' / ')}{f.ville ? ` — ${f.ville}` : ''}{f.statut !== 'ACTIF' ? ` [${f.statut === 'INACTIF' ? 'Inactif' : 'À vérifier'}]` : ''}
+                    </option>)}
+                </select></label>
+                <p className="ob-finance-wide" style={{margin:'-4px 0 0',fontSize:12,color:'#667e9b'}}>
+                  {fournisseurs.length} fournisseur(s) dans BDD → Fournisseurs (Artisans, GMS, Industriels).
+                  L'appartenance à la catégorie Artisan ne garantit pas qu'il s'agisse d'une boulangerie.
+                  {!editing.fournisseurId && ' Si la boulangerie manque, vous pouvez saisir son nom ci-dessus ou la créer depuis BDD → Fournisseurs.'}
+                  {editing.fournisseurId && !fournisseurs.some(f=>f.id===editing.fournisseurId) && ' La fiche liée est introuvable : choisissez une autre fiche.'}
+                </p>
+              </>}
+              {editing.nature === 'En nature' && <label><span>Don en nature *</span><select required value={editing.produit || ''} onChange={e=>setEditing({...editing, produit:e.target.value})}>
+                <option value="">Choisir le type</option><option value="Brioches">Brioches offertes (boulangerie mécène)</option><option value="Autre">Autre don en nature</option>
+              </select></label>}
+              {isMecenatBrioches(editing) && <>
+                <label><span>Brioches annoncées (facultatif)</span><input type="number" min="0" max="1000000" step="1" value={editing.quantite || ''} onChange={e=>setEditing({...editing, quantite:e.target.value})}/></label>
+                <label><span>Établissement destinataire prévu</span><select value={editing.etablissementId || ''} onChange={e=>setEditing({...editing, etablissementId:e.target.value})}>
+                  <option value="">À préciser à la réception</option>{etablissements.filter(e=>e.statut==='ACTIF').map(e=><option key={e.id} value={e.id}>{e.nom}</option>)}
+                </select></label>
+              </>}
               <label className="ob-finance-wide"><span>Description de la contribution</span><textarea rows={3} value={editing.description || ''} onChange={e => setEditing({...editing, description:e.target.value})}/></label>
             </> : <>
               <label><span>Établissement / stand *</span><input required value={editing.etablissement || ''} onChange={e => setEditing({...editing, etablissement:e.target.value})}/></label>

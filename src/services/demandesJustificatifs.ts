@@ -1,3 +1,4 @@
+import { affectationsCommandesEntreprise } from '../lib/ficheCaisseCommandes'
 import type { Commande, Donateur, FicheCaisse } from '../types/ob'
 import type { JustificatifDon, JustificatifType } from '../types/justificatifs'
 
@@ -53,7 +54,7 @@ export function calculerDemandesJustificatifs(
     if (!memeCampagne(commande.campagne, campagneSelectionnee)) continue
     const donateur = donateurs.find(d => d.id === commande.donateurId)
     const montantFicheLiee = fiches.some(f =>
-      f.commandeId === commande.id && memeCampagne(f.campagne, commande.campagne),
+      f.type === 'ENTREPRISE' && affectationsCommandesEntreprise(f).some(ligne => ligne.commandeId === commande.id && ligne.montant > 0) && memeCampagne(f.campagne, commande.campagne),
     )
     const justificatifLie = (type: JustificatifType) => justificatifs.find(j =>
       j.type === type && memeCampagne(j.campagne, commande.campagne) &&

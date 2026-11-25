@@ -1,3 +1,4 @@
+import { affectationsCommandesEntreprise } from '../lib/ficheCaisseCommandes'
 import {
   useEffect,
   useMemo,
@@ -184,15 +185,26 @@ function rapprocherPaiements(
     const montantFiche = totalEncaisseFiche(fiche)
     if (montantFiche <= 0) continue
     const annee = campagneAnnee(fiche.campagne)
-    let commande: Commande | undefined
-    if (fiche.commandeId != null) {
-      commande = actives.find(c => c.id === Number(fiche.commandeId) && campagneAnnee(c.campagne) === annee)
-    } else if (fiche.donateurId != null) {
-      const candidates = byDonateur.get(`${annee}:${fiche.donateurId}`) ?? []
-      if (candidates.length === 1) commande = candidates[0]
+    const affectations = affectationsCommandesEntreprise(fiche)
+    if (affectations.length > 0) {
+      for (const ligne of affectations) {
+        const commande = actives.find(c => c.id === Number(ligne.commandeId) && campagneAnnee(c.campagne) === annee)
+        if (!commande || ligne.montant <= 0) continue
+        const existing = encaissements.get(commande.id) ?? { montantEncaisse: 0, fiches: [] }
+        encaissements.set(commande.id, {
+          montantEncaisse: Math.round((existing.montantEncaisse + ligne.montant) * 100) / 100,
+          fiches: [...existing.fiches, fiche.numero],
+        })
+      }
+      continue
     }
-    // Fiche sans lien explicite ou donateur ayant plusieurs commandes : à rapprocher manuellement.
-    if (!commande) continue
+    // Compatibilité des fiches anciennes non liées : une seule commande par donateur.
+    // Une fiche explicitement ventilée, même vide, ne doit pas être attribuée par déduction.
+    if (fiche.affectationsCommandesEntreprise !== undefined || fiche.commandeId !== undefined) continue
+    if (fiche.donateurId == null) continue
+    const candidates = byDonateur.get(`${annee}:${fiche.donateurId}`) ?? []
+    if (candidates.length !== 1) continue
+    const commande = candidates[0]
     const existing = encaissements.get(commande.id) ?? { montantEncaisse: 0, fiches: [] }
     encaissements.set(commande.id, {
       montantEncaisse: Math.round((existing.montantEncaisse + montantFiche) * 100) / 100,

@@ -231,3 +231,114 @@
   .ob-week-operation-panel .ob-week-nav { justify-content: flex-start; flex-wrap: wrap; }
   .ob-week-operation-range { grid-template-columns: minmax(0,1fr) auto; }
 }
+
+
+/* Correctif 23/11/2026 : modal de choix caisse / TPE.
+   Les classes étaient présentes dans StandsBrioches.tsx sans styles propres.
+   Ce bloc n'affecte pas le composant Outils de communication. */
+.ob-stand-material-modal {
+  box-sizing: border-box;
+  position: relative;
+  isolation: isolate;
+  width: min(570px, 100%);
+  max-height: min(90vh, 760px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 26px 28px 24px;
+  background: #fff;
+  color: #123b70;
+  border: 1px solid #d9e4f0;
+  border-radius: 17px;
+  box-shadow: 0 20px 70px rgba(10, 34, 68, .28);
+  text-align: left;
+}
+.ob-stand-material-modal *,
+.ob-stand-material-modal *::before,
+.ob-stand-material-modal *::after { box-sizing: border-box; }
+.ob-stand-material-modal h2 {
+  margin: 0 0 10px;
+  color: #0b376e;
+  font-size: clamp(19px, 2.5vw, 24px);
+  font-weight: 800;
+  line-height: 1.25;
+}
+.ob-stand-material-modal > p {
+  margin: 0 0 20px;
+  color: #566d89;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.ob-stand-material-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 24px;
+}
+.ob-stand-material-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 12px 13px;
+  border: 1px solid #dce6f1;
+  border-radius: 11px;
+  background: #f8fafd;
+  color: #174576;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.ob-stand-material-options label:has(input:checked) {
+  border-color: #2362a0;
+  background: #eaf4ff;
+}
+.ob-stand-material-options input[type="radio"] {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #0d4d8c;
+}
+.ob-stand-material-options label:focus-within {
+  outline: 2px solid #76a8dd;
+  outline-offset: 1px;
+}
+.ob-stand-material-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid #e5ecf4;
+}
+.ob-stand-material-footer button {
+  min-height: 40px;
+  padding: 10px 16px;
+  border: 1px solid #cad8e6;
+  border-radius: 9px;
+  background: #fff;
+  color: #153c6d;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.ob-stand-material-footer button:last-child {
+  background: #0e4d88;
+  border-color: #0e4d88;
+  color: #fff;
+}
+.ob-stand-material-footer button:hover { filter: brightness(.96); }
+.ob-stand-material-footer button:focus-visible {
+  outline: 2px solid #76a8dd;
+  outline-offset: 2px;
+}
+@media (max-width: 520px) {
+  .ob-stand-material-modal { padding: 20px 16px; }
+  .ob-stand-material-options { grid-template-columns: 1fr; }
+  .ob-stand-material-footer button { flex: 1 1 auto; }
+}

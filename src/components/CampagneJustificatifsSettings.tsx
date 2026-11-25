@@ -29,6 +29,8 @@ import {
 } from '../services/campagneJustificatifs'
 
 import './CampagneJustificatifsSettings.css'
+import CampagneConventionSettings from './CampagneConventionSettings'
+import CampagneEcolesTemplateSettings from './CampagneEcolesTemplateSettings'
 
 type Props = {
   campagneId: string
@@ -289,6 +291,10 @@ function CampagneJustificatifsSettingsInner({
           void handleUpload('JDP', event)
         }
       />
+
+      <CampagneConventionSettings campaignId={campagneId} canManage={canManage} />
+
+      <CampagneEcolesTemplateSettings campaignId={campagneId} canManage={canManage} />
 
       <div className="campaign-jd-payment-grid">
         <section className="campaign-jd-payment-card">

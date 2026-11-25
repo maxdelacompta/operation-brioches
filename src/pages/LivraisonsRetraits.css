@@ -1204,3 +1204,20 @@
 .lr-retrait-legend-chip, .lr-retrait-type-count { display:inline-flex; align-items:center; gap:6px; border:1px solid; border-radius:999px; padding:5px 10px; font-size:11px; font-weight:750; white-space:nowrap; }
 .lr-retrait-driver-types { display:flex; flex-wrap:wrap; gap:5px; margin-top:3px; }
 .lr-retrait-type-count { font-size:10px; padding:3px 8px; }
+
+/* Véhicule affecté à chaque tournée (bénévoles, communication, ESAT). */
+.lr-vehicle-fields { display:flex;flex-wrap:wrap;align-items:end;gap:10px;padding:12px;margin-bottom:12px;border:1px solid #cbd8e8;background:#f4f8fc;border-radius:12px;color:#15375a; }
+.lr-vehicle-fields > strong {width:100%;display:flex;align-items:center;gap:8px;font-size:13px;}
+.lr-vehicle-fields > p {width:100%;margin:0;font-size:12px;color:#576b83;}
+.lr-vehicle-fields label {display:flex;flex-direction:column;gap:5px;font-size:12px;min-width:190px;flex:1;}
+.lr-vehicle-fields select,.lr-vehicle-fields input {min-height:38px;padding:7px 10px;border:1px solid #cbd8e8;border-radius:8px;background:white;font:inherit;max-width:100%;}
+
+/* Points de ravitaillement recommandés dans les affectations de véhicules. */
+.lr-refuelling-hint { grid-column: 1 / -1; border: 1px solid #d9e6f3; background: #f7fbff; border-radius: 11px; padding: 13px 15px; font-size: 12px; color: #244d73; }
+.lr-refuelling-hint > strong { display: flex; gap: 7px; align-items: center; }
+.lr-refuelling-hint p { margin: 8px 0; }
+.lr-refuelling-hint ul { list-style: none; margin: 9px 0; padding: 0; display: grid; gap: 6px; }
+.lr-refuelling-hint li { display: flex; align-items: flex-start; gap: 7px; line-height: 1.5; }
+.lr-refuelling-hint li svg { flex-shrink: 0; margin-top: 3px; }
+.lr-refuelling-hint small { font-size: 11px; color: #587791; }
+.lr-refuelling-hint a { color: #145598; font-weight: 750; }

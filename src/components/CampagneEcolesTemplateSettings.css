@@ -1,0 +1,16 @@
+
+.campaign-jd-school-template {border:1px solid #dce7ec; border-radius:12px; padding:22px; margin:18px 0; background:#fbfdfc;}
+.campaign-jd-school-template .campaign-jd-heading {margin-bottom:14px;}
+.campaign-jd-school-card {display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px; background:#fff; border:1px solid #dce7ec; border-radius:10px; padding:16px;}
+.campaign-jd-school-title {display:flex; gap:12px; align-items:center; color:#164579; min-width:200px;}
+.campaign-jd-school-title div {display:grid; gap:6px;}
+.campaign-jd-school-title small {color:#71869c;}
+.campaign-jd-school-actions {display:flex; flex-wrap:wrap; gap:7px;}
+.campaign-jd-school-actions button {border:1px solid #bacbd8; border-radius:8px; background:white; padding:9px 12px; color:#164579; display:inline-flex; align-items:center; gap:7px; cursor:pointer; font-weight:700;}
+.campaign-jd-school-actions button:hover {background:#eef6fa;}
+.campaign-jd-school-actions button:disabled {opacity:.5; cursor:not-allowed;}
+.campaign-jd-school-info {display:flex; gap:10px; align-items:flex-start; background:#f1f8f7; border-radius:8px; padding:13px 15px; font-size:13px; color:#355b66; line-height:1.55;}
+.campaign-jd-school-info svg {flex:0 0 auto; margin-top:2px;}
+.campaign-jd-school-error {color:#a62434;font-weight:700;}
+.campaign-jd-school-success {color:#13683f;display:flex;gap:8px;align-items:center;}
+.campaign-jd-school-note {color:#71869c;display:block;margin-top:11px;}

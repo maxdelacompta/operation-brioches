@@ -68,6 +68,9 @@ const RecapitulatifGlobal = lazy(() => import('./pages/RecapitulatifGlobal'))
 const JustificatifsDons = lazy(() => import('./pages/JustificatifsDons'))
 const FacturesPaiements = lazy(() => import('./pages/FacturesPaiements'))
 const Mecenat = lazy(() => import('./pages/Mecenat'))
+const Sponsoring = lazy(() => import('./pages/Sponsoring'))
+const CommunicationAssets = lazy(() => import('./pages/CommunicationAssets'))
+const Ecoles = lazy(() => import('./pages/Ecoles'))
 const PertesEcarts = lazy(() => import('./pages/PertesEcarts'))
 
 const Administration = lazy(() => import('./pages/Administration'))
@@ -190,6 +193,13 @@ function App() {
 
                     <Route path="/finance/factures-paiements" element={<FacturesPaiements />} />
                     <Route path="/finance/mecenat" element={<Mecenat />} />
+                    <Route path="/finance/sponsoring" element={<Sponsoring />} />
+                    <Route path="/gestion/materiel-communication" element={<CommunicationAssets kind="materiel" />} />
+                    <Route path="/gestion/vehicules" element={<CommunicationAssets kind="vehicule" />} />
+                    <Route path="/gestion/ecoles" element={<Ecoles />} />
+                    <Route path="/communication/sponsoring" element={<Navigate to="/finance/sponsoring" replace />} />
+                    <Route path="/communication/materiel" element={<Navigate to="/gestion/materiel-communication" replace />} />
+                    <Route path="/communication/vehicules" element={<Navigate to="/gestion/vehicules" replace />} />
                     <Route path="/finance/pertes-ecarts" element={<PertesEcarts />} />
                     <Route
                       path="/finance/justificatifs-dons"

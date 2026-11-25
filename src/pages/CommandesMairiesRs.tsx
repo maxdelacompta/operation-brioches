@@ -2,6 +2,7 @@ import { omitKeys } from '../lib/omitKeys'
 import { useNavigate } from 'react-router-dom'
 import { useCampaignWriteAccess } from '../lib/useCampaignWriteAccess'
 import { bilanCaisseMairieRs } from '../lib/mairiesRsCaisse'
+import { resteBriochesSurFiches, totalBriochesRemisesSurFiches } from '../lib/ficheCaisseCommandes'
 import {
   useMemo,
   useState,
@@ -902,9 +903,12 @@ export default function CommandesMairiesRs() {
                     <td>{item.secteur || '—'}</td>
 
                     <td>
-                      <strong>
-                        {number(item.quantite)}
-                      </strong>
+                      <strong>{number(item.quantite)}</strong>
+                      {totalBriochesRemisesSurFiches(fichesCaisse, 'MAIRIE', item.id, item.campagne) > 0 && (
+                        <small style={{display: 'block', color: '#22618b'}}>
+                          {number(resteBriochesSurFiches(item.quantite, fichesCaisse, 'MAIRIE', item.id, item.campagne))} restantes (fiches)
+                        </small>
+                      )}
                     </td>
 
                     <td>
@@ -1208,6 +1212,12 @@ export default function CommandesMairiesRs() {
                     label="Brioches commandées"
                     value={number(detail.quantite)}
                   />
+                  {totalBriochesRemisesSurFiches(fichesCaisse, 'MAIRIE', detail.id, detail.campagne) > 0 && (
+                    <Detail
+                      label="Reste à remettre (selon fiches de caisse)"
+                      value={number(resteBriochesSurFiches(detail.quantite, fichesCaisse, 'MAIRIE', detail.id, detail.campagne))}
+                    />
+                  )}
                   <Detail
                     label="Cartons"
                     value={new Intl.NumberFormat(

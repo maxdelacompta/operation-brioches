@@ -9,7 +9,15 @@ export type FinanceRow = {
   date: string
   partenaire?: string
   donateurId?: string
+  /** Lien vers BDD Fournisseurs ; optionnel pour les mécènes non référencés. */
+  fournisseurId?: string
   nature?: string
+  /** Distingue les brioches offertes des autres mécénats en nature. */
+  produit?: string
+  /** Quantité annoncée : ne crée aucun mouvement de stock. */
+  quantite?: string
+  /** Établissement prévu pour la réception. */
+  etablissementId?: string
   description?: string
   valeur?: string
   etablissement?: string
@@ -17,7 +25,6 @@ export type FinanceRow = {
   statut?: string
   origine?: string
   motif?: string
-  quantite?: string
   createdAt?: string
   updatedAt?: string
 }

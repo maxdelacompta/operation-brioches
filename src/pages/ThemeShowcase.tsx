@@ -61,7 +61,7 @@ export default function ThemeShowcase() {
         }
       />
 
-      <SegmentedTabs
+      <SegmentedTabs<DemoTab>
         value={tab}
         onChange={setTab}
         tabs={[

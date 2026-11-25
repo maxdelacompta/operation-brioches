@@ -1,0 +1,51 @@
+.ecoles-page { max-width: 1600px; margin: 0 auto; }
+.ecoles-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ecoles-tabs { display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #dce7f2; margin: 8px 0 20px; }
+.ecoles-tabs button { display: flex; align-items: center; gap: 8px; border: 0; border-bottom: 3px solid transparent; padding: 12px 15px; background: transparent; color: #59718f; font-weight: 700; font: inherit; cursor: pointer; }
+.ecoles-tabs button.active { color: #123d73; border-color: #ed7819; font-weight: 800; }
+.ecoles-tabs b { border-radius: 99px; padding: 1px 6px; color: white; background: #ee7817; }
+.ecoles-page h3 { color: #164579; font-size: 17px; margin: 25px 0 15px; }
+.ecoles-search { display: flex; align-items: center; gap: 6px; }
+.ecoles-search input { flex: 1; }
+.ecoles-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.ecoles-facts > div { background: #f5f8fd; padding: 12px 14px; border-radius: 9px; display: grid; gap: 7px; overflow-wrap: anywhere; }
+.ecoles-facts small { color: #68809c; }
+.ecoles-facts strong { font-size: 13px; color: #164579; }
+.ecoles-table-wrap { overflow-x: auto; width: 100%; }
+.ecoles-class-edit { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(100px, .6fr) minmax(110px, 1fr) auto auto; gap: 10px; padding: 15px 0; border-bottom: 1px solid #e1eaf4; align-items: end; }
+.ecoles-class-edit label, .ecoles-order-form label, .ecoles-review-fields label { display: grid; gap: 6px; font-weight: 700; font-size: 12px; color: #69819b; }
+.ecoles-class-edit .ecoles-participate { display: flex; flex-direction: row; align-items: center; padding-bottom: 10px; gap: 6px; color: #164579; white-space: nowrap; }
+.ecoles-order-form { display: grid; grid-template-columns: minmax(180px, 1.3fr) minmax(170px, 1.3fr) minmax(90px, .6fr) auto; gap: 12px; align-items: end; padding: 18px; background: #f5f8fd; border-radius: 12px; margin: 15px 0 22px; }
+.ecoles-import { position: relative; display: flex; align-items: center; gap: 14px; padding: 27px; background: #f8fbff; border: 2px dashed #a9c2dc; border-radius: 12px; color: #145598; margin: 20px 0; }
+.ecoles-import div { display: grid; gap: 7px; }
+.ecoles-import small { color: #627f9d; }
+.ecoles-import input { max-width: 350px; margin-left: auto; }
+.ecoles-review { padding: 17px; border: 1px solid #dae5f2; border-radius: 12px; margin: 15px 0; }
+.ecoles-review-head { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 12px; color: #194879; }
+.ecoles-review-head span { color: #b36c25; font-size: 12px; }
+.ecoles-review-grid { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.5fr); gap: 20px; }
+.ecoles-preview img { width: 100%; max-height: 450px; object-fit: contain; border: 1px solid #e4eaf2; border-radius: 8px; background: #fafafa; }
+.ecoles-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; font-size: 11px; }
+.ecoles-review-fields { display: grid; gap: 12px; align-content: start; }
+.ecoles-recap-school { margin: 12px 0; border: 1px solid #dfe8f2; padding: 13px; border-radius: 12px; }
+.ecoles-recap-school summary { display: flex; cursor: pointer; justify-content: space-between; gap: 15px; color: #194879; }
+.ecoles-recap-school summary span { color: #70849e; font-size: 12px; }
+.ecoles-recap-school h4 { font-size: 14px; margin: 18px 0 7px; }
+.ecoles-page .com-table tfoot th { background: #eaf1f9; color: #164579; padding: 14px 9px; text-align: left; }
+@media (max-width: 1100px) { .ecoles-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }.ecoles-class-edit { grid-template-columns: repeat(2,minmax(0,1fr)); }.ecoles-order-form { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 680px) { .ecoles-stats,.ecoles-facts,.ecoles-order-form,.ecoles-review-grid { grid-template-columns: 1fr; }.ecoles-class-edit { grid-template-columns: 1fr; }.ecoles-import { flex-direction: column; align-items: flex-start; }.ecoles-import input { margin-left: 0; max-width: 100%; }.ecoles-recap-school summary { display: block; } }
+.ecoles-flyer-notice {background:#f0f8f7;border-left:4px solid #0c6065;padding:12px 18px;border-radius:6px;margin-bottom:16px;color:#13495c;}
+.ecoles-flyer-notice p {margin:6px 0 0;color:#47687a;font-size:13px;}
+.ecoles-flyer-config {border:1px solid #d8e7e5;border-radius:11px;padding:18px;margin:0 0 22px;background:#fbfdfc;}
+.ecoles-flyer-config .com-detail-head {margin-bottom:15px;}
+.ecoles-flyer-config .com-fields {margin-bottom:12px;}
+.ecoles-flyer-config > small {display:block;margin-top:12px;}
+
+/* Commandes et retours OCR regroupés dans une seule section */
+.ecoles-orders-head { align-items: center; gap: 16px; flex-wrap: wrap; }
+.ecoles-orders-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ecoles-pending-count { padding: 2px 8px; border-radius: 99px; background: #fff; color: #154e85; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.ecoles-ocr-inline { margin: 14px 0 24px; padding: 18px; border: 1px solid #d8e6f5; border-radius: 12px; background: #fbfdff; }
+.ecoles-ocr-inline > h2 { font-size: 18px; margin: 0 0 8px; color: #174a7d; }
+.ecoles-ocr-inline .ecoles-import { background: #fff; }
+@media (max-width: 680px) { .ecoles-orders-actions { width: 100%; } }

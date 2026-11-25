@@ -3,7 +3,7 @@ import { BellRing, CheckCircle2, Clock3, Plus, Search, Trash2, X } from 'lucide-
 import { useUsers, getUserDisplayName } from '../contexts/UsersContext'
 import { useObData } from '../contexts/ObDataContext'
 import {
-  ALERTS_EVENT, ALERT_MODULES, createUserAlert, deleteUserAlert, readUserAlerts,
+  ALERTS_EVENT, ALERT_MODULES, createUserAlert, deleteUserAlert, readUserAlerts, estDestinataireAlertesStocks,
   setUserAlertStatus, type AlertPriority, type AlertStatus, type UserAlert,
 } from '../services/userAlerts'
 import './MesAlertes.css'
@@ -45,6 +45,7 @@ export default function MesAlertes() {
   }, [])
 
   const visible = useMemo(() => alerts.filter(alert => {
+    if (alert.module === 'Stocks brioches' && alert.automaticKey && !estDestinataireAlertesStocks(currentUser?.role)) return false
     const allowed = scope === 'toutes' && isAdmin ? true :
       scope === 'creees' ? alert.creatorId === currentId : alert.assigneeId === currentId
     const matchesStatus = statusFilter === 'toutes' ||
@@ -52,9 +53,12 @@ export default function MesAlertes() {
     const haystack = `${alert.title} ${alert.description} ${alert.module}`.toLocaleLowerCase('fr')
     return allowed && matchesStatus && haystack.includes(search.toLocaleLowerCase('fr'))
   }).sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999') || b.createdAt.localeCompare(a.createdAt)),
-  [alerts, scope, isAdmin, currentId, statusFilter, search])
+  [alerts, scope, isAdmin, currentId, currentUser?.role, statusFilter, search])
 
-  const assigned = alerts.filter(alert => alert.assigneeId === currentId)
+  const assigned = alerts.filter(alert =>
+    alert.assigneeId === currentId && (
+      !(alert.module === 'Stocks brioches' && alert.automaticKey) || estDestinataireAlertesStocks(currentUser?.role)
+    ))
   const open = assigned.filter(alert => alert.status !== 'terminee')
   const late = open.filter(alert => alert.dueDate && alert.dueDate < new Date().toLocaleDateString('en-CA'))
   const staff = users.filter(user => user.status === 'actif')
@@ -122,7 +126,7 @@ export default function MesAlertes() {
               <div className="ob-alerts-item-main">
                 <div className="ob-alerts-item-top"><strong>{alert.title}</strong><span>{priorityLabels[alert.priority]}</span></div>
                 <p>{alert.description || 'Aucune description'}</p>
-                <div className="ob-alerts-meta"><span>{alert.module}</span>{alert.campagneId && <span>{alert.campagneId}</span>}
+                <div className="ob-alerts-meta"><span>{alert.module}</span>{alert.automaticKey && <span>⚙ Automatique</span>}{alert.campagneId && <span>{alert.campagneId}</span>}
                   <span>Attribuée à {getUserDisplayName(users.find(user => user.id === alert.assigneeId))}</span>
                   {alert.dueDate && <span>Échéance : {new Date(`${alert.dueDate}T12:00:00`).toLocaleDateString('fr-FR')}</span>}</div>
               </div>

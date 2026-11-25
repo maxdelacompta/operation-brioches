@@ -57,6 +57,7 @@ import type {
 } from '../types/ob'
 
 import { calculerCoffre } from '../services/coffre'
+import { affectationsCommandesEntreprise, affectationsCommandesMairieRs, montantEncaisseFiche, totalAffecteFiche, verifierMontantsAffectes, resteBriochesSurFiches } from '../lib/ficheCaisseCommandes'
 
 import './FichesCaisse.css'
 
@@ -269,6 +270,16 @@ const PIECES: {
     valeur: 0.01,
   },
 ]
+
+/** Compatibilité des campagnes officielles (OB2026, OB 2026 et 2026), sans mélanger les campagnes TEST. */
+function memeCampagneCommandes(a: string, b: string): boolean {
+  const normalise = (value: string) => value.trim().replace(/[^a-z0-9]/gi, '').toUpperCase()
+  const aa = normalise(a)
+  const bb = normalise(b)
+  if (aa === bb) return true
+  return /^OB20\d{2}$/.test(aa) && aa.slice(2) === bb ||
+    /^OB20\d{2}$/.test(bb) && bb.slice(2) === aa
+}
 
 /* =========================================================
    PAGE
@@ -530,7 +541,7 @@ function FichesCaisse() {
         fichesCaisse.filter(
           (fiche) => {
             if (activeCampagne && fiche.campagne !== activeCampagne.id) return false
-            if (commandeMairieRsFiltre && fiche.commandeMairieRsId !== commandeMairieRsFiltre) return false
+            if (commandeMairieRsFiltre && !affectationsCommandesMairieRs(fiche).some(ligne => ligne.commandeId === commandeMairieRsFiltre)) return false
             const searchable =
               [
                 fiche.numero,
@@ -885,11 +896,32 @@ const pageButtons = Array.from(
   function saveFiche(fiche: FicheCaisse) {
     try {
       if (!canWriteCampaign) throw new Error('Campagne en consultation seule : enregistrement interdit.')
-      if (fiche.commandeMairieRsId) {
-        const commandeMR = commandesMairiesRs.find(item => item.id === fiche.commandeMairieRsId)
-        if (!commandeMR || commandeMR.statut === 'ANNULEE' ||
-            commandeMR.campagne !== fiche.campagne || fiche.type !== 'MAIRIE') {
-          throw new Error('Le rattachement à la commande Mairie/RS est invalide ou appartient à une autre campagne.')
+      const problemeMontants = verifierMontantsAffectes(fiche)
+      if (problemeMontants) throw new Error(problemeMontants)
+      if (fiche.type === 'MAIRIE') {
+        for (const ligne of affectationsCommandesMairieRs(fiche)) {
+          const commandeMR = commandesMairiesRs.find(item => item.id === ligne.commandeId)
+          if (!commandeMR || commandeMR.statut === 'ANNULEE' || commandeMR.campagne !== fiche.campagne) {
+            throw new Error('Une commande Mairie / RS liée est introuvable, annulée ou appartient à une autre campagne.')
+          }
+          if (ligne.quantiteLivree != null && ligne.quantiteLivree >
+            resteBriochesSurFiches(commandeMR.quantite, fichesCaisse, 'MAIRIE', commandeMR.id, fiche.campagne, undefined, fiche.id)) {
+            throw new Error(`La quantité remise dépasse le solde de la commande ${commandeMR.numero}.`)
+          }
+        }
+      }
+      if (fiche.type === 'ENTREPRISE') {
+        for (const ligne of affectationsCommandesEntreprise(fiche)) {
+          const commande = commandes.find(item => item.id === ligne.commandeId)
+          if (!commande || commande.statut === 'ANNULEE' ||
+              !memeCampagneCommandes(commande.campagne, fiche.campagne)) {
+            throw new Error('Une commande entreprise liée est introuvable, annulée ou appartient à une autre campagne.')
+          }
+          if (ligne.quantiteLivree != null && ligne.quantiteLivree >
+            resteBriochesSurFiches(commande.quantite, fichesCaisse, 'ENTREPRISE', commande.id,
+              fiche.campagne, memeCampagneCommandes, fiche.id)) {
+            throw new Error(`La quantité remise dépasse le solde de la commande ${commande.numero}.`)
+          }
         }
       }
 
@@ -1579,6 +1611,26 @@ const pageButtons = Array.from(
           fiche,
         ),
       ])
+
+    const affectationsExcel = fiche.type === 'ENTREPRISE'
+      ? affectationsCommandesEntreprise(fiche).map(ligne => ({
+          numero: commandes.find(c => c.id === ligne.commandeId)?.numero ?? String(ligne.commandeId),
+          montant: ligne.montant,
+          quantiteLivree: ligne.quantiteLivree,
+        }))
+      : fiche.type === 'MAIRIE'
+        ? affectationsCommandesMairieRs(fiche).map(ligne => ({
+            numero: commandesMairiesRs.find(c => c.id === ligne.commandeId)?.numero ?? ligne.commandeId,
+            montant: ligne.montant,
+            quantiteLivree: ligne.quantiteLivree,
+          })) : []
+    if (affectationsExcel.length) {
+      worksheet.addRow([])
+      worksheet.addRow(['COMMANDES LIÉES', 'BRIOCHES REMISES', 'MONTANT ENCAISSÉ'])
+      affectationsExcel.forEach(ligne => worksheet.addRow([ligne.numero, ligne.quantiteLivree ?? '', ligne.montant]))
+      worksheet.addRow(['TOTAL AFFECTÉ', '', totalAffecteFiche(fiche)])
+      worksheet.addRow(['RESTE NON AFFECTÉ', '', Math.round((montantEncaisseFiche(fiche) - totalAffecteFiche(fiche)) * 100) / 100])
+    }
 
     if (
       fiche.remarque
@@ -2625,11 +2677,36 @@ const pageButtons = Array.from(
       },
     )
 
-    /*
-     * Aucun doc.addPage()
-     * dans ce PDF individuel.
-     * Il restera donc sur une seule feuille.
-     */
+    // Annexe conditionnelle : traçabilité des commandes et des remises partielles.
+    const lignesCommandesPdf = fiche.type === 'ENTREPRISE'
+      ? affectationsCommandesEntreprise(fiche).map(ligne => ({
+          numero: commandes.find(c => c.id === ligne.commandeId)?.numero ?? String(ligne.commandeId),
+          quantite: ligne.quantiteLivree,
+          montant: ligne.montant,
+        }))
+      : fiche.type === 'MAIRIE'
+        ? affectationsCommandesMairieRs(fiche).map(ligne => ({
+            numero: commandesMairiesRs.find(c => c.id === ligne.commandeId)?.numero ?? String(ligne.commandeId),
+            quantite: ligne.quantiteLivree,
+            montant: ligne.montant,
+          })) : []
+    if (lignesCommandesPdf.length) {
+      doc.addPage()
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(14)
+      doc.setTextColor(6, 59, 124)
+      doc.text(`COMMANDES LIÉES À LA FICHE ${fiche.numero}`, 14, 18)
+      autoTable(doc, {
+        startY: 26,
+        head: [['Commande', 'Brioches remises', 'Montant encaissé']],
+        body: lignesCommandesPdf.map(ligne => [ligne.numero,
+          ligne.quantite == null ? 'Non renseigné' : String(ligne.quantite),
+          formatMoneyPdf(ligne.montant)]),
+        foot: [['TOTAL', String(lignesCommandesPdf.reduce((total, ligne) => total + (ligne.quantite ?? 0), 0)),
+          formatMoneyPdf(totalAffecteFiche(fiche))]],
+        theme: 'grid',
+      })
+    }
 
     doc.save(
       `${fiche.numero}_${safeFilename(
@@ -3787,6 +3864,8 @@ const pageButtons = Array.from(
           fiche={
             detailFiche
           }
+          commandes={commandes}
+          commandesMairiesRs={commandesMairiesRs}
           onClose={() =>
             setDetailFiche(
               null,
@@ -3856,12 +3935,16 @@ const pageButtons = Array.from(
 
 function FicheDetailModal({
   fiche,
+  commandes,
+  commandesMairiesRs,
   onClose,
   onEdit,
   onPdf,
   onExcel,
 }: {
   fiche: FicheCaisse
+  commandes: ReturnType<typeof useObData>['commandes']
+  commandesMairiesRs: CommandeMairieRs[]
   onClose: () => void
   onEdit: () => void
   onPdf: () => void
@@ -4021,6 +4104,25 @@ function FicheDetailModal({
             </div>
 
           </section>
+
+          {(fiche.type === 'MAIRIE' ? affectationsCommandesMairieRs(fiche).length :
+            fiche.type === 'ENTREPRISE' ? affectationsCommandesEntreprise(fiche).length : 0) > 0 && (
+            <section className="fiche-detail-card fiche-detail-commandes">
+              <h3>Répartition du retour de fonds entre les commandes</h3>
+              {(fiche.type === 'MAIRIE' ? affectationsCommandesMairieRs(fiche) : []).map(ligne => {
+                const commande = commandesMairiesRs.find(item => item.id === ligne.commandeId)
+                return <InfoLine key={ligne.commandeId} label={`${commande?.numero ?? ligne.commandeId} · ${commande?.quiPasseCommande ?? 'Commande Mairie / RS'}`} value={`${formatMoney(ligne.montant)}${ligne.quantiteLivree == null ? '' : ` · ${ligne.quantiteLivree} brioche(s) remise(s)`}`} />
+              })}
+              {(fiche.type === 'ENTREPRISE' ? affectationsCommandesEntreprise(fiche) : []).map(ligne => {
+                const commande = commandes.find(item => item.id === ligne.commandeId)
+                return <InfoLine key={ligne.commandeId} label={`${commande?.numero ?? ligne.commandeId} · Bon entreprise`} value={`${formatMoney(ligne.montant)}${ligne.quantiteLivree == null ? '' : ` · ${ligne.quantiteLivree} brioche(s) remise(s)`}`} />
+              })}
+              <div className="fiche-detail-card-total"><span>Brioches remises sur cette fiche</span><strong>{fiche.type === 'MAIRIE'
+                ? affectationsCommandesMairieRs(fiche).reduce((s, ligne) => s + (ligne.quantiteLivree ?? 0), 0)
+                : affectationsCommandesEntreprise(fiche).reduce((s, ligne) => s + (ligne.quantiteLivree ?? 0), 0)}</strong></div>
+              <div className="fiche-detail-card-total"><span>Total affecté aux commandes</span><strong>{formatMoney(totalAffecteFiche(fiche))}</strong></div>
+            </section>
+          )}
 
           <div className="fiche-detail-kpis">
 
@@ -4451,7 +4553,13 @@ function FicheCaisseModal({
   const [standsClotures] = useState(lireStandsClotures)
 
   const [form, setForm] = useState<FicheCaisse>(() => {
-    if (fiche) return { ...fiche }
+    if (fiche) return {
+      ...fiche,
+      affectationsCommandesEntreprise: affectationsCommandesEntreprise(fiche),
+      affectationsCommandesMairieRs: affectationsCommandesMairieRs(fiche),
+      commandeId: undefined,
+      commandeMairieRsId: undefined,
+    }
     const initial = createEmptyFiche(fiches)
     const preselect = commandesMairiesRs.find(item =>
       item.id === commandeMairieRsInitiale &&
@@ -4463,7 +4571,7 @@ function FicheCaisseModal({
       campagne: campagneActive || initial.campagne,
       ...(preselect ? {
         type: 'MAIRIE' as const,
-        commandeMairieRsId: preselect.id,
+        affectationsCommandesMairieRs: [{ commandeId: preselect.id, montant: 0, quantiteLivree: 0 }],
         libelle: preselect.quiPasseCommande,
         secteur: preselect.secteur,
       } : {}),
@@ -4536,9 +4644,11 @@ function FicheCaisseModal({
     setForm(current => ({
       ...current,
       type,
-      commandeId: type === 'ENTREPRISE' ? current.commandeId : undefined,
+      commandeId: undefined,
+      affectationsCommandesEntreprise: type === 'ENTREPRISE' ? current.affectationsCommandesEntreprise : [],
       donateurId: type === 'ENTREPRISE' ? current.donateurId : undefined,
-      commandeMairieRsId: type === 'MAIRIE' ? current.commandeMairieRsId : undefined,
+      commandeMairieRsId: undefined,
+      affectationsCommandesMairieRs: type === 'MAIRIE' ? current.affectationsCommandesMairieRs : [],
       etablissementId: type === 'ETABLISSEMENT' ? current.etablissementId : undefined,
       standId: type === 'STAND' ? current.standId : undefined,
       enveloppeRetourSiege: type === 'ETABLISSEMENT' ? current.enveloppeRetourSiege : false,
@@ -4546,17 +4656,46 @@ function FicheCaisseModal({
     }))
   }
 
-  // Les références de commande sont liées à la fiche de caisse (commandeId).
-  // On normalise OB2026 / OB 2026 / 2026 pour ne pas mélanger les campagnes.
-  const campagneAnnee = (value: string) =>
-    String(value || '').match(/(?:19|20)\d{2}/)?.[0] ?? String(value || '').trim().toUpperCase()
+  // Les remises partielles sont associées aux fiches, pas soustraites du bon d'origine.
+  // On exclut la fiche en cours d'édition pour éviter un double comptage.
+  const resteCommandeEntreprise = (commandeId: number, quantite: number) =>
+    resteBriochesSurFiches(quantite, fiches, 'ENTREPRISE', commandeId,
+      form.campagne, memeCampagneCommandes, fiche?.id)
+  const resteCommandeMairie = (commandeId: string, quantite: number) =>
+    resteBriochesSurFiches(quantite, fiches, 'MAIRIE', commandeId,
+      form.campagne, undefined, fiche?.id)
+
+  function changerQuantiteEntreprise(id: number, quantite: number) {
+    setForm(current => ({
+      ...current,
+      affectationsCommandesEntreprise: affectationsCommandesEntreprise(current).map(ligne => {
+        if (ligne.commandeId !== id) return ligne
+        const commande = bonsDeCommande.find(item => item.id === id)
+        const plafond = commande ? resteCommandeEntreprise(id, commande.quantite) : 0
+        return { ...ligne, quantiteLivree: Math.min(plafond, Math.max(0, Math.trunc(quantite || 0))) }
+      }),
+    }))
+  }
+
+  function changerQuantiteMairie(id: string, quantite: number) {
+    setForm(current => ({
+      ...current,
+      affectationsCommandesMairieRs: affectationsCommandesMairieRs(current).map(ligne => {
+        if (ligne.commandeId !== id) return ligne
+        const commande = bonsMairiesRs.find(item => item.id === id)
+        const plafond = commande ? resteCommandeMairie(id, commande.quantite) : 0
+        return { ...ligne, quantiteLivree: Math.min(plafond, Math.max(0, Math.trunc(quantite || 0))) }
+      }),
+    }))
+  }
+
+  // Une fiche peut ventiler un même retour de fonds sur plusieurs commandes.
 
   const bonsDeCommande = useMemo(() => {
-    const annee = campagneAnnee(form.campagne || campagneActive)
     return commandes
       .filter(commande =>
         commande.statut !== 'ANNULEE' &&
-        campagneAnnee(commande.campagne) === annee,
+        memeCampagneCommandes(commande.campagne, form.campagne || campagneActive),
       )
       .sort((a, b) => a.numero.localeCompare(b.numero, 'fr', { numeric: true }))
   }, [commandes, form.campagne, campagneActive])
@@ -4566,42 +4705,107 @@ function FicheCaisseModal({
     .sort((a, b) => a.numero.localeCompare(b.numero, 'fr', { numeric: true })),
   [commandesMairiesRs, form.campagne])
 
-  function choisirCommandeMairieRs(id: string) {
+  function ajouterCommandeMairieRs(id: string) {
     const commande = bonsMairiesRs.find(item => item.id === id)
-    if (!commande) {
-      setForm(current => ({ ...current, commandeMairieRsId: undefined }))
-      return
-    }
+    if (!commande) return
+    setForm(current => {
+      const existing = affectationsCommandesMairieRs(current)
+      if (existing.some(item => item.commandeId === id)) return current
+      const disponible = Math.max(0, Math.round((montantEncaisseFiche(current) - totalAffecteFiche(current)) * 100) / 100)
+      return {
+        ...current,
+        commandeMairieRsId: undefined,
+        affectationsCommandesMairieRs: [...existing, {
+          commandeId: commande.id,
+          montant: Math.min(disponible, Math.max(0, commande.donPrevu)),
+          quantiteLivree: 0,
+        }],
+        ...(existing.length ? {} : { libelle: commande.quiPasseCommande, secteur: commande.secteur }),
+      }
+    })
+  }
+
+  function ajouterCommandeEntreprise(value: string) {
+    const commande = bonsDeCommande.find(item => item.id === Number(value))
+    if (!commande) return
+    const donateur = getDonateurById(commande.donateurId)
+    setForm(current => {
+      const existing = affectationsCommandesEntreprise(current)
+      if (existing.some(item => item.commandeId === commande.id)) return current
+      const disponible = Math.max(0, Math.round((montantEncaisseFiche(current) - totalAffecteFiche(current)) * 100) / 100)
+      const nouvelle = [...existing, {
+        commandeId: commande.id,
+        montant: Math.min(disponible, Math.max(0, commande.quantite * commande.prixUnitaire)),
+        quantiteLivree: 0,
+      }]
+      const idsDonateurs = nouvelle.map(ligne => bonsDeCommande.find(item => item.id === ligne.commandeId)?.donateurId)
+      const donateurCommun = idsDonateurs.every(id => id === idsDonateurs[0]) ? idsDonateurs[0] : undefined
+      return {
+        ...current,
+        commandeId: undefined,
+        affectationsCommandesEntreprise: nouvelle,
+        donateurId: donateurCommun,
+        ...(existing.length ? {} : {
+          libelle: donateur?.nom ?? current.libelle,
+          cp: donateur?.cp ?? current.cp,
+          ville: donateur?.ville ?? current.ville,
+        }),
+      }
+    })
+  }
+
+  function retirerCommandeEntreprise(id: number) {
+    setForm(current => {
+      const reste = affectationsCommandesEntreprise(current).filter(ligne => ligne.commandeId !== id)
+      const idDonateurs = reste.map(ligne => bonsDeCommande.find(item => item.id === ligne.commandeId)?.donateurId)
+      return {
+        ...current,
+        commandeId: undefined,
+        affectationsCommandesEntreprise: reste,
+        donateurId: reste.length && idDonateurs.every(d => d === idDonateurs[0]) ? idDonateurs[0] : undefined,
+      }
+    })
+  }
+
+  function repartirCommandes() {
+    setForm(current => {
+      let reste = Math.max(0, Math.round(montantEncaisseFiche(current) * 100))
+      if (current.type === 'MAIRIE') {
+        return {
+          ...current,
+          affectationsCommandesMairieRs: affectationsCommandesMairieRs(current).map(ligne => {
+            const commande = bonsMairiesRs.find(item => item.id === ligne.commandeId)
+            const cents = Math.min(reste, Math.max(0, Math.round((commande?.donPrevu ?? 0) * 100)))
+            reste -= cents
+            return { ...ligne, montant: cents / 100 }
+          }),
+        }
+      }
+      return {
+        ...current,
+        affectationsCommandesEntreprise: affectationsCommandesEntreprise(current).map(ligne => {
+          const commande = bonsDeCommande.find(item => item.id === ligne.commandeId)
+          const cents = Math.min(reste, Math.max(0, Math.round((commande?.quantite ?? 0) * (commande?.prixUnitaire ?? 0) * 100)))
+          reste -= cents
+          return { ...ligne, montant: cents / 100 }
+        }),
+      }
+    })
+  }
+
+  function changerMontantEntreprise(id: number, montant: number) {
     setForm(current => ({
       ...current,
-      type: 'MAIRIE',
-      campagne: commande.campagne,
-      commandeMairieRsId: commande.id,
-      commandeId: undefined,
-      donateurId: undefined,
-      libelle: commande.quiPasseCommande,
-      secteur: commande.secteur,
+      affectationsCommandesEntreprise: affectationsCommandesEntreprise(current).map(ligne =>
+        ligne.commandeId === id ? { ...ligne, montant } : ligne),
     }))
   }
 
-  function choisirBonDeCommande(value: string) {
-    const id = Number(value)
-    const commande = bonsDeCommande.find(item => item.id === id)
-    if (!commande) {
-      setForm(current => ({ ...current, commandeId: undefined, donateurId: undefined }))
-      return
-    }
-    const donateur = getDonateurById(commande.donateurId)
+  function changerMontantMairieRs(id: string, montant: number) {
     setForm(current => ({
       ...current,
-      type: 'ENTREPRISE',
-      commandeId: commande.id,
-      commandeMairieRsId: undefined,
-      donateurId: commande.donateurId,
-      campagne: commande.campagne,
-      libelle: donateur?.nom ?? current.libelle,
-      cp: donateur?.cp ?? current.cp,
-      ville: donateur?.ville ?? current.ville,
+      affectationsCommandesMairieRs: affectationsCommandesMairieRs(current).map(ligne =>
+        ligne.commandeId === id ? { ...ligne, montant } : ligne),
     }))
   }
 
@@ -4683,11 +4887,16 @@ function FicheCaisseModal({
       return
     }
 
+    const probleme = verifierMontantsAffectes(form)
+    if (probleme) {
+      setError(probleme)
+      return
+    }
     onSave({
       ...form,
-
-      libelle:
-        form.libelle.trim(),
+      commandeId: undefined,
+      commandeMairieRsId: undefined,
+      libelle: form.libelle.trim(),
     })
   }
 
@@ -4848,8 +5057,10 @@ function FicheCaisseModal({
                         ...current,
                         campagne: event.target.value,
                         commandeId: undefined,
+                        affectationsCommandesEntreprise: [],
                         donateurId: undefined,
                         commandeMairieRsId: undefined,
+                        affectationsCommandesMairieRs: [],
                         standId: undefined,
                         ...(current.type === 'STAND' ? { libelle: '', ville: '', cp: '', secteur: '' } : {}),
                       }))
@@ -4858,52 +5069,88 @@ function FicheCaisseModal({
                 </FormField>
 
                 {form.type === 'MAIRIE' && (
-                  <FormField label="Commande Mairie / RS" wide>
-                    <select
-                      value={form.commandeMairieRsId ?? ''}
-                      onChange={event => choisirCommandeMairieRs(event.target.value)}
-                      aria-label="Lier la fiche à une commande Mairie ou RS"
-                    >
-                      <option value="">— Aucune commande liée —</option>
-                      {bonsMairiesRs.map(item => (
-                        <option key={item.id} value={item.id}>
-                          {item.numero} · {item.quiPasseCommande} · {item.quantite} brioches
-                          · prévu {item.donPrevu.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
-                        </option>
-                      ))}
-                    </select>
-                    <small className="fiche-commande-hint">
-                      La somme des fiches contrôlées liées alimentera automatiquement le don reçu
-                      et l’écart de cette commande. Plusieurs fiches peuvent être rattachées.
-                      La saisie historique ne sera pas ajoutée une deuxième fois.
-                    </small>
-                  </FormField>
+                  <div className="fiche-form-field wide">
+                  <span>Commandes Mairie / RS liées au retour de fonds</span>
+                    <div className="fiche-commandes-liees">
+                      <select value="" onChange={event => ajouterCommandeMairieRs(event.target.value)} aria-label="Ajouter une commande Mairie ou RS">
+                        <option value="">+ Ajouter une commande Mairie / RS</option>
+                        {bonsMairiesRs.filter(item => !affectationsCommandesMairieRs(form).some(ligne => ligne.commandeId === item.id)).map(item => (
+                          <option key={item.id} value={item.id}>
+                            {item.numero} · {item.quiPasseCommande} · {item.quantite} brioches · prévu {formatMoney(item.donPrevu)}
+                          </option>
+                        ))}
+                      </select>
+                      {affectationsCommandesMairieRs(form).map(ligne => {
+                        const commande = bonsMairiesRs.find(item => item.id === ligne.commandeId)
+                        return (
+                          <div className="fiche-commande-ligne" key={ligne.commandeId}>
+                            <span><strong>{commande?.numero ?? 'Commande introuvable'}</strong> · {commande?.quiPasseCommande ?? ligne.commandeId}</span>
+                            <label>Brioches remises sur ce retour
+                              <input type="number" min="0" step="1" max={commande ? resteCommandeMairie(ligne.commandeId, commande.quantite) : 0}
+                                value={ligne.quantiteLivree ?? 0} onChange={event => changerQuantiteMairie(ligne.commandeId, Number(event.target.value))}/>
+                              <small>{commande ? resteCommandeMairie(ligne.commandeId, commande.quantite) : 0} à remettre avant cette fiche · après : {Math.max(0, (commande ? resteCommandeMairie(ligne.commandeId, commande.quantite) : 0) - (ligne.quantiteLivree ?? 0))}</small>
+                            </label>
+                            <label>Montant encaissé (€)
+                              <input type="number" min="0" step="0.01" value={ligne.montant} onChange={event => changerMontantMairieRs(ligne.commandeId, Number(event.target.value))}/>
+                            </label>
+                            <button type="button" onClick={() => setForm(current => ({ ...current, affectationsCommandesMairieRs: affectationsCommandesMairieRs(current).filter(item => item.commandeId !== ligne.commandeId) }))} aria-label={`Retirer la commande ${commande?.numero ?? ligne.commandeId}`} title="Retirer cette commande"><X size={18}/></button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )}
 
                 {form.type === 'ENTREPRISE' && (
-                  <FormField label="Bon de commande entreprise" wide>
-                    <select
-                      value={form.commandeId ?? ''}
-                      onChange={event => choisirBonDeCommande(event.target.value)}
-                      aria-label="Sélectionner un bon de commande entreprise"
-                    >
-                      <option value="">— Sélectionner un bon de commande —</option>
-                      {bonsDeCommande.map(commande => {
-                        const donateur = getDonateurById(commande.donateurId)
-                        const montant = Number(commande.quantite || 0) * Number(commande.prixUnitaire || 0)
-                        return (
-                          <option key={commande.id} value={commande.id}>
-                            {commande.numero} · {donateur?.nom ?? 'Donateur inconnu'} · {commande.quantite} brioches · {montant.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                  <div className="fiche-form-field wide">
+                  <span>Bons de commande entreprise liés au retour de fonds</span>
+                    <div className="fiche-commandes-liees">
+                      <select value="" onChange={event => ajouterCommandeEntreprise(event.target.value)} aria-label="Ajouter un bon de commande entreprise">
+                        <option value="">+ Ajouter un bon de commande</option>
+                        {bonsDeCommande.filter(commande => !affectationsCommandesEntreprise(form).some(ligne => ligne.commandeId === commande.id)).map(commande => {
+                          const donateur = getDonateurById(commande.donateurId)
+                          return <option key={commande.id} value={commande.id}>
+                            {commande.numero} · {donateur?.nom ?? 'Donateur inconnu'} · {commande.quantite} brioches · {formatMoney(commande.quantite * commande.prixUnitaire)}
                           </option>
+                        })}
+                      </select>
+                      {affectationsCommandesEntreprise(form).map(ligne => {
+                        const commande = bonsDeCommande.find(item => item.id === ligne.commandeId)
+                        const donateur = commande ? getDonateurById(commande.donateurId) : undefined
+                        return (
+                          <div className="fiche-commande-ligne" key={ligne.commandeId}>
+                            <span><strong>{commande?.numero ?? 'Commande introuvable'}</strong> · {donateur?.nom ?? 'Donateur inconnu'}</span>
+                            <label>Brioches remises sur ce retour
+                              <input type="number" min="0" step="1" max={commande ? resteCommandeEntreprise(ligne.commandeId, commande.quantite) : 0}
+                                value={ligne.quantiteLivree ?? 0} onChange={event => changerQuantiteEntreprise(ligne.commandeId, Number(event.target.value))}/>
+                              <small>{commande ? resteCommandeEntreprise(ligne.commandeId, commande.quantite) : 0} à remettre avant cette fiche · après : {Math.max(0, (commande ? resteCommandeEntreprise(ligne.commandeId, commande.quantite) : 0) - (ligne.quantiteLivree ?? 0))}</small>
+                            </label>
+                            <label>Montant encaissé (€)
+                              <input type="number" min="0" step="0.01" value={ligne.montant} onChange={event => changerMontantEntreprise(ligne.commandeId, Number(event.target.value))}/>
+                            </label>
+                            <button type="button" onClick={() => retirerCommandeEntreprise(ligne.commandeId)} aria-label={`Retirer le bon ${commande?.numero ?? ligne.commandeId}`} title="Retirer cette commande"><X size={18}/></button>
+                          </div>
                         )
                       })}
-                    </select>
-                    <small className="fiche-commande-hint">
-                      {bonsDeCommande.length === 0
-                        ? 'Aucun bon de commande actif pour cette campagne.'
-                        : 'Choisis la commande pour relier automatiquement cette fiche de caisse au suivi des règlements.'}
-                    </small>
-                  </FormField>
+                    </div>
+                  </div>
+                )}
+
+                {(form.type === 'MAIRIE' || form.type === 'ENTREPRISE') && (
+                  <div className="fiche-commandes-repartition">
+                    <div>
+                      <span>Encaissement disponible : <strong>{formatMoney(montantEncaisseFiche(form))}</strong></span>
+                      <span>Affecté aux commandes : <strong>{formatMoney(totalAffecteFiche(form))}</strong></span>
+                      <span className={totalAffecteFiche(form) > montantEncaisseFiche(form) + 0.005 ? 'fiche-repartition-erreur' : ''}>
+                        Reste non affecté : <strong>{formatMoney(Math.round((montantEncaisseFiche(form) - totalAffecteFiche(form)) * 100) / 100)}</strong>
+                      </span>
+                    </div>
+                    <button type="button" className="fiche-repartition-auto" onClick={repartirCommandes}
+                      disabled={form.type === 'MAIRIE' ? !affectationsCommandesMairieRs(form).length : !affectationsCommandesEntreprise(form).length}>
+                      Répartir automatiquement
+                    </button>
+                    <small className="fiche-commande-hint">Une remise partielle est autorisée : indique les brioches effectivement remises et le nombre restant se met à jour. Tu peux enregistrer 0 € si le règlement arrive plus tard. La commande initiale reste inchangée pour l'historique. Le total des montants attribués ne peut cependant pas dépasser les fonds réellement encaissés. Les remises déclarées ici ne déclenchent pas un second mouvement de stock.</small>
+                  </div>
                 )}
 
                 <FormField label="Structure / Nom" wide>

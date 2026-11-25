@@ -1,0 +1,24 @@
+/* Outils de communication : sous-fiche autonome dans les détails d'un stand */
+.ob-com-stand-tools { margin: 14px 0 12px; padding: 16px; background: #f7fbff; border: 1px solid #d9e6f2; border-radius: 14px; color: #17426b; }
+.ob-com-stand-tools__header { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+.ob-com-stand-tools__header h3 { margin:0 0 5px; font-size:16px; display:flex; align-items:center; gap:7px; color:#073b79; }
+.ob-com-stand-tools__header p,.ob-com-stand-tools__muted { color:#6d8299; font-size:12px; margin:0; }
+.ob-com-stand-tools__muted { margin:12px 0 0; }
+.ob-com-stand-tools__muted a { color:#12548a; font-weight:700; }
+.ob-com-stand-tools__primary { background:#0d4b87 !important; color:white !important; border-color:#0d4b87 !important; }
+.ob-com-stand-tools button { border:1px solid #d3e2ef; background:white; color:#154a79; padding:7px 10px; border-radius:8px; display:inline-flex; gap:5px; align-items:center; font-size:12px; font-weight:750; cursor:pointer; }
+.ob-com-stand-tools__list { display:grid; gap:8px; margin-top:12px; }
+.ob-com-stand-tools__line { background:white; border:1px solid #e0eaf3; border-radius:9px; padding:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+.ob-com-stand-tools__line > div:first-child { display:grid; gap:3px; }
+.ob-com-stand-tools__line strong { font-size:13px; }
+.ob-com-stand-tools__line small { font-size:11px; color:#617991; }
+.ob-com-stand-tools__actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.ob-com-stand-tools__form { background:#fff; border:1px solid #dbe7f2; border-radius:10px; padding:14px; display:grid; gap:12px; margin-top:12px; }
+.ob-com-stand-tools__form h4 { margin:0; }
+.ob-com-stand-tools__fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.ob-com-stand-tools__fields label { display:grid; font-size:12px; font-weight:750; gap:5px; color:#254d70; }
+.ob-com-stand-tools__fields input, .ob-com-stand-tools__fields select { width:100%; padding:9px; min-width:0; border-radius:7px; border:1px solid #cbdcea; color:#183f65; background:white; box-sizing:border-box; }
+.ob-com-stand-tools__full { grid-column:1/-1; }
+.ob-com-stand-tools__error { color:#9c2d2d; font-size:12px; }
+.ob-com-stand-tools__success { color:#12764b; font-size:12px; }
+@media (max-width:700px) { .ob-com-stand-tools__fields { grid-template-columns:1fr; } .ob-com-stand-tools__header { align-items:flex-start; flex-wrap:wrap; } }

@@ -193,6 +193,7 @@ export default function StockBrioches() {
   }
   function supprimer(item: Mouvement) {
     if (item.id.startsWith('achat-reception-')) return setErreur('Cette réception provient d’une commande achat. Corrigez la livraison depuis le module Commandes achats.')
+    if (item.id.startsWith('mecenat-reception-')) return setErreur('Réception issue du Mécénat : pour préserver la traçabilité, corrigez la quantité via un ajustement de stock justifié.')
     if (!estAutorise(item.etablissementId) || (item.destinationId && !estAutorise(item.destinationId))) return setErreur('Mouvement hors de votre périmètre.')
     if (!window.confirm('Supprimer ce mouvement de démonstration ?')) return
     const next = mouvements.filter(m => m.id !== item.id)

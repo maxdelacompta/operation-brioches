@@ -62,6 +62,7 @@ import { useJustificatifs } from '../contexts/JustificatifsContext'
 import { generateAndDownloadJustificatifPdf } from '../services/justificatifPdf'
 import type { JustificatifDon } from '../types/justificatifs'
 import { memeCampagneCommande } from '../lib/commandeCampaign'
+import { resteBriochesSurFiches, totalBriochesRemisesSurFiches } from '../lib/ficheCaisseCommandes'
 
 import './Commandes.css'
 
@@ -151,6 +152,7 @@ function Commandes() {
   const {
     donateurs,
     commandes,
+    fichesCaisse,
     setCommandes,
     selectedCampagne,
     activeCampagne,
@@ -1484,7 +1486,11 @@ function Commandes() {
                               <StatutBadge statut={commande.statut}/>
                             </div>
                             <div className="commande-structure-order-actions">
-                              <span>{formatNumber(commande.quantite)} brioches · {formatMoney(commande.quantite * commande.prixUnitaire)}</span>
+                              <span>{formatNumber(commande.quantite)} brioches · {formatMoney(commande.quantite * commande.prixUnitaire)}
+                {totalBriochesRemisesSurFiches(fichesCaisse, 'ENTREPRISE', commande.id, commande.campagne, memeCampagneEntreprise) > 0 && (
+                  <> · <strong>{resteBriochesSurFiches(commande.quantite, fichesCaisse, 'ENTREPRISE', commande.id, commande.campagne, memeCampagneEntreprise)} restantes (fiches)</strong></>
+                )}
+              </span>
                               <button type="button" onClick={() => setSelectedCommande(commande)}>Voir la commande</button>
                               <Link to={`/finance/justificatifs-dons?commande=${commande.id}`} className="commande-jd-link">
                                 <FileDown size={14}/> JDI / JDP
@@ -1755,9 +1761,12 @@ function Commandes() {
                                 </td>
 
                                 <td className="commande-quantity">
-                                  {
-                                    commande.quantite
-                                  }
+                                  {commande.quantite}
+                                  {totalBriochesRemisesSurFiches(fichesCaisse, 'ENTREPRISE', commande.id, commande.campagne, memeCampagneEntreprise) > 0 && (
+                                    <small style={{display: 'block', color: '#22618b', whiteSpace: 'nowrap'}}>
+                                      {resteBriochesSurFiches(commande.quantite, fichesCaisse, 'ENTREPRISE', commande.id, commande.campagne, memeCampagneEntreprise)} restantes (fiches)
+                                    </small>
+                                  )}
                                 </td>
 
                                 <td>
@@ -1989,6 +1998,7 @@ function CommandeDetail({
 }) {
   const {
     donateurs,
+    fichesCaisse,
   } = useObData()
 
   const donateur =
@@ -2273,6 +2283,14 @@ function CommandeDetail({
               commande.quantite,
             )}
           />
+
+          {totalBriochesRemisesSurFiches(fichesCaisse, 'ENTREPRISE', commande.id, commande.campagne, memeCampagneEntreprise) > 0 && (
+            <CommandeInfoRow
+              label="Reste à remettre (selon fiches de caisse)"
+              value={String(resteBriochesSurFiches(commande.quantite, fichesCaisse,
+                'ENTREPRISE', commande.id, commande.campagne, memeCampagneEntreprise))}
+            />
+          )}
 
           <CommandeInfoRow
             label="Prix unitaire"

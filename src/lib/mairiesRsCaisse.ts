@@ -1,6 +1,7 @@
 import type { FicheCaisse } from '../types/ob'
 import type { CommandeMairieRs } from '../types/commandesMairiesRs'
 import { cashChannels, sumChannels } from './dashboardMetrics'
+import { affectationsCommandesMairieRs } from './ficheCaisseCommandes'
 
 /** Centimes pour éviter les écarts d'arrondi en cumulant plusieurs encaissements. */
 const cents = (value: number): number => Math.round((Number(value) || 0) * 100)
@@ -28,12 +29,19 @@ export function bilanCaisseMairieRs(
   fiches: readonly FicheCaisse[],
 ): BilanCaisseMairieRs {
   const liees = fiches.filter(fiche =>
-    fiche.commandeMairieRsId === commande.id &&
+    // Une remise de brioches sans règlement (montant = 0) ne doit pas
+    // écraser le don déjà enregistré à l'historique.
+    affectationsCommandesMairieRs(fiche).some(ligne => ligne.commandeId === commande.id && ligne.montant > 0) &&
     fiche.campagne === commande.campagne &&
     fiche.type === 'MAIRIE' &&
     fiche.statutCoffre === 'CONTROLEE',
   )
-  const montantFiches = liees.reduce((total, fiche) => total + cents(montantFicheCaisse(fiche)), 0) / 100
+  // On n'impute que la quote-part de chaque fiche affectée à cette commande.
+  // Une même fiche reliée à plusieurs commandes ne doit jamais être comptée en totalité pour chacune.
+  const montantFiches = liees.reduce((total, fiche) => {
+    const ligne = affectationsCommandesMairieRs(fiche).find(item => item.commandeId === commande.id)
+    return total + cents(ligne?.montant ?? 0)
+  }, 0) / 100
   const historique = commande.donRecu
   const recu = liees.length > 0 ? montantFiches : historique
   return {

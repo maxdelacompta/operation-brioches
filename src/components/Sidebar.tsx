@@ -76,6 +76,9 @@ const sections: SidebarSection[] = [
         label: 'Stands Brioches',
         to: '/gestion/stands-brioches',
       },
+      { label: 'Matériel de communication', to: '/gestion/materiel-communication' },
+      { label: 'Véhicules', to: '/gestion/vehicules' },
+      { label: 'Écoles', to: '/gestion/ecoles' },
     ],
   },
   {
@@ -177,6 +180,7 @@ const sections: SidebarSection[] = [
         label: 'Mécénat',
         to: '/finance/mecenat',
       },
+      { label: 'Sponsoring', to: '/finance/sponsoring' },
       {
         label: 'Pertes / Écarts',
         to: '/finance/pertes-ecarts',

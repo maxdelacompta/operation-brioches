@@ -4,6 +4,11 @@
   padding: 4px 0 2px;
 }
 
+.campaign-conventions { display: grid; gap: 15px; padding-top: 24px; border-top: 1px solid #e2e9f2; }
+.campaign-conventions-help, .campaign-conventions-local { margin: 0; color: #65758d; font-size: 13px; line-height: 1.6; }
+.campaign-conventions-help code { padding: 2px 5px; border-radius: 5px; color: #174576; background: #eef4fa; }
+.campaign-conventions-local { font-style: italic; }
+
 .campaign-jd-heading {
   display: flex;
   justify-content: space-between;

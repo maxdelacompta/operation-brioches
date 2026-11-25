@@ -1,0 +1,54 @@
+.com-manage { padding: 26px clamp(18px, 3vw, 44px) 50px; color: #193958; }
+.com-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 23px; }
+.com-heading span { color: #ed7819; font-size: 11px; letter-spacing: .1em; font-weight: 900; }
+.com-heading h1 { margin: 6px 0; font-size: clamp(26px, 2.5vw, 35px); color: #123d73; }
+.com-heading p { margin: 0 0 9px; color: #75849a; }
+.com-heading small { color: #215793; font-weight: 700; }
+.com-button { font: inherit; font-size: 13px; font-weight: 750; border: none; display: inline-flex; gap: 7px; align-items: center; justify-content: center; padding: 10px 13px; border-radius: 10px; cursor: pointer; text-decoration: none; }
+.com-button:disabled { opacity: .5; cursor: not-allowed; }
+.com-button.primary { background: #ed7819; color: white; box-shadow: 0 5px 12px #ed78191c; }
+.com-button.blue { background: #145598; color: white; }
+.com-button.light { background: #f0f5fa; color: #21507c; }
+.com-button.danger { background: #ffeded; color: #ac3030; }
+.com-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; margin-bottom: 20px; }
+.com-stats > div { border: 1px solid #e0e9f1; border-radius: 15px; background: white; padding: 18px; display: grid; gap: 7px; }
+.com-stats small { color: #71819a; }.com-stats strong { font-size: 23px; color: #194879; }
+.com-alert { display: flex; align-items: center; gap: 8px; padding: 12px 15px; border-radius: 10px; font-size: 13px; }
+.com-alert.error { color: #ad3636; background: #fff0f0; }.com-alert.success { color: #167b4d; background: #eaf8ef; }
+.com-layout { display: grid; grid-template-columns: minmax(250px, 310px) minmax(0, 1fr); align-items: start; gap: 18px; }
+.com-panel { background: #fff; border: 1px solid #e0e9f1; border-radius: 16px; padding: 20px; box-shadow: 0 6px 18px #17436d0a; min-width: 0; }
+.com-list { display: grid; gap: 10px; }.com-list label, .com-fields label, .com-benefit-details label, .com-notes { display: grid; gap: 6px; font-size: 12px; color: #67809c; font-weight: 750; }
+.com-manage input:not([type="checkbox"]), .com-manage select, .com-manage textarea { font: inherit; font-size: 14px; min-width: 0; width: 100%; box-sizing: border-box; padding: 11px; background: #fff; border: 1px solid #d7e1ec; border-radius: 8px; color: #193958; }
+.com-manage input:disabled, .com-manage select:disabled, .com-manage textarea:disabled { background: #f5f7fa; }
+.com-list-item { width: 100%; text-align: left; border: 1px solid #e3eaf1; background: #fbfcfe; color: #1a436f; border-radius: 11px; padding: 14px; cursor: pointer; display: grid; gap: 5px; }
+.com-list-item.selected { border-color: #ed7819; background: #fff9f2; }.com-list-item span { font-size: 12px; }.com-list-item small { color: #75859a; }
+.com-detail-head, .com-block-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }.com-detail-head h2 { margin: 0 0 17px; color: #164579; font-size: 22px; }
+.com-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.com-block { margin: 25px 0; padding: 19px; border: 1px solid #e0e8f1; border-radius: 12px; background: #fafcff; }.com-block h3 { margin: 0; color: #194675; }.com-block p { color: #6d7e94; margin: 5px 0 13px; font-size: 13px; }
+.com-actions { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }.com-file { position: relative; cursor: pointer; }.com-file input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.com-benefits { display: grid; gap: 10px; }.com-benefit { padding: 14px; border: 1px solid #e0e8f1; border-radius: 10px; background: white; display: grid; gap: 11px; }
+.com-benefit-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.com-benefit-head strong { color: #24537e; }
+.com-icon { border: none; background: none; color: #a94a4a; cursor: pointer; }.com-benefit-controls { display: flex; flex-wrap: wrap; gap: 23px; }
+.com-benefit-controls label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }.com-benefit-controls input { accent-color: #ed7819; width: 16px; height: 16px; }
+.com-benefit-details { display: grid; grid-template-columns: minmax(145px, 1fr) minmax(0, 2fr); gap: 11px; }
+.com-add-benefit { margin-top: 15px; display: flex; gap: 9px; }.com-notes { margin: 16px 0; }.com-bottom { justify-content: flex-end; border-top: 1px solid #e0e8f1; padding-top: 16px; }
+.com-empty { color: #70829c; padding: 60px 12px; text-align: center; }.com-empty svg { color: #ed7819; }.com-empty h2 { color: #1b4a7d; }.com-muted, .com-disclaimer { font-size: 13px; color: #77869b; }.com-disclaimer { margin-top: 20px; }
+.com-table { width: 100%; border-collapse: collapse; }.com-table th, .com-table td { text-align: left; border-bottom: 1px solid #e6edf3; padding: 12px 9px; font-size: 13px; }.com-table th { background: #f2f6fa; color: #1d527f; }.com-table td { vertical-align: middle; }
+.com-full { grid-column: 1 / -1; }.com-asset-row { display: flex; justify-content: space-between; align-items: center; gap: 9px; }.com-asset-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+@media (max-width: 1100px) { .com-layout { grid-template-columns: 1fr; }.com-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }.com-list > label { grid-column: 1 / -1; } }
+@media (max-width: 680px) { .com-heading { flex-direction: column; }.com-stats { grid-template-columns: 1fr; }.com-fields, .com-benefit-details, .com-list { grid-template-columns: 1fr; }.com-add-benefit { flex-direction: column; }.com-panel { padding: 14px; }.com-block { padding: 13px; } }
+
+/* Navigation dédiée à la gestion des véhicules (sans effet sur la page Matériel). */
+.com-vehicle-nav { display: flex; gap: 9px; flex-wrap: wrap; margin: 4px 0 20px; padding: 8px; border: 1px solid #dce7f2; border-radius: 14px; background: #f7fafd; }
+.com-vehicle-tab { display: inline-flex; align-items: center; gap: 9px; border: 1px solid transparent; background: transparent; color: #325b83; font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; padding: 11px 16px; border-radius: 10px; transition: background .15s, color .15s, border-color .15s; }
+.com-vehicle-tab:hover { background: #e9f1fa; }
+.com-vehicle-tab.active { background: white; color: #114a7f; border-color: #bad1e5; box-shadow: 0 3px 8px #1f4d780c; }
+.com-vehicle-tab:focus-visible { outline: 3px solid #ee8b31; outline-offset: 2px; }
+@media (max-width: 680px) { .com-vehicle-tab { flex: 1; justify-content: center; } }
+
+/* Répertoire des points de ravitaillement / recharge de la flotte. */
+.com-refuelling-energies { margin: 17px 0; border: 1px solid #dce7f2; border-radius: 12px; padding: 14px; display: flex; flex-wrap: wrap; gap: 13px 20px; }
+.com-refuelling-energies legend { font-size: 13px; font-weight: 750; color: #194675; padding: 0 5px; }
+.com-refuelling-energies label, .com-refuelling-active { display: inline-flex; gap: 8px; align-items: center; color: #194675; font-size: 13px; font-weight: 650; cursor: pointer; }
+.com-refuelling-energies input, .com-refuelling-active input { accent-color: #ed7819; width: 17px; height: 17px; }
+.com-refuelling-active { margin: 10px 0 20px; }

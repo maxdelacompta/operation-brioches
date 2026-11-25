@@ -26,6 +26,7 @@ type Props = {
   benevoles: Volunteer[]
   caisseLabels: string[]
   tpeLabels: string[]
+  communicationMaterials?: string[]
   distributed: number
   giftCount: number
   giftTotal: number
@@ -52,7 +53,7 @@ function SheetQR({ value, label }: { value: string; label: string }) {
   </div>
 }
 
-export default function FeuilleStand({ stand, benevoles, caisseLabels, tpeLabels, distributed, giftCount, giftTotal, onClose }: Props) {
+export default function FeuilleStand({ stand, benevoles, caisseLabels, tpeLabels, communicationMaterials = [], distributed, giftCount, giftTotal, onClose }: Props) {
   const counterUrl = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}/gestion/stands-brioches/${encodeURIComponent(stand.id)}/compteur`
   const teamsUrl = TEAMS_SUPPORT_URL
   const volunteers = useMemo(() => [
@@ -79,6 +80,7 @@ export default function FeuilleStand({ stand, benevoles, caisseLabels, tpeLabels
           <div><span>Caisse</span><strong>{caisseLabels.length ? `N° ${caisseLabels.join(', ')}` : stand.caissePrevue ? 'Prévue · non attribuée' : 'Non prévue'}</strong></div>
           <div><span>TPE</span><strong>{tpeLabels.length ? `N° ${tpeLabels.join(', ')}` : stand.tpePrevu ? 'Prévu · non attribué' : 'Non prévu'}</strong></div>
         </div>
+        <div className="ob-feuille-com-tools"><strong>Outils de communication affectés</strong><span>{communicationMaterials.length ? communicationMaterials.join(' · ') : 'Aucun outil de communication affecté'}</span></div>
         <h2>Suivi des brioches</h2>
         <div className="ob-feuille-numbers"><div>Quantité prévue <strong>{stand.briochesPrevues || 'Non précisée'}</strong></div><div>Déjà remises (déclaratif) <strong>{distributed}</strong></div><div>Dons sans brioche <strong>{giftCount}</strong></div><div>Montant des dons déclarés <strong>{giftTotal.toLocaleString('fr-FR',{style:'currency',currency:'EUR'})}</strong></div></div>
         <div className="ob-feuille-writing"><div>Brioches reçues (comptage) : __________________</div><div>Brioches restantes : __________________</div><div>Brioches distribuées : __________________</div><div>Écart / pertes : __________________</div></div>

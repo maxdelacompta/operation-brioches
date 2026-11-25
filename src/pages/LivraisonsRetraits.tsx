@@ -29,9 +29,10 @@ import {
 
 import { useObData } from '../contexts/ObDataContext'
 import type { Commande } from '../types/ob'
-import { campagneEstTest, cleAlerteLivraison, cleLivraisonMulti, conserverAffectationsMulti, memeCampagneCommande } from '../lib/commandeCampaign'
 import { useEtablissements } from '../contexts/EtablissementsContext'
 import { useUsers, type AppUser } from '../contexts/UsersContext'
+import { readAssets, type Asset } from '../services/communicationAssets'
+import VehicleRefuellingHint from '../components/VehicleRefuellingHint'
 import type {
   MissionLivraison,
   ModeLivraison,
@@ -85,9 +86,12 @@ type TourForm = {
   responsable: string
   retraitType: 'ETABLISSEMENT' | 'STAND'
   commandes: Record<string, { selected: boolean; heure: string }>
+  vehicleKind: '' | 'PERSONNEL' | 'AEIM' | 'ESAT'
+  vehicleId: string
+  personalPlate: string
 }
 
-type BenevoleLivraison = { id:string;nom:string;prenom:string;mission?:string;statut?:string;disponibilites?:string;peutEffectuerLivraisons?:boolean;departLivraison?:string;adresseDepart?:string }
+type BenevoleLivraison = { id:string;nom:string;prenom:string;mission?:string;statut?:string;disponibilites?:string;peutEffectuerLivraisons?:boolean;departLivraison?:string;adresseDepart?:string;utiliseVehiculePersonnel?:boolean|null;immatriculationVehicule?:string }
 type StandLivraison = { id:string; nom:string; date:string;lieu?:string;campagne?:string }
 type ChoixDepart = 'SIEGE' | 'DOMICILE' | 'AUTRE'
 const ADRESSE_SIEGE_DEFAUT = '6 allée de Saint-Cloud, 54600 Villers-lès-Nancy'
@@ -129,6 +133,7 @@ function readMultiAffectations(): Record<string, MultiAffectation> {
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, MultiAffectation> : {}
   } catch { return {} }
 }
+const keyMulti = (commandeId: number, ligneId: string) => `${commandeId}:${ligneId}`
 const anneeDe = (value: string) => value.match(/(?:19|20)\d{2}/)?.[0] ?? ''
 
 // Une livraison n'est réellement attribuée qu'avec un mode ET un responsable.
@@ -332,6 +337,9 @@ const TOUR_CHOIX_DEPART_KEY='ob-livraisons-choix-depart-v1'
 const TOUR_ADRESSES_AUTRES_KEY='ob-livraisons-adresses-autres-v1'
 const TOUR_ORDRE_KEY='ob-livraisons-ordre-v1'
 const TOUR_ALERTES_KEY='ob-livraisons-reattribution-v1'
+const TOUR_VEHICULES_KEY='ob-livraisons-vehicules-v1'
+type VehicleChoice = { kind:'PERSONNEL'|'AEIM'|'ESAT'; assetId?:string; personalPlate?:string }
+const formatPlate = (plate:string) => plate.trim().toLocaleUpperCase('fr-FR')
 function readObject<T>(key:string):Record<string,T>{
   try{const data:unknown=JSON.parse(localStorage.getItem(key)||'{}');return data&&typeof data==='object'&&!Array.isArray(data)?data as Record<string,T>:{} }
   catch{return {}}
@@ -354,9 +362,7 @@ function LivraisonsRetraitsCampagne() {
   const selection = useObData()
   const {commandes, setCommandes, getDonateurById, activeCampagne} = selection
   const campagne = selection.selectedCampagne ?? activeCampagne
-  const campagneId = campagne?.id ?? ''
   const campagneAnnee = anneeDe(campagne?.id ?? '')
-  const commandesCampagne = useMemo(() => commandes.filter(c => memeCampagneCommande(c.campagne, campagneId)), [commandes, campagneId])
   const periode = useMemo(() => periodeOperation(campagne), [campagne])
   const dateStorageKey = `ob-livraisons-jour-travail-v2:${campagne?.id ?? 'sans-campagne'}`
   const { etablissements } = useEtablissements()
@@ -368,10 +374,16 @@ function LivraisonsRetraitsCampagne() {
     return [siege.adresse.trim(), siege.codePostal.trim(), siege.ville.trim()].join(', ')
   }, [etablissements])
   const [benevolesLogistique,setBenevolesLogistique]=useState<BenevoleLivraison[]>(() => readArray('ob-bdd-benevoles-v1'))
+  const [vehicles, setVehicles] = useState<Asset[]>(() => readAssets().filter(a => a.kind === 'vehicule'))
+  const vehiclesAEIM = useMemo(() => vehicles.filter(a => (a.fleetOwner ?? 'AEIM') === 'AEIM'), [vehicles])
+  const vehiclesESAT = useMemo(() => vehicles.filter(a => a.fleetOwner === 'ESAT'), [vehicles])
+  const [vehicleChoices, setVehicleChoices] = useState<Record<string, VehicleChoice>>(() => readObject<VehicleChoice>(TOUR_VEHICULES_KEY))
+  useEffect(() => { try { localStorage.setItem(TOUR_VEHICULES_KEY, JSON.stringify(vehicleChoices)) } catch { /* stockage saturé */ } }, [vehicleChoices])
   const [standsLogistique,setStandsLogistique]=useState<StandLivraison[]>(() => readArray('ob-stands-brioches-v1'))
   useEffect(()=>{
     const refresh=()=>{
       setBenevolesLogistique(readArray('ob-bdd-benevoles-v1'))
+      setVehicles(readAssets().filter(a => a.kind === 'vehicule'))
       setStandsLogistique(readArray('ob-stands-brioches-v1'))
     }
     window.addEventListener('focus',refresh)
@@ -379,16 +391,15 @@ function LivraisonsRetraitsCampagne() {
     return ()=>{window.removeEventListener('focus',refresh);window.removeEventListener('storage',refresh)}
   },[])
 
-  const [multiAffectations, setMultiAffectations] = useState<Record<string, MultiAffectation>>(
-    () => conserverAffectationsMulti(readMultiAffectations(), commandes),
-  )
+  const [multiAffectations, setMultiAffectations] = useState<Record<string, MultiAffectation>>(readMultiAffectations)
   useEffect(() => { localStorage.setItem(MULTI_STORAGE_KEY, JSON.stringify(multiAffectations)) }, [multiAffectations])
-  const lignesMulti = useMemo(() => commandesCampagne
-    .filter(commande => commande.statut !== 'ANNULEE')
+  const lignesMulti = useMemo(() => commandes
+    .filter(commande => commande.statut !== 'ANNULEE' &&
+      (campagneAnnee === '' || anneeDe(commande.campagne) === campagneAnnee))
     .flatMap(commande => (commande.livraisons ?? []).map((ligne, index) => ({
       commande, ligne, ligneId: ligne.id || `index-${index}`,
-      cle: cleLivraisonMulti(commande, ligne.id || `index-${index}`),
-    }))), [commandesCampagne])
+      cle: keyMulti(commande.id, ligne.id || `index-${index}`),
+    }))), [commandes, campagneAnnee])
   function updateMulti(cle: string, commandeId: number, ligneId: string, dateInitiale: string, patch: Partial<MultiAffectation>) {
     setMultiAffectations(current => {
       const old = current[cle] ?? {
@@ -422,13 +433,14 @@ function LivraisonsRetraitsCampagne() {
     // l'opération : aucune ancienne préférence hors période n'est reprise.
     if (periode) return periode.debut
 
-    const dates = commandesCampagne
+    const dates = commandes
+      .filter(commande => campagneAnnee === '' || anneeDe(commande.campagne) === campagneAnnee)
       .flatMap(commande => [commande.datePrevueLivraison, ...(commande.livraisons ?? []).map(l => l.datePrevue)])
       .filter((date): date is string => Boolean(date))
       .sort()
     const today = todayInput()
     return dates.find(date => date >= today) || dates[0] || today
-  }, [commandesCampagne, periode])
+  }, [commandes, campagneAnnee, periode])
 
   const [missions, setMissions] =
     useState<MissionSauvegardee[]>(loadMissions)
@@ -516,6 +528,7 @@ function LivraisonsRetraitsCampagne() {
       mode: 'BENEVOLE',
       responsable: '',
       retraitType: 'ETABLISSEMENT',
+      vehicleKind: '', vehicleId:'', personalPlate:'',
       commandes: {},
     }))
 
@@ -564,16 +577,14 @@ function LivraisonsRetraitsCampagne() {
       .filter(e=>e.statut==='ACTIF' && e.peutEffectuerLivraisons)
       .map(e=>({id:e.id,label:e.nom}))
     return standsLogistique
-      .filter(st=>st.campagne
-        ? memeCampagneCommande(st.campagne, campagneId)
-        : !campagneEstTest(campagneId) && (!campagneAnnee || anneeDe(st.date)===campagneAnnee))
+      .filter(st=>!campagneAnnee || anneeDe(st.campagne||st.date)===campagneAnnee)
       .sort((a,b)=>{
         const aToday=a.date===tourForm.date ? 0 : 1
         const bToday=b.date===tourForm.date ? 0 : 1
         return aToday-bToday || a.date.localeCompare(b.date) || a.nom.localeCompare(b.nom,'fr')
       })
       .map(st=>({id:st.id,label:`${st.nom}${st.lieu ? ` · ${st.lieu}` : ''} · ${st.date}`}))
-  },[tourForm.mode,tourForm.retraitType,tourForm.date,benevolesLogistique,missions,etablissements,users,standsLogistique,campagneAnnee,campagneId])
+  },[tourForm.mode,tourForm.retraitType,tourForm.date,benevolesLogistique,missions,etablissements,users,standsLogistique,campagneAnnee])
 
   useEffect(() => {
     localStorage.setItem(
@@ -669,9 +680,10 @@ function LivraisonsRetraitsCampagne() {
     () =>
       missions.filter(
         (mission) => mission.date === selectedDate &&
-          commandesCampagne.some(c=>appartient(mission, c, commandes)),
+          commandes.some(c=>appartient(mission, c, commandes) &&
+            (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee)),
       ),
-    [missions, selectedDate, commandes, commandesCampagne],
+    [missions, selectedDate, commandes, campagneAnnee],
   )
 
   const commandesSimplesDuJour = useMemo(
@@ -1060,16 +1072,17 @@ function LivraisonsRetraitsCampagne() {
     : null
 
   const eligibleCommandes = useMemo(
-    () => commandesCampagne
+    () => commandes
       .filter(commande => {
         if (commande.statut === 'ANNULEE' || commande.statut === 'LIVREE' ||
-            (commande.livraisons?.length ?? 0) > 0) return false
+            (commande.livraisons?.length ?? 0) > 0 ||
+            (campagneAnnee && anneeDe(commande.campagne) !== campagneAnnee)) return false
         const commandesMissions = missions.filter(m => appartient(m, commande, commandes))
         return commandesMissions.length === 0 ||
           commandesMissions.every(missionDoitEtreAttribuee)
       })
       .sort((a, b) => a.numero.localeCompare(b.numero, 'fr', { numeric: true })),
-    [commandesCampagne, commandes, missions],
+    [commandes, campagneAnnee, missions],
   )
 
   // Les commandes simples et chaque adresse multi-sites sont proposées dans
@@ -1103,7 +1116,7 @@ function LivraisonsRetraitsCampagne() {
         byKey.set(key, multiAffectations[item.cle]?.date || item.ligne.datePrevue || '')
     }
     return byKey
-  }, [eligibleCommandes, missions, lignesMulti, multiAffectations, eligibleStops, commandes])
+  }, [eligibleCommandes, missions, lignesMulti, multiAffectations, eligibleStops])
   const nonAffecteesPourDate = (date: string) => eligibleStops.filter(stop => datesNonAffectees.get(stop.key) === date)
   // Le sélecteur d'une tournée suit la bannette de la date du formulaire,
   // et non la totalité des destinations encore libres dans la campagne.
@@ -1180,7 +1193,7 @@ function LivraisonsRetraitsCampagne() {
       if (!query) return true
       return normalizeText([item.nom, item.ville, item.contact, item.commande.numero, item.datePrevue].join(' ')).includes(query)
     }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
-  }, [eligibleStops, eligibleCommandes, lignesMulti, multiAffectations, missions, commandes, selectedDate,
+  }, [eligibleStops, eligibleCommandes, lignesMulti, multiAffectations, missions, selectedDate,
       getDonateurById, searchNonAffectees, secteurFilter, voirToutesDates])
 
   function changeTab(tab: Tab) {
@@ -1210,12 +1223,53 @@ function LivraisonsRetraitsCampagne() {
       mode: 'BENEVOLE',
       responsable: '',
       retraitType: 'ETABLISSEMENT',
+      vehicleKind: '', vehicleId:'', personalPlate:'',
       commandes: commandState,
     })
 
     setTourOpen(true)
   }
 
+  const vehicleKey = (date:string,mode:ModeLivraison,responsable:string) =>
+    `${campagne?.id ?? 'sans-campagne'}|${date}|${mode}|${responsable}`
+  const selectedEsatId = (responsable:string) => etablissements.find(e =>
+    `${e.nom}${e.ville ? ` · ${e.ville}` : ''}` === responsable)?.id
+  const vehicleOptionsFor = (mode:ModeLivraison,responsable:string) => mode === 'ESAT'
+    ? vehiclesESAT.filter(asset => !asset.esatId || asset.esatId === selectedEsatId(responsable))
+    : vehiclesAEIM
+  const vehicleChoiceFor = (mode:ModeLivraison,responsable:string,date=selectedDate): VehicleChoice | undefined =>
+    vehicleChoices[vehicleKey(date,mode,responsable)]
+  function updateVehicleChoice(mode:ModeLivraison,responsable:string,patch:VehicleChoice){
+    setVehicleChoices(old => ({...old,[vehicleKey(selectedDate,mode,responsable)]:patch}))
+  }
+  const vehicleDisplay = (mode:ModeLivraison,responsable:string,date=selectedDate) => {
+    const choice=vehicleChoiceFor(mode,responsable,date)
+    if(!choice) return 'Véhicule non renseigné'
+    if(choice.kind==='PERSONNEL') {
+      const benevole=mode==='BENEVOLE' ? benevolesLogistique.find(b=>normalizeText(`${b.prenom} ${b.nom}`)===normalizeText(responsable)) : undefined
+      const plate=choice.personalPlate || benevole?.immatriculationVehicule || ''
+      return `Véhicule personnel${plate ? ` · ${formatPlate(plate)}` : ' · plaque à renseigner'}`
+    }
+    const vehicule=vehicles.find(v=>v.id===choice.assetId)
+    return `${choice.kind==='ESAT' ? 'Véhicule ESAT' : 'Véhicule AEIM'}${vehicule ? ` · ${vehicule.name} (${vehicule.registration})` : ' · à sélectionner'}`
+  }
+  function vehicleConflict(date:string,mode:ModeLivraison,responsable:string,assetId:string):string | null {
+    if(!assetId)return null
+    const ownKey=vehicleKey(date,mode,responsable)
+    const prefix=`${campagne?.id ?? 'sans-campagne'}|${date}|`
+    const existing=Object.entries(vehicleChoices).find(([key,choice]) => key!==ownKey && key.startsWith(prefix) && choice.assetId===assetId)
+    if(!existing)return null
+    const matching=vehicles.find(vehicle=>vehicle.id===assetId)
+    return `${matching?.name || 'Ce véhicule'} est déjà attribué à une autre tournée le ${date}.`
+  }
+  function validateVehicleChoice(mode:ModeLivraison,responsable:string,choice:VehicleChoice,date:string):string|null{
+    if(mode==='RETRAIT')return null
+    if(mode==='ESAT' && choice.kind!=='ESAT') return 'Sélectionne un véhicule ESAT.'
+    if((mode==='BENEVOLE'||mode==='SERVICE_COMM') && !['PERSONNEL','AEIM'].includes(choice.kind)) return 'Choisis véhicule personnel ou véhicule AEIM.'
+    if(choice.kind!=='PERSONNEL' && !vehicleOptionsFor(mode,responsable).some(a=>a.id===choice.assetId)) return 'Sélectionne un véhicule du parc correspondant.'
+    if(choice.kind!=='PERSONNEL') return vehicleConflict(date,mode,responsable,choice.assetId || '')
+    return null
+  }
   function saveTour(
     event: FormEvent<HTMLFormElement>,
   ) {
@@ -1256,8 +1310,14 @@ function LivraisonsRetraitsCampagne() {
       return
     }
 
+    if(tourForm.mode !== 'RETRAIT') {
+      const choice:VehicleChoice={kind:tourForm.vehicleKind as VehicleChoice['kind'],assetId:tourForm.vehicleId,personalPlate:formatPlate(tourForm.personalPlate)}
+      const vehicleError=validateVehicleChoice(tourForm.mode,responsable,choice,tourForm.date)
+      if(vehicleError){window.alert(vehicleError);return}
+    }
+
     if(selectedIds.some(id => {
-      const commande = commandesCampagne.find(c => c.id === id)
+      const commande = commandes.find(c => c.id === id && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
       return commande && missions.some(m => appartient(m, commande, commandes) && !missionDoitEtreAttribuee(m))
     })){
       window.alert('Une commande a déjà été affectée à une tournée. Actualise la liste avant de continuer.');return
@@ -1294,12 +1354,12 @@ function LivraisonsRetraitsCampagne() {
       for (const commandeId of selectedIds) {
         const currentMissionIndex = next.findIndex(
           (mission) => {
-            const commande = commandesCampagne.find(c => c.id === commandeId)
+            const commande = commandes.find(c => c.id === commandeId && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
             return Boolean(commande && appartient(mission, commande, commandes))
           },
         )
 
-        const commande = commandesCampagne.find(c => c.id === commandeId)
+        const commande = commandes.find(c => c.id === commandeId && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
         if (!commande) continue
         const heure =
           tourForm.commandes[`simple:${commandeId}`]?.heure ||
@@ -1344,7 +1404,7 @@ function LivraisonsRetraitsCampagne() {
     setCommandes((current) =>
       current.map((commande) =>
         selectedIds.includes(commande.id) &&
-        memeCampagneCommande(commande.campagne, campagneId)
+        (!campagneAnnee || anneeDe(commande.campagne) === campagneAnnee)
           ? {
               ...commande,
               datePrevueLivraison: tourForm.date,
@@ -1353,14 +1413,11 @@ function LivraisonsRetraitsCampagne() {
       ),
     )
 
-    setAlertesReattribution(prev=>{
-      const next={...prev}
-      selectedIds.forEach(id=>{
-        const commande=commandesCampagne.find(c=>c.id===id)
-        if(commande) delete next[cleAlerteLivraison(commande)]
-      })
-      return next
-    })
+    setAlertesReattribution(prev=>{const next={...prev};selectedIds.forEach(id=>delete next[String(id)]);return next})
+    if(tourForm.mode !== 'RETRAIT') {
+      const choice:VehicleChoice={kind:tourForm.vehicleKind as VehicleChoice['kind'],assetId:tourForm.vehicleId||undefined,personalPlate:formatPlate(tourForm.personalPlate)||undefined}
+      setVehicleChoices(old=>({...old,[vehicleKey(tourForm.date,tourForm.mode,responsable)]:choice}))
+    }
     setSelectedDate(bornerJour(tourForm.date, periode))
     setTourOpen(false)
   }
@@ -1512,8 +1569,7 @@ function LivraisonsRetraitsCampagne() {
     setMissions(current=>current.map(m=>m.id===mission.id?{
       ...m,mode:'NON_AFFECTE',responsable:'',heure:'',statut:'A_PLANIFIER',retraitType:undefined,updatedAt:new Date().toISOString()
     }:m))
-    const commande=commandesCampagne.find(c=>appartient(mission,c,commandes))
-    if(commande) setAlertesReattribution(prev=>({...prev,[cleAlerteLivraison(commande)]:'Commande retirée de la tournée, à réattribuer'}))
+    setAlertesReattribution(prev=>({...prev,[String(mission.commandeId)]:'Commande retirée de la tournée, à réattribuer'}))
   }
 
   function ajouterATour(mode:ModeLivraison,responsable:string){
@@ -1533,7 +1589,7 @@ function LivraisonsRetraitsCampagne() {
       return
     }
     const commandeId=Number(key.slice(7))
-    const commande = commandesCampagne.find(c => c.id === commandeId)
+    const commande = commandes.find(c => c.id === commandeId && (!campagneAnnee || anneeDe(c.campagne) === campagneAnnee))
     if (!commande) return
     setMissions(current=>{
       if(current.some(m=>appartient(m, commande, commandes) && !missionDoitEtreAttribuee(m))) return current
@@ -1542,7 +1598,7 @@ function LivraisonsRetraitsCampagne() {
         ...current,{id:createMissionId(),commandeId,commandeCle:commandeCle(commande),date:selectedDate,mode,responsable,heure:'',statut:'PLANIFIEE',commentaire:'',updatedAt:new Date().toISOString()}]
     })
     setCommandes(current=>current.map(c=>commandeCle(c)===commandeCle(commande)?{...c,datePrevueLivraison:selectedDate}:c))
-    setAlertesReattribution(prev=>{const next={...prev};delete next[cleAlerteLivraison(commande)];return next})
+    setAlertesReattribution(prev=>{const next={...prev};delete next[String(commandeId)];return next})
     setCommandeAjout('');setTourEdit(null)
   }
 
@@ -1660,6 +1716,7 @@ function LivraisonsRetraitsCampagne() {
         doc.roundedRect(margin,y,usable,40,3,3,'FD')
         label('LIVREUR / RESPONSABLE',margin+5,y+7)
         doc.setFont('helvetica','bold');doc.setFontSize(11);text(responsable,margin+5,y+13)
+        label(`VÉHICULE : ${vehicleDisplay(mode,responsable)}`.slice(0,94),margin+99,y+7)
         label('POINT DE DÉPART',margin+5,y+21)
         doc.setFont('helvetica','normal');doc.setFontSize(9)
         const depLines=wrap(depart,usable-10).slice(0,2);doc.text(depLines,margin+5,y+27)
@@ -1832,7 +1889,7 @@ function LivraisonsRetraitsCampagne() {
     </style></head><body>
       <section class="summary">
         <div class="summary-head"><div class="logo">OB</div><div class="summary-title"><span class="eyebrow">Opération Brioche · Logistique</span><h1>Feuille de tournée</h1><span class="muted">À conserver par le conducteur · ${htmlEscape(formatDateLabel(selectedDate))}</span></div><div class="head-counter">${stops.length} arrêt(s)<br/><b>${qty} brioches</b></div></div>
-        <div class="meta"><div><span>Responsable</span><strong>${htmlEscape(responsable)}</strong></div><div><span>Mode</span><strong>${htmlEscape(MODE_LABELS[mode])}</strong></div><div><span>Point de départ</span><strong>${htmlEscape(departure)}</strong></div><div><span>Date et heure de départ</span><strong>${htmlEscape(formatDateLabel(selectedDate))} · ${htmlEscape(plan?.departureTime||'À renseigner')}</strong></div></div>
+        <div class="meta"><div><span>Responsable</span><strong>${htmlEscape(responsable)}</strong></div><div><span>Mode / véhicule</span><strong>${htmlEscape(MODE_LABELS[mode])} · ${htmlEscape(vehicleDisplay(mode,responsable))}</strong></div><div><span>Point de départ</span><strong>${htmlEscape(departure)}</strong></div><div><span>Date et heure de départ</span><strong>${htmlEscape(formatDateLabel(selectedDate))} · ${htmlEscape(plan?.departureTime||'À renseigner')}</strong></div></div>
         <div class="stats"><div class="stat"><small>Distance estimée</small><b>${plan?`${(plan.distanceMeters/1000).toFixed(1)} km`:'—'}</b></div><div class="stat"><small>Temps de route estimé</small><b>${plan?`${Math.round(plan.totalSeconds/60)} min`:'—'}</b></div><div class="stat"><small>Dernière arrivée prévue</small><b>${htmlEscape(plan?.stops.at(-1)?.arrival||'—')}</b></div></div>
         <h2 class="section-title">Ordre de passage des livraisons</h2><table class="route-table"><thead><tr><th>#</th><th>Destination / adresse</th><th>Commande</th><th>Qté</th><th>Arrivée</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="route-note">${plan?'Ordre optimisé selon le réseau routier. Horaires indicatifs hors trafic en temps réel, avec 8 min de manutention par arrêt.':'Ordre manuel : vérifier le parcours et les horaires avant le départ.'} Vérifier les quantités et faire signer un bon à chaque livraison.</div>
@@ -1854,6 +1911,7 @@ function LivraisonsRetraitsCampagne() {
       'Ville',
       'Affecté à',
       'Mode',
+      'Véhicule',
       'Statut',
       'Commande',
     ]
@@ -1866,6 +1924,7 @@ function LivraisonsRetraitsCampagne() {
         ville,
         mission.responsable,
         MODE_LABELS[mission.mode],
+        mission.responsable ? vehicleDisplay(mission.mode,mission.responsable,mission.date) : '',
         STATUS_LABELS[mission.statut],
         commande.numero,
       ],
@@ -1895,16 +1954,6 @@ function LivraisonsRetraitsCampagne() {
       1000,
     )
   }
-
-  const clesAlertesCampagne = new Set(commandesCampagne.map(cleAlerteLivraison))
-  const nombreAlertesReattribution = Object.keys(alertesReattribution).filter(id => {
-    if (id.startsWith('multi:')) return lignesMulti.some(l => `multi:${l.cle}` === id)
-    if (clesAlertesCampagne.has(id)) return true
-    // Les alertes historiques avaient seulement un id numérique : elles ne sont
-    // affichées que si cet id correspond à une unique commande toutes campagnes confondues.
-    const correspondances = commandes.filter(c => String(c.id) === id)
-    return correspondances.length === 1 && memeCampagneCommande(correspondances[0].campagne, campagneId)
-  }).length
 
   return (
     <main className="lr-page">
@@ -2295,9 +2344,9 @@ function LivraisonsRetraitsCampagne() {
           {(activeTab === 'BENEVOLES' || activeTab === 'ESAT' || activeTab === 'SERVICE_COMM') ? (
             <div className="lr-benevole-groups">
               <p className="lr-benevole-explain">{activeTab === 'BENEVOLES' ? 'Choisis un bénévole pour voir ses livraisons du jour. Les bénévoles sans mission sont aussi affichés.' : activeTab === 'ESAT' ? 'Choisis un ESAT pour consulter ses livraisons du jour ou lui en attribuer de nouvelles.' : 'Choisis une personne du service Communication pour consulter et gérer ses livraisons du jour.'}</p>
-              {nombreAlertesReattribution > 0 &&
+              {Object.keys(alertesReattribution).filter(id=>id.startsWith('multi:') ? lignesMulti.some(l=>`multi:${l.cle}`===id) : commandes.some(c=>String(c.id)===id && (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee))).length > 0 &&
                 <div className="lr-reattribution-alert" role="status"><AlertTriangle size={16}/>
-                  {nombreAlertesReattribution} commande(s) retirée(s) à réattribuer. Elles sont de nouveau disponibles dans « Planifier une tournée ».
+                  {Object.keys(alertesReattribution).filter(id=>id.startsWith('multi:') ? lignesMulti.some(l=>`multi:${l.cle}`===id) : commandes.some(c=>String(c.id)===id && (!campagneAnnee || anneeDe(c.campagne)===campagneAnnee))).length} commande(s) retirée(s) à réattribuer. Elles sont de nouveau disponibles dans « Planifier une tournée ».
                 </div>}
               {groupesIntervenants.map(b => {
                 const ouvert = benevoleDeplie === b.id
@@ -2327,6 +2376,28 @@ function LivraisonsRetraitsCampagne() {
                     </tr>)}</tbody></table></div>
                     : <p className="lr-benevole-no-mission">Aucune livraison attribuée pour cette date.</p>}
                     <div className="lr-route-planner">
+                      <div className="lr-vehicle-fields">
+                        <strong><Truck size={16}/> Véhicule de la tournée</strong>
+                        <p>{vehicleDisplay(modeBenevole,b.nom)}</p>
+                        <label>Type de véhicule
+                          <select value={vehicleChoiceFor(modeBenevole,b.nom)?.kind ?? (modeBenevole==='ESAT'?'ESAT':'')} onChange={event=>updateVehicleChoice(modeBenevole,b.nom,{kind:event.target.value as VehicleChoice['kind']})}>
+                            {modeBenevole!=='ESAT' && <option value="">Choisir un véhicule</option>}
+                            {modeBenevole!=='ESAT' && <option value="PERSONNEL">Véhicule personnel</option>}
+                            {modeBenevole!=='ESAT' && <option value="AEIM">Véhicule AEIM</option>}
+                            {modeBenevole==='ESAT' && <option value="ESAT">Véhicule ESAT</option>}
+                          </select>
+                        </label>
+                        {((vehicleChoiceFor(modeBenevole,b.nom)?.kind==='AEIM') || modeBenevole==='ESAT') && <label>Véhicule du parc
+                          <select value={vehicleChoiceFor(modeBenevole,b.nom)?.assetId||''} onChange={event=>{const error=vehicleConflict(selectedDate,modeBenevole,b.nom,event.target.value);if(error){window.alert(error);return}updateVehicleChoice(modeBenevole,b.nom,{kind:modeBenevole==='ESAT'?'ESAT':'AEIM',assetId:event.target.value})}}>
+                            <option value="">Sélectionner dans le parc</option>
+                            {vehicleOptionsFor(modeBenevole,b.nom).map(v=><option key={v.id} value={v.id}>{v.name} · {v.registration}</option>)}
+                          </select>
+                        </label>}
+                        <VehicleRefuellingHint vehicle={vehicles.find(v => v.id === vehicleChoiceFor(modeBenevole,b.nom)?.assetId)}/>
+                        {vehicleChoiceFor(modeBenevole,b.nom)?.kind==='PERSONNEL' && <label>Immatriculation (personnel)
+                          <input placeholder="AA-123-AA" value={vehicleChoiceFor(modeBenevole,b.nom)?.personalPlate || (modeBenevole==='BENEVOLE'?ficheBenevolePour(b.nom)?.immatriculationVehicule||'':'')} onChange={event=>updateVehicleChoice(modeBenevole,b.nom,{kind:'PERSONNEL',personalPlate:formatPlate(event.target.value)})}/>
+                        </label>}
+                      </div>
                       <div className="lr-route-heading"><MapPin size={17}/><strong>Optimiser la tournée de {b.nom}</strong></div>
                       <div className="lr-route-fields">
                         <div className="lr-route-depart">
@@ -2668,7 +2739,7 @@ function LivraisonsRetraitsCampagne() {
                           (current) => ({
                             ...current,
                             date: event.target.value,
-                            responsable:'',
+                            responsable:'', vehicleId:'', personalPlate:'',
                             // Éviter de conserver des arrêts cochés pour l'ancien jour.
                             commandes: {},
                           }),
@@ -2691,7 +2762,7 @@ function LivraisonsRetraitsCampagne() {
                           (current) => ({
                             ...current,
                             mode,
-                            responsable: '',
+                            responsable: '', vehicleKind:mode==='ESAT'?'ESAT':'',vehicleId:'',personalPlate:'',
                           }),
                         )
                       }}
@@ -2714,7 +2785,7 @@ function LivraisonsRetraitsCampagne() {
                   {tourForm.mode === 'RETRAIT' && <label>
                     <span>Type de retrait</span>
                     <select value={tourForm.retraitType} onChange={event=>setTourForm(current=>({
-                      ...current,retraitType:event.target.value as TourForm['retraitType'],responsable:''
+                      ...current,retraitType:event.target.value as TourForm['retraitType'],responsable:'',vehicleId:''
                     }))}>
                       <option value="ETABLISSEMENT">Retrait établissement</option>
                       <option value="STAND">Retrait stand</option>
@@ -2723,7 +2794,7 @@ function LivraisonsRetraitsCampagne() {
                   <label>
                     <span>{tourForm.mode==='BENEVOLE'?'Bénévole disponible':tourForm.mode==='ESAT'?'ESAT pouvant livrer':tourForm.mode==='SERVICE_COMM'?'Personne du service communication':tourForm.retraitType==='STAND'?'Stand concerné':'Établissement concerné'}</span>
                     <select required value={tourForm.responsable} onChange={event=>setTourForm(current=>({
-                      ...current,responsable:event.target.value
+                      ...current,responsable:event.target.value,vehicleId:''
                     }))}>
                       <option value="">Sélectionner dans la liste</option>
                       {responsablesProposes.map(option=><option key={option.id} value={option.label}>{option.label}</option>)}
@@ -2739,6 +2810,31 @@ function LivraisonsRetraitsCampagne() {
                           : 'Aucune entrée éligible. Vérifie les disponibilités ou les autorisations dans la base correspondante.'
                     }</small>}
                   </label>
+                  {(tourForm.mode === 'BENEVOLE' || tourForm.mode === 'SERVICE_COMM') && <label>
+                    <span>Quel véhicule pour cette tournée ? *</span>
+                    <select required value={tourForm.vehicleKind} onChange={event=>setTourForm(old=>({...old,vehicleKind:event.target.value as TourForm['vehicleKind'],vehicleId:'',personalPlate:''}))}>
+                      <option value="">Choisir un type de véhicule</option>
+                      <option value="PERSONNEL">Véhicule personnel</option>
+                      <option value="AEIM">Véhicule AEIM</option>
+                    </select>
+                  </label>}
+                  {(tourForm.vehicleKind === 'AEIM' || tourForm.mode === 'ESAT') && <label>
+                    <span>{tourForm.mode === 'ESAT' ? 'Véhicule ESAT *' : 'Sélectionner un véhicule AEIM *'}</span>
+                    <select required value={tourForm.vehicleId} onChange={event=>setTourForm(old=>({...old,vehicleId:event.target.value}))}>
+                      <option value="">Choisir dans le parc</option>
+                      {vehicleOptionsFor(tourForm.mode,tourForm.responsable).map(v=><option key={v.id} value={v.id}>{v.name} · {v.registration}{v.capacity ? ` · ${v.capacity}` : ''}</option>)}
+                    </select>
+                    {vehicleOptionsFor(tourForm.mode,tourForm.responsable).length===0&&<small className="lr-source-empty">Aucun véhicule disponible dans ce parc. Ajoute-le dans Gestion → Véhicules.</small>}
+                  </label>}
+                  <VehicleRefuellingHint vehicle={vehicles.find(v => v.id === tourForm.vehicleId)}/>
+                  {tourForm.vehicleKind === 'PERSONNEL' && <label>
+                    <span>Immatriculation du véhicule personnel</span>
+                    <input placeholder="AA-123-AA" value={tourForm.mode==='BENEVOLE' && !tourForm.personalPlate
+                      ? benevolesLogistique.find(b=>normalizeText(`${b.prenom} ${b.nom}`)===normalizeText(tourForm.responsable))?.immatriculationVehicule || ''
+                      : tourForm.personalPlate}
+                      onChange={event=>setTourForm(old=>({...old,personalPlate:formatPlate(event.target.value)}))}/>
+                    <small className="lr-source-info">{tourForm.mode==='BENEVOLE' ? 'Immatriculation préremplie depuis BDD → Bénévoles, modifiable pour cette tournée.' : 'Immatriculation facultative pour le service communication.'}</small>
+                  </label>}
                 </div>
 
                 <div className="lr-stop-picker">

@@ -1,3 +1,4 @@
+import { affectationsCommandesMairieRs } from '../lib/ficheCaisseCommandes'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useCampaignWriteAccess } from '../lib/useCampaignWriteAccess'
 import { useUsers } from './UsersContext'
@@ -100,7 +101,7 @@ export function CommandesMairiesRsProvider({
 
       deleteCommande(id) {
         if (!canWrite) throw new Error('Campagne inactive : suppression interdite.')
-        if (fichesCaisse.some(fiche => fiche.commandeMairieRsId === id)) {
+        if (fichesCaisse.some(fiche => affectationsCommandesMairieRs(fiche).some(ligne => ligne.commandeId === id))) {
           throw new Error('Suppression impossible : cette commande possède des fiches de caisse liées. Conservez-la pour préserver la traçabilité.')
         }
         setCommandes((current) =>

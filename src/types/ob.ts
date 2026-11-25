@@ -105,8 +105,12 @@ export type FicheCaisse = {
 
   donateurId?: number
   commandeId?: number
-  /** Commande mairie ou responsable de secteur liée à cette fiche. */
+  /** Ancien lien unique, conservé pour les fiches historiques. */
   commandeMairieRsId?: string
+  /** Répartition du retour de fonds sur plusieurs commandes entreprise. */
+  affectationsCommandesEntreprise?: { commandeId: number; montant: number; /** Quantité réellement remise lors de ce retour, indépendamment du paiement. */ quantiteLivree?: number }[]
+  /** Répartition du retour de fonds sur plusieurs commandes Mairie / RS. */
+  affectationsCommandesMairieRs?: { commandeId: string; montant: number; /** Quantité réellement remise lors de ce retour, indépendamment du paiement. */ quantiteLivree?: number }[]
   /** Établissement AEIM choisi dans la BDD (identifiant stable). */
   etablissementId?: string
   /** Stand clôturé choisi pour la campagne (identifiant stable). */

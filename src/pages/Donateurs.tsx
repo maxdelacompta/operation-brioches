@@ -1,3 +1,4 @@
+import { affectationsCommandesEntreprise } from '../lib/ficheCaisseCommandes'
 import {
   useEffect,
   useMemo,
@@ -1116,7 +1117,7 @@ function Donateurs() {
                 selectedDonateur.id,
             )
           }
-          fichesCaisse={fichesCaisse.filter(fiche => fiche.donateurId === selectedDonateur.id || commandes.some(commande => commande.donateurId === selectedDonateur.id && commande.id === fiche.commandeId))}
+          fichesCaisse={fichesCaisse.filter(fiche => fiche.donateurId === selectedDonateur.id || commandes.some(commande => commande.donateurId === selectedDonateur.id && affectationsCommandesEntreprise(fiche).some(ligne => ligne.commandeId === commande.id)))}
           onBack={() =>
             setSelectedDonateurId(
               null,

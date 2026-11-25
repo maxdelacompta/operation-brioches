@@ -16,6 +16,7 @@ import { readFinanceRows } from '../lib/financeRegister'
 import { donsSansContrepartieCaisse, financeSummary, invoiceSummary, purchaseSummary, readDashboardInvoices, readDashboardPayments, sumChannels, sumFiches } from '../lib/dashboardMetrics'
 import { geocodeFrenchLocation, getCachedCoordinate } from '../services/geocodage'
 import DashboardEncaissements from './DashboardEncaissements'
+import BriochesDashboardPanel from '../components/BriochesDashboardPanel'
 import './DashboardEncaissements.css'
 import './Dashboard.css'
 
@@ -564,5 +565,7 @@ export default function Dashboard() {
       </div></article>
       <article className="dashboard-box"><div className="dashboard-box-title"><FileText size={20}/><h2>Accès rapides</h2></div><div className="documents-list"><Link to="/commandes">Commandes entreprises</Link><Link to="/commandes/mairies-rs">Commandes Mairies & RS</Link><Link to="/encaissements/fiches-caisse">Fiches de caisse</Link><Link to="/encaissements/coffre">Coffre</Link><details className="dashboard-panel-details"><summary>6 autres raccourcis</summary><Link to="/encaissements/suivi-banque">Suivi banque</Link><Link to="/finance/justificatifs-dons">Justificatifs de dons</Link><Link to="/finance/mecenat">Mécénat</Link><Link to="/finance/pertes-ecarts">Pertes / Écarts</Link><Link to="/finance/factures-paiements">Factures & Paiements</Link><Link to="/geographie/carte">Carte des ventes</Link></details></div></article>
     </section>
+    {/* Suivi logistique placé après toutes les autres sections du tableau de bord. */}
+    <BriochesDashboardPanel />
   </div>
 }

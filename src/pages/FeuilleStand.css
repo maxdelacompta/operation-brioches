@@ -32,3 +32,8 @@
 /* Numéro d'assistance de secours, visible sur la fiche imprimée */
 .ob-feuille-qr-row .ob-feuille-phone-help{margin-top:8px;font-size:11px;line-height:1.35;font-weight:700;color:#123c70}
 .ob-feuille-phone-help a{color:inherit;text-decoration:none;white-space:nowrap}
+
+.ob-feuille-com-tools { display:flex; gap:10px; align-items:baseline; padding:9px 12px; background:#f4f7fb; border-radius:8px; font-size:11px; margin:8px 0 12px; }
+.ob-feuille-com-tools strong { color:#133c6a; white-space:nowrap; }
+.ob-feuille-com-tools span { color:#274d70; overflow-wrap:anywhere; }
+@media (max-width:700px) { .ob-feuille-com-tools { flex-direction:column; gap:4px; } }
