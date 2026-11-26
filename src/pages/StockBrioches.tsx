@@ -15,18 +15,8 @@ type Mouvement = { id: string; date: string; type: TypeMouvement; etablissementI
 const TYPES: Record<TypeMouvement,string> = { reception: 'Réception', sortie: 'Sortie / remise', retour: 'Retour en stock', ajustement: 'Ajustement (+/−)', transfert: 'Transfert' }
 const number = (n: number) => new Intl.NumberFormat('fr-FR').format(n)
 
-// Les livraisons fournisseurs sont rapprochées par commande et campagne.
-// Leur identifiant stable empêche toute seconde entrée lors des rechargements.
-function memeCampagne(commande: string, selection: string): boolean {
-  if (commande.trim().toUpperCase() === selection.trim().toUpperCase()) return true
-  const annee = (texte: string) => texte.trim().toUpperCase().match(/^(?:OB\s*[- ]?\s*)?((?:19|20)\d{2})$/)?.[1]
-  return Boolean(annee(commande) && annee(commande) === annee(selection))
-}
-
-function estLivre(c: { livre?: boolean; destinations?: Array<{ livre?: boolean }> }): boolean {
-  return c.livre === true || Boolean(c.destinations?.length && c.destinations.every(d => d.livre === true))
-}
-
+// Les réceptions fournisseurs sont créées depuis les modules Commandes Artisans/GMS/Industriels.
+// Ce panneau doit uniquement les LIRE : il ne doit jamais enregistrer une seconde réception.
 function read(campagne: string): Mouvement[] {
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(stockKeyForCampaign(campagne)) ?? '[]')
@@ -44,12 +34,12 @@ const STANDS_KEY = 'ob-stands-brioches-v1'
 const readJson = (key:string):unknown => {
   try{return JSON.parse(localStorage.getItem(key) || 'null') as unknown}catch{return null}
 }
-const anneeCampagne=(value:string)=>value.match(/(?:19|20)\\d{2}/)?.[0] ?? ''
+const anneeCampagne=(value:string)=>value.match(/(?:19|20)\d{2}/)?.[0] ?? ''
 const appartientCampagne=(stand:StandEstime,campagne:string)=>{
   if (stand.campagne) return stand.campagne===campagne ||
     (anneeCampagne(stand.campagne) !== '' && anneeCampagne(stand.campagne)===anneeCampagne(campagne))
   // Anciens stands sans campagne : affectation indicative d'après l'année de la date.
-  return /^\\d{4}-\\d{2}-\\d{2}$/.test(stand.date) && stand.date.slice(0,4)===anneeCampagne(campagne)
+  return /^\d{4}-\d{2}-\d{2}$/.test(stand.date) && stand.date.slice(0,4)===anneeCampagne(campagne)
 }
 function lireStandsEstimes(campagne:string) {
   const records=readJson(STANDS_KEY)
@@ -86,60 +76,6 @@ export default function StockBrioches() {
     : currentUser?.etablissementId ? [currentUser.etablissementId] : []), [currentUser])
   const estAutorise = useCallback((id: string) => Boolean(currentUser?.status === 'actif' && (tousEtablissements || idsAutorises.has(id))), [currentUser?.status, tousEtablissements, idsAutorises])
   const etablissementsVisibles = useMemo(() => etablissements.filter(e => estAutorise(e.id)), [etablissements, estAutorise])
-  // Les réceptions livrées au Siège alimentent la bonne campagne.
-  // Seuls les bons expressément marqués livrés sont rapprochés :
-  // le statut « Payé » seul ne déclenche jamais un mouvement de stock.
-  // Les mouvements manuels sont intégralement conservés.
-  useEffect(() => {
-    const commandesLivrees = commandesArtisans.filter(c => {
-      const x = c as typeof c & {
-        livre?: boolean
-        destinations?: Array<{ type?: string; referenceId?: string; quantite?: number; livre?: boolean }>
-      }
-      return memeCampagne(c.campagne, campagne)
-        && c.statut !== 'ANNULEE'
-        && estLivre(x)
-        && Number.isInteger(c.quantiteCommandee)
-        && c.quantiteCommandee > 0
-    })
-
-    const attendus = new Map<string, Mouvement>()
-    for (const c of commandesLivrees) {
-      const x = c as typeof c & {
-        livre?: boolean
-        destinationId?: string
-        etablissementId?: string
-        destinations?: Array<{ type?: string; referenceId?: string; quantite?: number; livre?: boolean }>
-      }
-      const destinations = (x.destinations ?? []).filter(d => d.livre && d.type === 'ETABLISSEMENT' && d.referenceId)
-      // Pour les livraisons multi-établissements, une réception par lieu.
-      if (destinations.length) {
-        destinations.forEach((d, i) => {
-          const etablissementId = d.referenceId!
-          const q = Number(d.quantite)
-          if (!etablissements.some(e => e.id === etablissementId) || !Number.isInteger(q) || q <= 0) return
-          const id = `achat-reception-${c.id}-${i}`
-          attendus.set(id, { id, date: c.dateRetrait || c.dateCommande || new Date().toISOString(), type: 'reception', etablissementId, quantite: q, commentaire: `Livraison achat ${c.numero} (automatique)` })
-        })
-      } else if (x.livre && (x.etablissementId || x.destinationId)) {
-        const etablissementId = x.etablissementId || x.destinationId || ''
-        if (!etablissements.some(e => e.id === etablissementId)) continue
-        const id = `achat-reception-${c.id}-0`
-        attendus.set(id, { id, date: c.dateRetrait || c.dateCommande || new Date().toISOString(), type: 'reception', etablissementId, quantite: c.quantiteCommandee, commentaire: `Livraison achat ${c.numero} (automatique)` })
-      }
-    }
-
-    const existants = read(campagne)
-    const manuels = existants.filter(m => !m.id.startsWith('achat-reception-'))
-    const prochains = [...manuels, ...attendus.values()]
-    if (JSON.stringify(existants) === JSON.stringify(prochains)) return
-    try {
-      localStorage.setItem(stockKeyForCampaign(campagne), JSON.stringify(prochains))
-      window.dispatchEvent(new Event(STOCK_CHANGED))
-    } catch {
-      // N'altère pas le stock si le navigateur refuse l'enregistrement.
-    }
-  }, [commandesArtisans, campagne, etablissements])
   const [mouvements, setMouvements] = useState<Mouvement[]>(() => read(campagne))
   const [dons, setDons] = useState(() => loadStockDons(campagne))
   useEffect(() => {
@@ -175,6 +111,28 @@ export default function StockBrioches() {
   const reception = mouvements.filter(m => m.type === 'reception' && estAutorise(m.etablissementId)).reduce((a,m) => a+m.quantite,0)
   const sorties = mouvements.filter(m => m.type === 'sortie' && estAutorise(m.etablissementId)).reduce((a,m) => a+m.quantite,0) + etablissementsVisibles.reduce((a,e) => a+donBrioches(e.id,dons),0)
   const stockNegatif = [...stocks.values()].filter(n => n < 0).length
+  // Données historiques : des entrées « achat-reception- » pouvaient être ajoutées
+  // une seconde fois à côté des mouvements déjà écrits par les commandes achats.
+  // Ne pas les effacer automatiquement (risque d’écart sur des remises passées).
+  const receptionsEnDoublePotentielles = useMemo(() => mouvements.filter(ancien =>
+    ancien.id.startsWith('achat-reception-') && commandesArtisans.some(commande =>
+      ancien.id.startsWith(`achat-reception-${commande.id}-`) && mouvements.some(actuel =>
+        actuel.etablissementId === ancien.etablissementId && (
+          actuel.id === `achat-industriel-${commande.id}` ||
+          actuel.id.startsWith(`achat-artisans-${commande.id}-`) ||
+          actuel.id.startsWith(`achat-gms-${commande.id}-`)
+        )
+      )
+    )
+  ), [mouvements, commandesArtisans])
+  const receptionsAutreCampagne = useMemo(() => mouvements.filter(m =>
+    (m.id.startsWith('achat-artisans-') || m.id.startsWith('achat-gms-') || m.id.startsWith('achat-industriel-')) &&
+    commandesArtisans.some(c => stockKeyForCampaign(c.campagne) !== STORAGE && (
+      m.id === `achat-industriel-${c.id}` ||
+      m.id.startsWith(`achat-artisans-${c.id}-`) ||
+      m.id.startsWith(`achat-gms-${c.id}-`)
+    ))
+  ), [mouvements, commandesArtisans, STORAGE])
   const visibles = mouvements.filter(m => estAutorise(m.etablissementId) && (!m.destinationId || estAutorise(m.destinationId)) && (!filtre || m.etablissementId === filtre || m.destinationId === filtre) && `${TYPES[m.type]} ${noms.get(m.etablissementId) ?? ''} ${noms.get(m.destinationId ?? '') ?? ''} ${m.commentaire}`.toLocaleLowerCase('fr').includes(recherche.toLocaleLowerCase('fr')))
   function sauvegarder(next: Mouvement[]) {
     try { localStorage.setItem(STORAGE,JSON.stringify(next)); setMouvements(next); publishBriochesChange(); setErreur(''); return true }
@@ -192,7 +150,8 @@ export default function StockBrioches() {
     if (sauvegarder([item,...mouvements])) { setQuantite('1'); setCommentaire(''); setConfirmation('Mouvement enregistré dans ce navigateur.') }
   }
   function supprimer(item: Mouvement) {
-    if (item.id.startsWith('achat-reception-')) return setErreur('Cette réception provient d’une commande achat. Corrigez la livraison depuis le module Commandes achats.')
+    if (item.id.startsWith('etab-commande-remise-')) return setErreur('Cette sortie est liée à un bon de commande établissement : impossible de la supprimer directement du stock.')
+    if (item.id.startsWith('achat-reception-') || item.id.startsWith('achat-artisans-') || item.id.startsWith('achat-gms-') || item.id.startsWith('achat-industriel-')) return setErreur('Cette réception provient d’une commande achat. Corrigez la livraison depuis le module Commandes achats.')
     if (item.id.startsWith('mecenat-reception-')) return setErreur('Réception issue du Mécénat : pour préserver la traçabilité, corrigez la quantité via un ajustement de stock justifié.')
     if (!estAutorise(item.etablissementId) || (item.destinationId && !estAutorise(item.destinationId))) return setErreur('Mouvement hors de votre périmètre.')
     if (!window.confirm('Supprimer ce mouvement de démonstration ?')) return
@@ -213,6 +172,14 @@ export default function StockBrioches() {
       <article className="stk-kpi"><span className="stk-kpi-icon stk-blue"><ArrowLeftRight size={23}/></span><div><span>Établissements suivis</span><strong>{etablissementsVisibles.length}</strong></div></article>
     </section>
     {stockNegatif > 0 && <p className="stk-error">{stockNegatif} établissement(s) ont un stock négatif dans les données enregistrées.</p>}
+    {receptionsEnDoublePotentielles.length > 0 && <p className="stk-error" role="alert">
+      <AlertTriangle size={16}/> {receptionsEnDoublePotentielles.length} réception(s) d’achat potentiellement comptée(s) deux fois dans l’historique de cette campagne.
+      Aucun mouvement n’a été supprimé : vérifiez les bons et les sorties avant de rapprocher ces anciennes écritures.
+    </p>}
+    {receptionsAutreCampagne.length > 0 && <p className="stk-error" role="alert">
+      <AlertTriangle size={16}/> {receptionsAutreCampagne.length} réception(s) d’achat semblent provenir d’une autre campagne.
+      Vérifiez les commandes et les écritures historiques avant de corriger le stock : aucun déplacement automatique n’a été effectué.
+    </p>}
     <section className="stk-panel stk-stands-estimes">
       <h2><Store size={20}/> Stock approximatif des stands · {campagne}</h2>
       <p className="stk-estimation-note">Quantités livrées aux stands lorsqu’elles existent, sinon prévisions des fiches de stands. Le reste correspond à une estimation, pas à un inventaire physique. Elles ne créent aucun mouvement de stock et ne sont pas soustraites au stock des établissements.</p>
@@ -253,7 +220,7 @@ export default function StockBrioches() {
       </section>
     </div>
     <section className="stk-panel stk-history"><div className="stk-history-head"><h2><ClipboardList size={20}/> Historique des mouvements</h2><div className="stk-filters"><select aria-label="Filtrer par établissement" value={filtre} onChange={e => setFiltre(e.target.value)}><option value="">Tous les établissements</option>{etablissementsVisibles.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}</select><label className="stk-search"><Search size={17}/><input value={recherche} onChange={e => setRecherche(e.target.value)} aria-label="Rechercher un mouvement" placeholder="Rechercher…"/></label></div></div>
-      <div className="stk-table-wrap"><table><thead><tr><th>Date / Heure</th><th>Type</th><th>Établissement</th><th>Destination</th><th>Quantité</th><th>Commentaire</th><th></th></tr></thead><tbody>{visibles.map(m => <tr key={m.id}><td>{new Date(m.date).toLocaleString('fr-FR')}</td><td>{TYPES[m.type]}</td><td>{noms.get(m.etablissementId) ?? 'Établissement supprimé'}</td><td>{m.destinationId ? noms.get(m.destinationId) ?? 'Établissement supprimé' : '—'}</td><td><strong>{m.type === 'sortie' || m.type === 'transfert' ? '−' : m.quantite > 0 ? '+' : ''}{number(m.quantite)}</strong></td><td>{m.commentaire || '—'}</td><td><button className="stk-delete" type="button" aria-label="Supprimer le mouvement" title="Supprimer" onClick={() => supprimer(m)} disabled={m.id.startsWith('achat-reception-')}><Trash2 size={16}/></button></td></tr>)}</tbody></table>{!visibles.length && <p className="stk-empty">Aucun mouvement à afficher.</p>}</div>
+      <div className="stk-table-wrap"><table><thead><tr><th>Date / Heure</th><th>Type</th><th>Établissement</th><th>Destination</th><th>Quantité</th><th>Commentaire</th><th></th></tr></thead><tbody>{visibles.map(m => <tr key={m.id}><td>{new Date(m.date).toLocaleString('fr-FR')}</td><td>{TYPES[m.type]}</td><td>{noms.get(m.etablissementId) ?? 'Établissement supprimé'}</td><td>{m.destinationId ? noms.get(m.destinationId) ?? 'Établissement supprimé' : '—'}</td><td><strong>{m.type === 'sortie' || m.type === 'transfert' ? '−' : m.quantite > 0 ? '+' : ''}{number(m.quantite)}</strong></td><td>{m.commentaire || '—'}</td><td><button className="stk-delete" type="button" aria-label="Supprimer le mouvement" title="Supprimer" onClick={() => supprimer(m)} disabled={m.id.startsWith('achat-reception-') || m.id.startsWith('achat-artisans-') || m.id.startsWith('achat-gms-') || m.id.startsWith('achat-industriel-') || m.id.startsWith('mecenat-reception-') || m.id.startsWith('etab-commande-remise-')}><Trash2 size={16}/></button></td></tr>)}</tbody></table>{!visibles.length && <p className="stk-empty">Aucun mouvement à afficher.</p>}</div>
     </section>
   </main>
 }
